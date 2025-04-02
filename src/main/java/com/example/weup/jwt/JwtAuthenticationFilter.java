@@ -5,7 +5,7 @@ import com.example.weup.dto.security.CustomUserDetails;
 import com.example.weup.dto.request.LoginDTO;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.response.ErrorResponseDTO;
-import com.example.weup.entity.UserEntity;
+import com.example.weup.entity.User;
 import com.example.weup.repository.UserRepository;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.FilterChain;
@@ -92,7 +92,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         String role = auth.getAuthority();
 
         // DB에서 사용자 검색
-        UserEntity user = userRepository.findByEmail(email)
+        User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
         Long userId = user.getId();
 

@@ -1,6 +1,6 @@
 package com.example.weup.dto.response;
 
-import com.example.weup.entity.UserEntity;
+import com.example.weup.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,7 +14,7 @@ public class GetProfileResponseDTO {
     private String password;
     private String profileImage;
 
-    public GetProfileResponseDTO(UserEntity user) {
+    public GetProfileResponseDTO(User user) {
         this.name = user.getName();
         this.email = user.getEmail();
         this.password = user.getPassword();

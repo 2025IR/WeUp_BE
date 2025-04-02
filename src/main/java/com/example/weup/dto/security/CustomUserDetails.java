@@ -1,6 +1,6 @@
 package com.example.weup.dto.security;
 
-import com.example.weup.entity.UserEntity;
+import com.example.weup.entity.User;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
@@ -15,10 +15,10 @@ Spring Security가 사용자 계정의 정보(예: 이메일, 비밀번호, 권�
  */
 
 public class CustomUserDetails implements UserDetails {
-    private final UserEntity userEntity;
+    private final User user;
     //스프링 시큐리티에서 사용자 인증정보를 제공하기 위해 유저엔티티 데이터 활용
-    public CustomUserDetails(UserEntity userEntity) {
-        this.userEntity = userEntity;
+    public CustomUserDetails(User user) {
+        this.user = user;
     //객체를 생성할 때 유저엔티티 객체를 받아와 초기화 및 얘로 조회한 정보를 전달
     }
 
@@ -29,7 +29,7 @@ public class CustomUserDetails implements UserDetails {
         collection.add(new GrantedAuthority() {
             @Override
             public String getAuthority() {
-                return userEntity.getRole();
+                return user.getRole();
                 //db에서 권한 정보 가져오고, 아래에서 컬렉션으로 반환하여 스프링 시큐리티가 확인할 수 있게 함
             }
         });
@@ -38,17 +38,17 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public String getPassword() {
-        return userEntity.getPassword();
+        return user.getPassword();
     }
 
     // 변동 가능성 있음
     @Override
     public String getUsername() {
-        return userEntity.getName();
+        return user.getName();
     }
 
     public String getEmail() {
-        return userEntity.getEmail();
+        return user.getEmail();
     }
 
 //    public String getProfileImage() {
@@ -69,7 +69,7 @@ public class CustomUserDetails implements UserDetails {
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return userEntity.getPasswordExpirationDate().isAfter(LocalDateTime.now());
+        return user.getPasswordExpirationDate().isAfter(LocalDateTime.now());
     }
 
 

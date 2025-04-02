@@ -1,7 +1,7 @@
 package com.example.weup.jwt;
 
 import com.example.weup.dto.security.CustomUserDetails;
-import com.example.weup.entity.UserEntity;
+import com.example.weup.entity.User;
 import com.example.weup.repository.UserRepository;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -47,16 +47,16 @@ public class JWTFilter extends OncePerRequestFilter {
         String role = jwtUtil.getRole(token);
 
         // 사용자 ID로 사용자 정보 조회
-        UserEntity userEntity = userRepository.findById(userId)
-                .orElse(new UserEntity()); // 사용자를 찾지 못하면 빈 객체 사용
+        User user = userRepository.findById(userId)
+                .orElse(new User()); // 사용자를 찾지 못하면 빈 객체 사용
         
-        if (userEntity.getId() == null) {
+        if (user.getId() == null) {
             // 사용자를 찾을 수 없는 경우 로그 기록 후 계속 진행
             log.warn("User not found with ID: {}", userId);
-            userEntity.setRole(role);
+            user.setRole(role);
         }
 
-        CustomUserDetails customUserDetails = new CustomUserDetails(userEntity);
+        CustomUserDetails customUserDetails = new CustomUserDetails(user);
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(customUserDetails, null, customUserDetails.getAuthorities());
         SecurityContextHolder.getContext().setAuthentication(authToken);
         filterChain.doFilter(request,response);

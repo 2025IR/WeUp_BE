@@ -1,8 +1,8 @@
 package com.example.weup.service;
 
-import com.example.weup.entity.MemberEntity;
-import com.example.weup.entity.ProjectEntity;
-import com.example.weup.entity.UserEntity;
+import com.example.weup.entity.Member;
+import com.example.weup.entity.Project;
+import com.example.weup.entity.User;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
 import com.example.weup.repository.UserRepository;
@@ -26,7 +26,7 @@ public class ProjectService {
     public boolean hasAccess(Long userId, Long projectId) {
 
         // 1. 사용자 조회
-        UserEntity user = userRepository.findById(userId)
+        User user = userRepository.findById(userId)
                 .orElse(null);
 
         if (user == null) {
@@ -39,7 +39,7 @@ public class ProjectService {
 
         // 2. 프로젝트 조회
         try {
-            ProjectEntity project = projectRepository.findById(projectId)
+            Project project = projectRepository.findById(projectId)
                     .orElse(null);
 
             if (project == null) {
@@ -63,22 +63,22 @@ public class ProjectService {
 
         try {
             // 1. 사용자 조회
-            UserEntity user = userRepository.findById(userId)
+            User user = userRepository.findById(userId)
                     .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
 
             // 2. 프로젝트 생성
-            ProjectEntity project = new ProjectEntity();
+            Project project = new Project();
             project.setName("이름 - " + user.getName());
 
-            ProjectEntity savedProject = projectRepository.save(project);
+            Project savedProject = projectRepository.save(project);
 
             // 3. 멤버 생성
-            MemberEntity member = new MemberEntity();
+            Member member = new Member();
             member.setUser(user);
             member.setProject(savedProject);
             member.setRole("LEADER");
 
-            MemberEntity savedMember = memberRepository.save(member);
+            Member savedMember = memberRepository.save(member);
 
             // 4. 결과 반환
             Map<String, Object> result = new HashMap<>();

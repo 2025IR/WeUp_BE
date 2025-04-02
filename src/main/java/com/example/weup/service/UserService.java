@@ -5,7 +5,7 @@ import com.example.weup.config.JwtProperties;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.JoinDTO;
 import com.example.weup.dto.response.TokenResponseDTO;
-import com.example.weup.entity.UserEntity;
+import com.example.weup.entity.User;
 import com.example.weup.jwt.JWTUtil;
 import com.example.weup.repository.UserRepository;
 import jakarta.transaction.Transactional;
@@ -43,7 +43,7 @@ public class UserService {
         }
 
         // 새 사용자 저장
-        UserEntity data = new UserEntity();
+        User data = new User();
         data.setName(name);
         data.setEmail(email);
         data.setPassword(bCryptPasswordEncoder.encode(password));
@@ -76,7 +76,7 @@ public class UserService {
             Long userId = jwtUtil.getUserId(tokenWithoutPrefix);
             
             // 4. 리프레시 토큰으로 사용자 조회
-            UserEntity user = userRepository.findByRefreshToken(refreshToken)
+            User user = userRepository.findByRefreshToken(refreshToken)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.UNAUTHORIZED, "저장된 리프레시 토큰을 찾을 수 없습니다"));
             
             // 사용자 ID가 토큰의 ID와 일치하는지 확인

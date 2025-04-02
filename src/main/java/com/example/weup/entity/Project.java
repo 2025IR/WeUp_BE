@@ -6,7 +6,7 @@ import lombok.Data;
 @Entity
 @Table(name = "jwt_project")
 @Data
-public class ProjectEntity {
+public class Project {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

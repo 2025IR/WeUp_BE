@@ -6,7 +6,7 @@ import com.example.weup.dto.request.TokenRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
 import com.example.weup.dto.response.TokenResponseDTO;
-import com.example.weup.entity.UserEntity;
+import com.example.weup.entity.User;
 import com.example.weup.jwt.JWTUtil;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.service.UserService;
@@ -44,7 +44,7 @@ public class UserController {
         jwtUtil.validateToken(accessToken);
 
         Long userId = jwtUtil.getUserId(accessToken);
-        UserEntity user = userRepository.findById(userId)
+        User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException(ErrorInfo.USER_NOT_FOUND.getMessage("사용자를 찾을 수 없습니다")));
 
         return DataResponseDTO.of(new GetProfileResponseDTO(user));

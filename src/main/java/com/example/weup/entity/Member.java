@@ -8,7 +8,7 @@ import lombok.Data;
     @UniqueConstraint(columnNames = {"user_id", "project_id"})
 })
 @Data
-public class MemberEntity {
+public class Member {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -16,11 +16,11 @@ public class MemberEntity {
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
-    private UserEntity user;
+    private User user;
 
     @ManyToOne
     @JoinColumn(name = "project_id", nullable = false)
-    private ProjectEntity project;
+    private Project project;
 
     @Column(nullable = false)
     private String role = "MEMBER"; // MEMBER, LEADER (is_leader)
