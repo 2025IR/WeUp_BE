@@ -94,7 +94,7 @@ public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilte
         // DB에서 사용자 검색
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + email));
-        Long userId = user.getId();
+        Long userId = user.getUserId();
 
         // 설정 파일에서 만료 시간 가져오기
         long accessTokenExpiration = jwtProperties.getAccessToken().getExpiration();
