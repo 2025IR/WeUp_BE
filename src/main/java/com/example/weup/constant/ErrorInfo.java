@@ -26,9 +26,9 @@ public enum ErrorInfo {
     USER_ALREADY_EXIST(HttpStatus.CONFLICT, "This username is already in use"),
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "User not found"),
 
+    WRONG_PASSWORD(HttpStatus.BAD_REQUEST, "Wrong password"),
+
     FORBIDDEN(HttpStatus.BAD_REQUEST, "access denied"),
-
-
 
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "User unauthorized"),
     BAD_CREDENTIALS(HttpStatus.UNAUTHORIZED, "Invalid username or password");

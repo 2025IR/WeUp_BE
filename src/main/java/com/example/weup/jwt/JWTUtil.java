@@ -63,7 +63,7 @@ public class JWTUtil {
         return expiration.before(new Date()); // 현재 시간과 비교
     }
 
-    // 생성
+    // 수정 필요
     public String createAccessToken(Long userId, String role, long expiredMs) {
         return Jwts.builder()
                 .claim("userId", userId)
@@ -75,6 +75,7 @@ public class JWTUtil {
                 .compact();
     }
 
+    // 수정 필요
     public String createRefreshToken(Long userId, long expiredMs) {
         return Jwts.builder()
                 .claim("userId", userId)

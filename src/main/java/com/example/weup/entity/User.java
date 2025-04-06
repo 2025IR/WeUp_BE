@@ -1,14 +1,18 @@
 package com.example.weup.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
 import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
 @Entity
 @Table(name = "jwt_user")
 @Data
@@ -22,50 +26,53 @@ public class User implements UserDetails {
     @Column(nullable = false, length = 10)
     private String name;
 
-    @Column(nullable = false)
-    private String profileImage;
-
     @Column(nullable = false, unique = true)
     private String email;
 
     @Column(nullable = false)
     private String password;
 
+    @Column(name = "profile_image", nullable = false)
+    private String profileImage;
+
     @Column(nullable = false)
     private String role;
+
+    @Column(name = "is_user_withdrawal", nullable = false)
+    private boolean isUserWithdrawal;
 
 //    @Column
 //    private String refreshToken;
 
-    private LocalDateTime passwordExpirationDate;
+    private LocalDateTime passwordExpirationDate;  // ???
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of();
+        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
     }
 
     @Override
     public String getUsername() {
-        return "";
+        return this.email;
     }
 
     @Override
     public boolean isAccountNonExpired() {
-        return UserDetails.super.isAccountNonExpired();
+        return true;
     }
 
     @Override
     public boolean isAccountNonLocked() {
-        return UserDetails.super.isAccountNonLocked();
+        return true;
     }
 
     @Override
     public boolean isCredentialsNonExpired() {
-        return UserDetails.super.isCredentialsNonExpired();
+        return true;
     }
 
     @Override
     public boolean isEnabled() {
-        return UserDetails.super.isEnabled();
+        return true;
     }
 }
