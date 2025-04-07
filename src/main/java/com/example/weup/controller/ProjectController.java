@@ -1,7 +1,7 @@
 package com.example.weup.controller;
 
 import com.example.weup.dto.response.DataResponseDTO;
-import com.example.weup.jwt.JWTUtil;
+import com.example.weup.security.JwtUtil;
 import com.example.weup.service.ProjectService;
 import io.jsonwebtoken.JwtException;
 import lombok.RequiredArgsConstructor;
@@ -19,7 +19,7 @@ import java.util.Map;
 public class ProjectController {
 
     private final ProjectService projectService;
-    private final JWTUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
     @GetMapping("/{projectId}")
     public ResponseEntity<?> getProject(@PathVariable Long projectId, @RequestHeader("Authorization") String token) {

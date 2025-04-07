@@ -1,23 +1,17 @@
 package com.example.weup.service;
 
 import com.example.weup.GeneralException;
-import com.example.weup.config.JwtProperties;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.SignInRequestDto;
 import com.example.weup.dto.request.SignUpRequestDto;
-import com.example.weup.dto.response.TokenResponseDTO;
 import com.example.weup.entity.User;
-import com.example.weup.jwt.JWTUtil;
-import com.example.weup.jwt.JwtDto;
+import com.example.weup.security.JwtUtil;
+import com.example.weup.security.JwtDto;
 import com.example.weup.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
-
-import java.time.LocalDate;
-import java.time.LocalDateTime;
 
 @Service
 @RequiredArgsConstructor
@@ -27,9 +21,9 @@ public class UserService {
 
     private final BCryptPasswordEncoder bCryptPasswordEncoder;
 
-    private final JWTUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
-    private final JwtProperties jwtProperties;
+    //private final JwtProperties jwtProperties;
 
     @Transactional
     public void signUp(SignUpRequestDto signUpRequestDto) {
@@ -45,7 +39,7 @@ public class UserService {
 //            throw new AuthenticationServiceException("모든 필드는 필수입니다");
 //        }
 
-        LocalDateTime PWExpirationDate = LocalDate.now().plusDays(90).atStartOfDay();
+//        LocalDateTime PWExpirationDate = LocalDate.now().plusDays(90).atStartOfDay();
 
         // 새 사용자 저장
         User signUpUser = User.builder()
@@ -54,7 +48,6 @@ public class UserService {
                 .password(bCryptPasswordEncoder.encode(signUpRequestDto.getPassword()))
                 .profileImage("base_image")
                 .role("ROLE_USER")
-                .passwordExpirationDate(PWExpirationDate)
                 .build();
 
         userRepository.save(signUpUser);
@@ -69,10 +62,9 @@ public class UserService {
             throw new GeneralException(ErrorInfo.WRONG_PASSWORD);
         }
 
-        //TODO. JwtUtil.createAccessToken, createRefreshToken 메소드의 expiredMs 수정하기
         return JwtDto.builder()
-                .accessToken(jwtUtil.createAccessToken(user.getUserId(), user.getRole(), 0))
-                .refreshToken(jwtUtil.createRefreshToken(user.getUserId(), 0))
+                .accessToken(jwtUtil.createAccessToken(user.getUserId(), user.getRole()))
+                .refreshToken(jwtUtil.createRefreshToken(user.getUserId()))
                 .build();
 
         // refreshToken 저장

@@ -1,4 +1,4 @@
-package com.example.weup.jwt;
+package com.example.weup.security;
 
 import lombok.Builder;
 import lombok.Data;
@@ -10,4 +10,5 @@ public class JwtDto {
     private String accessToken;
 
     private String refreshToken;
+
 }

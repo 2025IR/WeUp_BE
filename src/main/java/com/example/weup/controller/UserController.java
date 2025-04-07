@@ -3,23 +3,18 @@ package com.example.weup.controller;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.SignInRequestDto;
 import com.example.weup.dto.request.SignUpRequestDto;
-import com.example.weup.dto.request.TokenRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
-import com.example.weup.dto.response.TokenResponseDTO;
 import com.example.weup.entity.User;
-import com.example.weup.jwt.JWTUtil;
-import com.example.weup.jwt.JwtDto;
+import com.example.weup.security.JwtUtil;
+import com.example.weup.security.JwtDto;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.service.UserService;
-import jakarta.servlet.http.HttpServletResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.HashMap;
 
 @RestController
 @RequestMapping("/user")
@@ -28,7 +23,7 @@ public class UserController {
 
     private final UserService userService;
 
-    private final JWTUtil jwtUtil;
+    private final JwtUtil jwtUtil;
 
     private final UserRepository userRepository;
 
@@ -42,7 +37,7 @@ public class UserController {
     }
 
     // Login Logic
-    @PostMapping("/signin")
+    @PostMapping("/signIn")
     public ResponseEntity<?> signIn(@RequestBody SignInRequestDto signInRequestDto) {
 
         JwtDto jwtDto = userService.signIn(signInRequestDto);

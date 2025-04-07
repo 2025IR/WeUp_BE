@@ -1,11 +1,12 @@
 package com.example.weup.config;
 
-import com.example.weup.jwt.JWTFilter;
-import com.example.weup.jwt.JWTUtil;
-import com.example.weup.jwt.JwtAccessDeniedHandler;
-import com.example.weup.jwt.JwtAuthenticationEntryPoint;
-import com.example.weup.jwt.JwtAuthenticationFilter;
+import com.example.weup.security.*;
 import com.example.weup.repository.UserRepository;
+import com.example.weup.security.exception.JwtAccessDeniedHandler;
+import com.example.weup.security.exception.JwtAuthenticationEntryPoint;
+import com.example.weup.security.exception.JwtAuthenticationFailureHandler;
+import com.example.weup.security.exception.JwtAuthenticationSuccessHandler;
+import com.example.weup.service.CustomUserDetailsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
@@ -13,11 +14,14 @@ import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.web.cors.CorsConfiguration;
@@ -36,83 +40,137 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 @RequiredArgsConstructor
 public class SecurityConfig {
 
-    private final AuthenticationConfiguration authenticationConfiguration;
-    // Spring Security의 인증 관련 설정 가져오고, AuthenticationManager 생성
-    private final JWTUtil jwtUtil;
-    private final ObjectMapper objectMapper;
-    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
-    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
-    private final UserRepository userRepository;
-    private final JwtProperties jwtProperties;
+     private final CustomUserDetailsService customUserDetailsService;
 
-    @Bean
-    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
-    // 인증 요청을 처리하는 주요 컴포넌트, 로그인 시 사용자 인증에 사용
-        return configuration.getAuthenticationManager();
-    }
+     private final JwtSignInAuthenticationFilter jwtSignInAuthenticationFilter;
+     private final JwtFilter jwtFilter;
 
-    @Bean
-    public BCryptPasswordEncoder bCryptPasswordEncoder() {
-    // 비밀번호를 암호화하거나 저장된 비밀번호와 입력된 비밀번호를 비교할 때 사용
-    // UserDetailsService에서 사용자 비밀번호를 확인할 때 사용
-        return new BCryptPasswordEncoder();
-    }
+     private final JwtAuthenticationSuccessHandler jwtAuthenticationSuccessHandler;
+     private final JwtAuthenticationFailureHandler jwtAuthenticationFailureHandler;
 
-    @Bean
-    public CorsConfigurationSource corsConfigurationSource() {
-        CorsConfiguration configuration = new CorsConfiguration();
-        configuration.addAllowedOriginPattern("http://localhost:8080"); // 허용할 도메인
-        configuration.addAllowedOriginPattern("ws://localhost:8080"); // Pattern 붙이면 포트 와카 허용
-        configuration.addAllowedMethod("*"); // HTTP 메서드 허용
-        configuration.addAllowedHeader("*"); // 헤더 허용
-        configuration.setAllowCredentials(true); // 자격 증명 허용
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
-        source.registerCorsConfiguration("/**", configuration); // 모든 경로에 적용
-        return source;
-    }
+     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
-    @Bean
-    public RoleHierarchy roleHierarchy() {
-        RoleHierarchyImpl roleHierarchy = new RoleHierarchyImpl();
-        roleHierarchy.setHierarchy("ROLE_ADMIN > ROLE_USER"); // ADMIN은 USER 권한도 자동 포함
-        return roleHierarchy;
-    }
+     private final ObjectMapper objectMapper;
 
-    @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+     @Bean
+     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
 
-        //csrf disable -> JWT는 Stateless 방식으로 인증을 처리하기 때문에 불필요
-        http.csrf((auth) -> auth.disable());
+         http
+                 .csrf(AbstractHttpConfigurer::disable)
+                 .formLogin(AbstractHttpConfigurer::disable)
+                 .httpBasic(AbstractHttpConfigurer::disable)
+                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
-        // CORS 활성화
-        http.cors((cors) -> cors.configurationSource(corsConfigurationSource()));
+                 .exceptionHandling(exception -> exception
+                         .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+                         .accessDeniedHandler(jwtAccessDeniedHandler)
+                 )
 
-        //Form 로그인 방식 disable -> JSON으로 된 로그인 정보 처리
-        http.formLogin((auth) -> auth.disable());
+                 .authorizeHttpRequests(auth -> auth
+                         .requestMatchers("/user/login", "/user/signup").permitAll()
+                         .requestMatchers("/project/**").hasRole("USER")
+                         .anyRequest().authenticated()
+                 )
 
-        //http basic 인증 장식 disable -> JWT 기반 인증 방식 사용
-        http.httpBasic((auth) -> auth.disable());
+                 .addFilterBefore(jwtSignInAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
-        http.exceptionHandling((exceptionHandling) -> exceptionHandling
-            .authenticationEntryPoint(jwtAuthenticationEntryPoint)
-            .accessDeniedHandler(jwtAccessDeniedHandler));
+         return http.build();
+     }
 
-        //경로별 인가 작업
-        http.authorizeHttpRequests((auth) ->
-                auth.requestMatchers("/user/login", "/user/signup", "/user/token", "/", "/chat/**").permitAll() // 접근을 전체 허용할 경로 설정
-                        .requestMatchers("/admin").hasRole("ADMIN") // 권한에 따른 접근 허용 설정
-                        .anyRequest().authenticated()); // 그 외에는 인증을 요구
+     @Bean
+     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
+         return http.getSharedObject(AuthenticationManagerBuilder.class)
+                 .userDetailsService(customUserDetailsService)
+                 .passwordEncoder(passwordEncoder())
+                 .and()
+                 .build();
+     }
 
-        // JWT 인증 필터
-        http.addFilterBefore(new JWTFilter(jwtUtil, userRepository), UsernamePasswordAuthenticationFilter.class);
-        
-        // 로그인 처리 필터
-        http.addFilterBefore(new JwtAuthenticationFilter(authenticationManager(authenticationConfiguration), jwtUtil, objectMapper, userRepository, jwtProperties), JWTFilter.class);
+     @Bean
+     public PasswordEncoder passwordEncoder() {
+         return new BCryptPasswordEncoder();
+     }
 
-        http.sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
-        //세션 관리를 stateless로, JWT를 사용하니까 서버에 세션 상태를 저장하지 않음
-
-        return http.build();
-        //구성된 httpSecurity 객체를 반환하고, 반환된 객체로 스프링 스큐리티가 필터 체인을 생성함
-    }
 }
+//    private final AuthenticationConfiguration authenticationConfiguration;
+//    // Spring Security의 인증 관련 설정 가져오고, AuthenticationManager 생성
+//    private final JwtUtil jwtUtil;
+//    private final ObjectMapper objectMapper;
+//    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+//    private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+//    private final UserRepository userRepository;
+//    private final JwtProperties jwtProperties;
+//
+//    @Bean
+//    public AuthenticationManager authenticationManager(AuthenticationConfiguration configuration) throws Exception {
+//    // 인증 요청을 처리하는 주요 컴포넌트, 로그인 시 사용자 인증에 사용
+//        return configuration.getAuthenticationManager();
+//    }
+//
+//    @Bean
+//    public BCryptPasswordEncoder bCryptPasswordEncoder() {
+//    // 비밀번호를 암호화하거나 저장된 비밀번호와 입력된 비밀번호를 비교할 때 사용
+//    // UserDetailsService에서 사용자 비밀번호를 확인할 때 사용
+//        return new BCryptPasswordEncoder();
+//    }
+//
+//    @Bean
+//    public CorsConfigurationSource corsConfigurationSource() {
+//        CorsConfiguration configuration = new CorsConfiguration();
+//        configuration.addAllowedOriginPattern("http://localhost:8080"); // 허용할 도메인 -> 프론트 배포 도메인
+//        configuration.addAllowedOriginPattern("ws://localhost:8080"); // Pattern 붙이면 포트 와카 허용
+//        configuration.addAllowedMethod("*"); // HTTP 메서드 허용
+//        configuration.addAllowedHeader("*"); // 헤더 허용
+//        configuration.setAllowCredentials(true); // 자격 증명 허용
+//        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+//        source.registerCorsConfiguration("/**", configuration); // 모든 경로에 적용
+//        return source;
+//    }
+//
+//    @Bean
+//    public RoleHierarchy roleHierarchy() {
+//        RoleHierarchyImpl roleHierarchy = new RoleHierarchyImpl();
+//        roleHierarchy.setHierarchy("ROLE_ADMIN > ROLE_USER"); // ADMIN은 USER 권한도 자동 포함
+//        return roleHierarchy;
+//    }
+//
+//    @Bean
+//    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+//
+//        //csrf disable -> JWT는 Stateless 방식으로 인증을 처리하기 때문에 불필요
+//        http.csrf((auth) -> auth.disable());
+//
+//        // CORS 활성화
+//        http.cors((cors) -> cors.configurationSource(corsConfigurationSource()));
+//
+//        //Form 로그인 방식 disable -> JSON으로 된 로그인 정보 처리 -> 왜 disable??
+//        http.formLogin((auth) -> auth.disable());
+//
+//        //http basic 인증 장식 disable -> JWT 기반 인증 방식 사용 -> 왜 disable??
+//        http.httpBasic((auth) -> auth.disable());
+//
+//        http.exceptionHandling((exceptionHandling) -> exceptionHandling
+//            .authenticationEntryPoint(jwtAuthenticationEntryPoint)
+//            .accessDeniedHandler(jwtAccessDeniedHandler));
+//
+//        //경로별 인가 작업
+//        http.authorizeHttpRequests((auth) ->
+//                auth.requestMatchers("/user/login", "/user/signup", "/user/token").permitAll() // 접근을 전체 허용할 경로 설정 -> 토큰 재발급 url은 전체 경로로 설정하면 안됨
+//                        .requestMatchers("/admin").hasRole("USER") // 권한에 따른 접근 허용 설정 -> ADMIN이 아니라 USER로
+//                        .anyRequest().authenticated()); // 그 외에는 인증을 요구
+//
+//        // JWT 인증 필터
+//        http.addFilterBefore(new JwtFilter(jwtUtil, userRepository), UsernamePasswordAuthenticationFilter.class);
+//
+//        // 로그인 처리 필터
+//        http.addFilterBefore(new JwtSignInAuthenticationFilter(authenticationManager(authenticationConfiguration), jwtUtil, objectMapper, userRepository, jwtProperties), JwtFilter.class);
+//
+//        http.sessionManagement((session) -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS));
+//        //세션 관리를 stateless로, JWT를 사용하니까 서버에 세션 상태를 저장하지 않음
+//
+//        return http.build();
+//        //구성된 httpSecurity 객체를 반환하고, 반환된 객체로 스프링 스큐리티가 필터 체인을 생성함
+//    }
+//}

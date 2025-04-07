@@ -28,9 +28,12 @@ public enum ErrorInfo {
 
     WRONG_PASSWORD(HttpStatus.BAD_REQUEST, "Wrong password"),
 
-    FORBIDDEN(HttpStatus.BAD_REQUEST, "access denied"),
-
+    // 401 오류, 인증되지 않은 사용자 오류
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "User unauthorized"),
+
+    // 403 오류여야 하기 때문에 BAD_REQUEST -> FORBIDDEN 으로 수정, 인증은 됐는데 권한이 없는 사용자 오류
+    FORBIDDEN(HttpStatus.FORBIDDEN, "access denied"),
+
     BAD_CREDENTIALS(HttpStatus.UNAUTHORIZED, "Invalid username or password");
 
     private final HttpStatus httpStatus;

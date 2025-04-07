@@ -10,12 +10,13 @@ import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
+@Getter
+@Setter
 @Builder
 @NoArgsConstructor
 @AllArgsConstructor
 @Entity
-@Table(name = "jwt_user")
-@Data
+@Table(name = "user")
 public class User implements UserDetails {
 
     @Id
@@ -44,11 +45,11 @@ public class User implements UserDetails {
 //    @Column
 //    private String refreshToken;
 
-    private LocalDateTime passwordExpirationDate;  // ???
+//    private LocalDateTime passwordExpirationDate;  // ???
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority("ROLE_USER"));
+        return List.of(new SimpleGrantedAuthority(this.role));
     }
 
     @Override
@@ -73,6 +74,6 @@ public class User implements UserDetails {
 
     @Override
     public boolean isEnabled() {
-        return true;
+        return !isUserWithdrawal;
     }
 }
