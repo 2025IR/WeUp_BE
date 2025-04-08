@@ -11,6 +11,7 @@ import com.example.weup.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
@@ -19,11 +20,9 @@ public class UserService {
 
     private final UserRepository userRepository;
 
-    private final BCryptPasswordEncoder bCryptPasswordEncoder;
+    private final PasswordEncoder passwordEncoder;
 
     private final JwtUtil jwtUtil;
-
-    //private final JwtProperties jwtProperties;
 
     @Transactional
     public void signUp(SignUpRequestDto signUpRequestDto) {
@@ -45,7 +44,7 @@ public class UserService {
         User signUpUser = User.builder()
                 .name(signUpRequestDto.getName())
                 .email(signUpRequestDto.getEmail())
-                .password(bCryptPasswordEncoder.encode(signUpRequestDto.getPassword()))
+                .password(passwordEncoder.encode(signUpRequestDto.getPassword()))
                 .profileImage("base_image")
                 .role("ROLE_USER")
                 .build();
@@ -53,22 +52,21 @@ public class UserService {
         userRepository.save(signUpUser);
     }
 
-    @Transactional
-    public JwtDto signIn(SignInRequestDto signInRequestDto) {
-        User user = userRepository.findByEmail(signInRequestDto.getEmail())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-
-        if (!bCryptPasswordEncoder.matches(signInRequestDto.getPassword(), user.getPassword())) {
-            throw new GeneralException(ErrorInfo.WRONG_PASSWORD);
-        }
-
-        return JwtDto.builder()
-                .accessToken(jwtUtil.createAccessToken(user.getUserId(), user.getRole()))
-                .refreshToken(jwtUtil.createRefreshToken(user.getUserId()))
-                .build();
-
-        // refreshToken 저장
-    }
+//    @Transactional
+//    public JwtDto signIn(SignInRequestDto signInRequestDto) {
+//        User user = userRepository.findByEmail(signInRequestDto.getEmail())
+//                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+//
+//        if (!bCryptPasswordEncoder.matches(signInRequestDto.getPassword(), user.getPassword())) {
+//            throw new GeneralException(ErrorInfo.WRONG_PASSWORD);
+//        }
+//
+//        return JwtDto.builder()
+//                .accessToken(jwtUtil.createAccessToken(user.getUserId(), user.getRole()))
+//                .refreshToken(jwtUtil.createRefreshToken(user.getUserId()))
+//                .build();
+//
+//    }
 
 //    @Transactional
 //    public TokenResponseDTO refreshToken(String refreshToken) {

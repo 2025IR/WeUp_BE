@@ -3,6 +3,7 @@ package com.example.weup.security;
 import com.example.weup.repository.UserRepository;
 import io.jsonwebtoken.*;
 import io.jsonwebtoken.security.Keys;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -22,11 +23,6 @@ public class JwtUtil {
     private final JwtProperties jwtProperties;
 
     private final SecretKey secretKey;
-
-    @Bean
-    public SecretKey jwtSecretKey(@Value("${jwt.secret}") String secret) {
-        return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));
-    }
 
     public String createAccessToken(Long userId, String role) {
         Date now = new Date();
@@ -53,6 +49,16 @@ public class JwtUtil {
                 .claim("userId", userId)
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
+    }
+
+    public String resolveToken(HttpServletRequest request) {
+        String authorization = request.getHeader("Authorization");
+
+        if (authorization != null && authorization.startsWith("Bearer ")) {
+            return authorization.substring(7);
+        }
+
+        return null;
     }
 
     public boolean isExpired(String token) {

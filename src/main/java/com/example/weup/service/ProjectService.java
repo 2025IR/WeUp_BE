@@ -84,7 +84,7 @@ public class ProjectService {
             Map<String, Object> result = new HashMap<>();
             result.put("projectId", savedProject.getId());
             result.put("projectName", savedProject.getName());
-            result.put("userId", user.getId());
+            result.put("userId", user.getUserId());
             result.put("userName", user.getName());
             result.put("memberRole", savedMember.getRole());
             

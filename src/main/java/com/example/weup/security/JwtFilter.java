@@ -28,16 +28,14 @@ public class JwtFilter extends OncePerRequestFilter {
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
-        String authorization = request.getHeader("Authorization");
+        String token = jwtUtil.resolveToken(request);
 
-        if(authorization == null || !authorization.startsWith("Bearer ")) {
+        if(token == null) {
             log.debug("JWT 토큰 없음 또는 형식 오류");
             filterChain.doFilter(request,response);
             return;
         }
 
-        String token = authorization.substring(7);
-//
 //        log.debug("authorization now");
 //        String token = authorization.split(" ")[1];
 

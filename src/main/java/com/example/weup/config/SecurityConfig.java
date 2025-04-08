@@ -8,12 +8,15 @@ import com.example.weup.security.exception.JwtAuthenticationFailureHandler;
 import com.example.weup.security.exception.JwtAuthenticationSuccessHandler;
 import com.example.weup.service.CustomUserDetailsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.Filter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchy;
 import org.springframework.security.access.hierarchicalroles.RoleHierarchyImpl;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.ProviderManager;
+import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -42,24 +45,23 @@ public class SecurityConfig {
 
      private final CustomUserDetailsService customUserDetailsService;
 
-     private final JwtSignInAuthenticationFilter jwtSignInAuthenticationFilter;
      private final JwtFilter jwtFilter;
 
-     private final JwtAuthenticationSuccessHandler jwtAuthenticationSuccessHandler;
-     private final JwtAuthenticationFailureHandler jwtAuthenticationFailureHandler;
+     private final JwtAuthenticationSuccessHandler jwtAuthenticationSuccessHandler;  //Component 대신 매개변수로 의존성 주입해도 됨
+
+     private final JwtAuthenticationFailureHandler jwtAuthenticationFailureHandler;  //Component 대신 매개변수로 의존성 주입해도 됨
 
      private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+
      private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
      private final ObjectMapper objectMapper;
 
      @Bean
-     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+     public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
 
          http
                  .csrf(AbstractHttpConfigurer::disable)
-                 .formLogin(AbstractHttpConfigurer::disable)
-                 .httpBasic(AbstractHttpConfigurer::disable)
                  .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
 
                  .exceptionHandling(exception -> exception
@@ -73,19 +75,24 @@ public class SecurityConfig {
                          .anyRequest().authenticated()
                  )
 
-                 .addFilterBefore(jwtSignInAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
+                 .addFilterAt(jwtSignInAuthenticationFilter(authenticationManager), UsernamePasswordAuthenticationFilter.class)
                  .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
          return http.build();
      }
 
      @Bean
-     public AuthenticationManager authenticationManager(HttpSecurity http) throws Exception {
-         return http.getSharedObject(AuthenticationManagerBuilder.class)
-                 .userDetailsService(customUserDetailsService)
-                 .passwordEncoder(passwordEncoder())
-                 .and()
-                 .build();
+     public JwtSignInAuthenticationFilter jwtSignInAuthenticationFilter(AuthenticationManager authenticationManager) {
+         return new JwtSignInAuthenticationFilter(authenticationManager, objectMapper, jwtAuthenticationSuccessHandler, jwtAuthenticationFailureHandler);
+     }
+
+     @Bean
+     public AuthenticationManager authenticationManager() {
+         DaoAuthenticationProvider provider = new DaoAuthenticationProvider();
+         provider.setUserDetailsService(customUserDetailsService);
+         provider.setPasswordEncoder(passwordEncoder());
+
+         return new ProviderManager(provider);
      }
 
      @Bean
@@ -94,6 +101,7 @@ public class SecurityConfig {
      }
 
 }
+
 //    private final AuthenticationConfiguration authenticationConfiguration;
 //    // Spring Security의 인증 관련 설정 가져오고, AuthenticationManager 생성
 //    private final JwtUtil jwtUtil;

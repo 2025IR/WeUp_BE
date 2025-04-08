@@ -10,6 +10,7 @@ import com.example.weup.security.JwtUtil;
 import com.example.weup.security.JwtDto;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.service.UserService;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -36,29 +37,40 @@ public class UserController {
         return "회원가입하신 걸 환영합니다, " + username + "님!";  // 이 String 값을 ResponseEntity에 담아서
     }
 
-    // Login Logic
-    @PostMapping("/signIn")
-    public ResponseEntity<?> signIn(@RequestBody SignInRequestDto signInRequestDto) {
-
-        JwtDto jwtDto = userService.signIn(signInRequestDto);
-
-        return new ResponseEntity<>(jwtDto.getAccessToken(), HttpStatus.OK);  // 추후 수정
-    }
+//    // Login Logic
+//    @PostMapping("/signIn")
+//    public ResponseEntity<?> signIn(@RequestBody SignInRequestDto signInRequestDto) {
+//
+//        JwtDto jwtDto = userService.signIn(signInRequestDto);
+//
+//        return new ResponseEntity<>(jwtDto.getAccessToken(), HttpStatus.OK);
+//    }
 
     @PostMapping("/profile")
-    public DataResponseDTO<GetProfileResponseDTO> profile(@RequestHeader("Authorization") String token) {
-        if (token == null || !token.startsWith("Bearer ")) {
-            throw new RuntimeException(ErrorInfo.UNAUTHORIZED.getMessage("Authorization 헤더가 필요합니다"));
+    public ResponseEntity<GetProfileResponseDTO> profile(HttpServletRequest request) {
+//        if (token == null || !token.startsWith("Bearer ")) {
+//            throw new RuntimeException(ErrorInfo.UNAUTHORIZED.getMessage("Authorization 헤더가 필요합니다"));
+//        }
+//
+//        String accessToken = token.substring(7);
+        String token = jwtUtil.resolveToken(request);
+
+        if (token == null || jwtUtil.isExpired(token)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
 
-        String accessToken = token.substring(7);
-        jwtUtil.validateToken(accessToken);
-
-        Long userId = jwtUtil.getUserId(accessToken);
+        Long userId = jwtUtil.getUserId(token);
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new RuntimeException(ErrorInfo.USER_NOT_FOUND.getMessage("사용자를 찾을 수 없습니다")));
+                .orElseThrow(() -> new RuntimeException(ErrorInfo.USER_NOT_FOUND.getMessage("사용자를 찾을 수 없습니다")));  //RuntimeException?
 
-        return DataResponseDTO.of(new GetProfileResponseDTO(user));
+        GetProfileResponseDTO getProfileResponseDTO = GetProfileResponseDTO.builder()
+                .name(user.getName())
+                .email(user.getEmail())
+                .password(user.getPassword())
+                .profileImage(user.getProfileImage())
+                .build();
+
+        return ResponseEntity.ok(getProfileResponseDTO);
     }
 
 //    @PostMapping("/token")

@@ -8,6 +8,8 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.web.authentication.AuthenticationFailureHandler;
+import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
 import java.io.IOException;
@@ -15,15 +17,15 @@ import java.io.IOException;
 @Slf4j
 public class JwtSignInAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
 
-    private final AuthenticationManager authenticationManager;
-
     private final ObjectMapper objectMapper;
 
-    public JwtSignInAuthenticationFilter(AuthenticationManager authenticationManager, ObjectMapper objectMapper) {
-        this.authenticationManager = authenticationManager;
-        this.objectMapper = objectMapper;
-
+    public JwtSignInAuthenticationFilter(AuthenticationManager authenticationManager, ObjectMapper objectMapper,
+                                         AuthenticationSuccessHandler successHandler, AuthenticationFailureHandler failureHandler) {
+        setAuthenticationManager(authenticationManager);
         setFilterProcessesUrl("/user/signIn");
+        setAuthenticationSuccessHandler(successHandler);
+        setAuthenticationFailureHandler(failureHandler);
+        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -33,16 +35,13 @@ public class JwtSignInAuthenticationFilter extends UsernamePasswordAuthenticatio
             SignInRequestDto requestDto = objectMapper.readValue(request.getInputStream(), SignInRequestDto.class);
             UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(requestDto.getEmail(), requestDto.getPassword());
 
-            return authenticationManager.authenticate(authenticationToken);
+            return getAuthenticationManager().authenticate(authenticationToken);
         }
         catch (IOException e) {
             throw new AuthenticationServiceException("", e);
         }
     }
 }
-
-
-
 
 //@Slf4j
 //public class JwtAuthenticationFilter extends UsernamePasswordAuthenticationFilter {
