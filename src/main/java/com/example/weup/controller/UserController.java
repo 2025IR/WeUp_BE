@@ -1,13 +1,10 @@
 package com.example.weup.controller;
 
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.dto.request.SignInRequestDto;
 import com.example.weup.dto.request.SignUpRequestDto;
-import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
 import com.example.weup.entity.User;
 import com.example.weup.security.JwtUtil;
-import com.example.weup.security.JwtDto;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;

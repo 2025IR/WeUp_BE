@@ -46,7 +46,7 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         Long userId = jwtUtil.getUserId(token);
-        String role = jwtUtil.getRole(token);
+//        String role = jwtUtil.getRole(token);
 
         // 사용자 ID로 사용자 정보 조회
         User user = userRepository.findById(userId)

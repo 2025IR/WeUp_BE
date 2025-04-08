@@ -1,6 +1,5 @@
 package com.example.weup.dto.response;
 
-import com.example.weup.entity.User;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;

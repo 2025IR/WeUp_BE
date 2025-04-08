@@ -2,15 +2,12 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.dto.request.SignInRequestDto;
 import com.example.weup.dto.request.SignUpRequestDto;
 import com.example.weup.entity.User;
 import com.example.weup.security.JwtUtil;
-import com.example.weup.security.JwtDto;
 import com.example.weup.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -21,8 +18,6 @@ public class UserService {
     private final UserRepository userRepository;
 
     private final PasswordEncoder passwordEncoder;
-
-    private final JwtUtil jwtUtil;
 
     @Transactional
     public void signUp(SignUpRequestDto signUpRequestDto) {

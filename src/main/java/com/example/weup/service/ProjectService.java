@@ -48,8 +48,7 @@ public class ProjectService {
 
             // 3. 권한 확인 (멤버에서)
             try {
-                boolean isMember = memberRepository.existsByUserAndProject(user, project);
-                return isMember;
+                return memberRepository.existsByUserAndProject(user, project);
             } catch (Exception e) {
                 return false;
             }
