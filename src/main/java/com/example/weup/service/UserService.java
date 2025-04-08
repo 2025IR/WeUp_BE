@@ -4,7 +4,6 @@ import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.SignUpRequestDto;
 import com.example.weup.entity.User;
-import com.example.weup.security.JwtUtil;
 import com.example.weup.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
