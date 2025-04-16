@@ -30,7 +30,6 @@ public class UserService {
 
         if (userRepository.existsByEmail(signUpRequestDto.getEmail())) {
             throw new GeneralException(ErrorInfo.USER_ALREADY_EXIST);
-            //todo. 이거 이메일을 안 넣어도 이미 존재합니다라고 뜸. 어짜피 널값처린 프론트에서 하니까?
         }
 
         User signUpUser = User.builder()
