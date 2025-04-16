@@ -3,8 +3,6 @@ package com.example.weup.dto.response;
 import com.example.weup.constant.ErrorInfo;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Getter;
-import org.springframework.validation.BindingResult;
-import org.springframework.web.bind.MethodArgumentNotValidException;
 
 import java.time.LocalDateTime;
 

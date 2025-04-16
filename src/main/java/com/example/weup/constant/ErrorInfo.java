@@ -4,7 +4,6 @@ import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 
-import java.util.Optional;
 
 @Getter
 @RequiredArgsConstructor
@@ -28,10 +27,6 @@ public enum ErrorInfo {
 
     private final HttpStatus httpStatus;
     private final String message;
-
-//    public String getMessage(Throwable e) {
-//        return String.format("%s - %s", this.message, Optional.ofNullable(e.getMessage()).orElse(""));
-//    }
 
     public String getMessage() {
         return String.format(this.message);
