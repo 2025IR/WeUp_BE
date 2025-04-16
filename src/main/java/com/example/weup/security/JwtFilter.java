@@ -31,13 +31,10 @@ public class JwtFilter extends OncePerRequestFilter {
         String token = jwtUtil.resolveToken(request);
 
         if(token == null) {
-            log.debug("JWT 토큰 없음 또는 형식 오류");
+            log.warn("JWT 토큰 없음 또는 형식 오류");
             filterChain.doFilter(request,response);
             return;
         }
-
-//        log.debug("authorization now");
-//        String token = authorization.split(" ")[1];
 
         if(jwtUtil.isExpired(token)) {
             log.warn("JWT 토큰 만료");
@@ -46,17 +43,9 @@ public class JwtFilter extends OncePerRequestFilter {
         }
 
         Long userId = jwtUtil.getUserId(token);
-//        String role = jwtUtil.getRole(token);
 
-        // 사용자 ID로 사용자 정보 조회
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
-
-//        if (user.getUserId() == null) {
-//            // 사용자를 찾을 수 없는 경우 로그 기록 후 계속 진행
-//            log.warn("User not found with ID: {}", userId);
-//            user.setRole(role);
-//        }
 
         UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
 

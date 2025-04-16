@@ -15,10 +15,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
-/**
- *  요청 시에 인증에 실패했을 경우 처리
- */
-
 @Slf4j
 @Component
 @RequiredArgsConstructor
@@ -28,15 +24,16 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
 
     @Override
     public void commence(HttpServletRequest request, HttpServletResponse response,
-                        AuthenticationException authException) throws IOException, ServletException {
+                        AuthenticationException authException) throws IOException {
         
         log.warn("인증 실패 : {}", authException.getMessage());
-        
-        response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
+
+        ErrorResponseDTO errorResponse = ErrorResponseDTO.of(ErrorInfo.UNAUTHORIZED, "인증에 실패했습니다.");
+
+        response.setStatus(errorResponse.getStatus());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
-        
-        ErrorResponseDTO errorResponse = ErrorResponseDTO.of(ErrorInfo.UNAUTHORIZED, "인증에 실패했습니다.");
+
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
     }
 } 

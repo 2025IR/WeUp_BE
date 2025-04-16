@@ -23,6 +23,6 @@ public class Member {
     private Project project;
 
     @Column(nullable = false)
-    private String role = "MEMBER"; // MEMBER, LEADER (is_leader)
+    private String role = "MEMBER";
 
 } 

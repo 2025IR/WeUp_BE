@@ -12,14 +12,5 @@ import lombok.NoArgsConstructor;
 public class GetProfileResponseDTO {
     private String name;
     private String email;
-    private String password;
     private String profileImage;
-
-//    public GetProfileResponseDTO(User user) {
-//        this.name = user.getName();
-//        this.email = user.getEmail();
-//        this.password = user.getPassword();
-//        this.profileImage = user.getProfileImage();
-//    }
-
 } 

@@ -1,5 +1,7 @@
 package com.example.weup.service;
 
+import com.example.weup.GeneralException;
+import com.example.weup.constant.ErrorInfo;
 import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
 import com.example.weup.entity.User;
@@ -25,7 +27,6 @@ public class ProjectService {
 
     public boolean hasAccess(Long userId, Long projectId) {
 
-        // 1. 사용자 조회
         User user = userRepository.findById(userId)
                 .orElse(null);
 
@@ -37,7 +38,6 @@ public class ProjectService {
             return true;
         }
 
-        // 2. 프로젝트 조회
         try {
             Project project = projectRepository.findById(projectId)
                     .orElse(null);
@@ -46,7 +46,6 @@ public class ProjectService {
                 return false;
             }
 
-            // 3. 권한 확인 (멤버에서)
             try {
                 return memberRepository.existsByUserAndProject(user, project);
             } catch (Exception e) {
@@ -61,17 +60,14 @@ public class ProjectService {
     public Map<String, Object> createTestProjects(Long userId) {
 
         try {
-            // 1. 사용자 조회
             User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-            // 2. 프로젝트 생성
             Project project = new Project();
             project.setName("이름 - " + user.getName());
 
             Project savedProject = projectRepository.save(project);
 
-            // 3. 멤버 생성
             Member member = new Member();
             member.setUser(user);
             member.setProject(savedProject);
@@ -79,7 +75,6 @@ public class ProjectService {
 
             Member savedMember = memberRepository.save(member);
 
-            // 4. 결과 반환
             Map<String, Object> result = new HashMap<>();
             result.put("projectId", savedProject.getId());
             result.put("projectName", savedProject.getName());
@@ -88,8 +83,10 @@ public class ProjectService {
             result.put("memberRole", savedMember.getRole());
             
             return result;
+        } catch (GeneralException e) {
+            throw e;
         } catch (Exception e) {
-            throw new RuntimeException("테스트 프로젝트 생성 중 오류 발생: " + e.getMessage(), e);
+            throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
         }
     }
 } 

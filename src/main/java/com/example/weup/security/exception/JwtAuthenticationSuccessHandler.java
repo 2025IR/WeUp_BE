@@ -43,3 +43,4 @@ public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHan
         log.info("로그인 성공 - USER_ID : {}", user.getUserId());
     }
 }
+

@@ -1,6 +1,5 @@
 package com.example.weup.service;
 
-import com.example.weup.entity.User;
 import com.example.weup.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.core.userdetails.UserDetails;
