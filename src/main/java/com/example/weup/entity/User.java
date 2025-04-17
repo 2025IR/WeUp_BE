@@ -6,7 +6,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -21,17 +20,11 @@ public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false, updatable = false)
+    @Column(name = "user_id", nullable = false, updatable = false)
     private Long userId;
 
     @Column(nullable = false, length = 10)
     private String name;
-
-    @Column(nullable = false, unique = true)
-    private String email;
-
-    @Column(nullable = false)
-    private String password;
 
     @Column(name = "profile_image", nullable = false)
     private String profileImage;
@@ -42,6 +35,9 @@ public class User implements UserDetails {
     @Column(name = "is_user_withdrawal", nullable = false)
     private boolean isUserWithdrawal;
 
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true) //고아 처리??
+    private AccountSocial accountSocial;
+
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return List.of(new SimpleGrantedAuthority(this.role));
@@ -49,7 +45,12 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return this.email;
+        return accountSocial.getEmail();
+    }
+
+    @Override
+    public String getPassword() {
+        return accountSocial.getPassword();
     }
 
     @Override
