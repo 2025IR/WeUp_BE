@@ -2,6 +2,7 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.controller.MailController;
 import com.example.weup.dto.request.ProfileEditRequestDTO;
 import com.example.weup.dto.request.SignUpRequestDto;
 import com.example.weup.dto.request.TokenRequestDTO;
@@ -11,6 +12,7 @@ import com.example.weup.entity.AccountSocial;
 import com.example.weup.entity.User;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.security.JwtUtil;
+import com.example.weup.service.MailService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -28,11 +30,19 @@ public class UserService {
 
     private final PasswordEncoder passwordEncoder;
 
+    private final MailService mailService;
+
     @Transactional
     public void signUp(SignUpRequestDto signUpRequestDto) {
 
         if (userRepository.existsByAccountSocialEmail(signUpRequestDto.getEmail())) {
-            throw new GeneralException(ErrorInfo.USER_ALREADY_EXIST);
+            throw new GeneralException(ErrorInfo.EMAIL_ALREADY_EXIST);
+        }
+        
+        // 이메일 인증 상태 확인
+        String email = signUpRequestDto.getEmail();
+        if (!mailService.isEmailVerified(email)) {
+            throw new GeneralException(ErrorInfo.EMAIL_NOT_VERIFIED);
         }
 
         User signUpUser = User.builder()
