@@ -1,12 +1,11 @@
 package com.example.weup.controller;
 
-import com.example.weup.GeneralException;
-import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.request.PasswordRequestDTO;
+import com.example.weup.dto.request.ProfileEditRequestDTO;
 import com.example.weup.dto.request.SignUpRequestDto;
 import com.example.weup.dto.request.TokenRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
-import com.example.weup.entity.User;
 import com.example.weup.security.JwtDto;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.repository.UserRepository;
@@ -42,19 +41,7 @@ public class UserController {
     public ResponseEntity<DataResponseDTO<GetProfileResponseDTO>> profile(HttpServletRequest request) {
         String token = jwtUtil.resolveToken(request);
 
-        if (token == null || jwtUtil.isExpired(token)) {
-            throw new GeneralException(ErrorInfo.UNAUTHORIZED);
-        }
-
-        Long userId = jwtUtil.getUserId(token);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-
-        GetProfileResponseDTO getProfileResponseDTO = GetProfileResponseDTO.builder()
-                .name(user.getName())
-                .email(user.getEmail())
-                .profileImage(user.getProfileImage())
-                .build();
+        GetProfileResponseDTO getProfileResponseDTO = userService.getProfile(token);
 
         return ResponseEntity.ok(DataResponseDTO.of(getProfileResponseDTO, "프로필 조회 완료"));
     }
@@ -74,5 +61,29 @@ public class UserController {
                 .header("Authorization", "Bearer " + newAccessToken)
                 .header("RefreshToken", "Bearer " + newRefreshToken)
                 .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료"));
+    }
+
+    @PostMapping("/password")
+    public ResponseEntity<DataResponseDTO<String>> changePassword(HttpServletRequest request, @RequestBody PasswordRequestDTO passwordRequestDTO) {
+        String token = jwtUtil.resolveToken(request);
+        userService.changePassword(token, passwordRequestDTO);
+        String message = "비밀번호가 성공적으로 변경되었습니다.";
+        return ResponseEntity.ok(DataResponseDTO.of(message));
+    }
+
+    @PutMapping("/profile/edit")
+    public ResponseEntity<DataResponseDTO<String>> editProfile(HttpServletRequest request, @RequestBody ProfileEditRequestDTO profileEditRequestDTO) {
+        String token = jwtUtil.resolveToken(request);
+        userService.editProfile(token, profileEditRequestDTO);
+        String message = "회원 정보가 성공적으로 수정되었습니다.";
+        return ResponseEntity.ok(DataResponseDTO.of(message));
+    }
+
+    @PutMapping("/withdraw")
+    public ResponseEntity<DataResponseDTO<String>> withdrawUser(HttpServletRequest request) {
+        String token = jwtUtil.resolveToken(request);
+        userService.withdrawUser(token);
+        String message = "회원 탈퇴가 완료되었습니다.";
+        return ResponseEntity.ok(DataResponseDTO.of(message));
     }
 }
