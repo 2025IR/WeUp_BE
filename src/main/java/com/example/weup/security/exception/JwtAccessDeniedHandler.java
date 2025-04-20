@@ -15,7 +15,6 @@ import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 
-// 요청 시에 권한이 부족할 경우 처리
 
 @Slf4j
 @Component
@@ -29,12 +28,13 @@ public class JwtAccessDeniedHandler implements AccessDeniedHandler {
                       AccessDeniedException accessDeniedException) throws IOException, ServletException {
         
         log.warn("권한 부족 : {}", accessDeniedException.getMessage());
-        
-        response.setStatus(HttpServletResponse.SC_FORBIDDEN);
+
+        ErrorResponseDTO errorResponse = ErrorResponseDTO.of(ErrorInfo.FORBIDDEN, "접근 권한이 없습니다.");
+
+        response.setStatus(errorResponse.getStatus());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
-        
-        ErrorResponseDTO errorResponse = ErrorResponseDTO.of(ErrorInfo.FORBIDDEN, "접근 권한이 없습니다.");
+
         response.getWriter().write(objectMapper.writeValueAsString(errorResponse));
     }
 } 

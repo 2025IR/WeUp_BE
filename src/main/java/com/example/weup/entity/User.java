@@ -6,7 +6,6 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -21,7 +20,7 @@ public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "user_id", nullable = false, updatable = false)
+    @Column(name = "id", nullable = false, updatable = false)
     private Long userId;
 
     @Column(nullable = false, length = 10)
@@ -41,11 +40,6 @@ public class User implements UserDetails {
 
     @Column(name = "is_user_withdrawal", nullable = false)
     private boolean isUserWithdrawal;
-
-//    @Column
-//    private String refreshToken;
-
-//    private LocalDateTime passwordExpirationDate;  // ???
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {

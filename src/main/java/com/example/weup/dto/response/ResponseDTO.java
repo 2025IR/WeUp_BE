@@ -15,12 +15,4 @@ public class ResponseDTO {
         this.success = success;
         this.message = message;
     }
-
-    public static ResponseDTO success() {
-        return new ResponseDTO(true, "처리가 완료되었습니다.");
-    }
-
-    public static ResponseDTO success(String message) {
-        return new ResponseDTO(true, message);
-    }
 } 
