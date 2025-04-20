@@ -3,7 +3,6 @@ package com.example.weup.security.exception;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.response.ErrorResponseDTO;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
