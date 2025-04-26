@@ -20,6 +20,8 @@ public enum ErrorInfo {
 
     USER_NOT_FOUND(HttpStatus.NOT_FOUND, "User not found"),
 
+    PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "Project not found"),
+
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "User unauthorized"),
 
     INVALID_JWT(HttpStatus.UNAUTHORIZED, "Invalid or expired JWT token"),

@@ -27,11 +27,7 @@ public class Project {
     private String description = "프로젝트 입니다.";
 
     @Column(nullable = false, length = 20)
-    private String color;
-
-    @Column(name = "project_people", nullable = false)
-    @Builder.Default
-    private int projectPeople = 1;
+    private String projectImage;
 
     @Column(name = "project_created_time", nullable = false)
     @Builder.Default
@@ -40,7 +36,8 @@ public class Project {
     @Column(name = "project_ended_time")
     private LocalDate projectEndedTime;
 
-    @Column(name = "is_project_ended")
+    @Column(name = "is_revealed_number", nullable = false)
     @Builder.Default
-    private boolean isProjectEnded = true;
+    private boolean isRevealedNumber = false;
+
 }
