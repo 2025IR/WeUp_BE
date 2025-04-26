@@ -29,6 +29,10 @@ public class Project {
     @Column(nullable = false, length = 20)
     private String projectImage;
 
+    @Column(nullable = false)
+    @Builder.Default
+    private int status = 1;
+
     @Column(name = "project_created_time", nullable = false)
     @Builder.Default
     private LocalDate projectCreatedTime = LocalDate.now();

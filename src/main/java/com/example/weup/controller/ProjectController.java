@@ -70,20 +70,21 @@ public class ProjectController {
                 .body(DataResponseDTO.of(data, "프로젝트 상세 정보 : " + projectId));
     }
 
-    // 프로젝트 상태 변경 -> 이 로직이 필요한가?
-//    @PutMapping("/change/state/{projectId}")
-//    public ResponseEntity<ResponseDTO> changeProjectState(HttpServletRequest request, @PathVariable Long projectId) {
-//
-//        String token = jwtUtil.resolveToken(request);
-//        Long userId = jwtUtil.getUserId(token);
-//        log.debug("token id: {}", userId);
-//
-//        // 이 수정은 팀장만 가능한데, 해당 로직은 나중에 추가.
-//        projectService.changeProjectState(projectId);
-//
-//        return ResponseEntity.ok()
-//                .body(new ResponseDTO(true, "프로젝트 상태 변경 : " + projectId));
-//    }
+    // 프로젝트 상태 변경
+    @PutMapping("/change/state/{projectId}")
+    public ResponseEntity<ResponseDTO> changeProjectState(HttpServletRequest request, @PathVariable Long projectId, @RequestParam Integer status) {
+
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
+        log.debug("token id: {}", userId);
+
+        // 이 수정은 팀장만 가능한데, 해당 로직은 나중에 추가.
+
+        projectService.changeProjectState(projectId, status);
+
+        return ResponseEntity.ok()
+                .body(new ResponseDTO(true, "프로젝트 상태 변경 : " + projectId));
+    }
 
     // 프로젝트 수정
     @PutMapping("/edit/{projectId}")
@@ -104,12 +105,12 @@ public class ProjectController {
 
     // 프로젝트 설명 수정
     @PutMapping("/edit/description/{projectId}")
-    public ResponseEntity<ResponseDTO> editProjectDescription(HttpServletRequest request, @PathVariable Long projectId, @RequestBody Map<String, String> description) {
+    public ResponseEntity<ResponseDTO> editProjectDescription(HttpServletRequest request, @PathVariable Long projectId, @RequestParam String description) {
 
         jwtUtil.resolveToken(request);
 
-        String descriptionData = description.get("description");
-        projectService.editProjectDescription(projectId, descriptionData);
+        //String descriptionData = description.get("description");
+        projectService.editProjectDescription(projectId, description);
 
         return ResponseEntity.ok()
                 .body(new ResponseDTO(true, "프로젝트 설명 수정 : " + projectId));

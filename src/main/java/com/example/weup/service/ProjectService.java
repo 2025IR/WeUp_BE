@@ -57,6 +57,17 @@ public class ProjectService {
     }
 
     @Transactional
+    public void changeProjectState(Long projectId, Integer status) {
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+
+        project.setStatus(status);
+
+        projectRepository.save(project);
+    }
+
+    @Transactional
     public void editProject(Long projectId, CreateProjectDTO createProjectDto) {
 
         Project project = projectRepository.findById(projectId)
