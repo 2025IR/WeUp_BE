@@ -56,9 +56,6 @@ public class UserController {
                 .build();
         
         return ResponseEntity.ok()
-//                .header("Authorization", "Bearer " + newAccessToken)
-//                .header("RefreshToken", "Bearer " + newRefreshToken)
-                // 토큰은 바디로만 전달 1
                 .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료"));
     }
 
