@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>프로젝트 초대</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            padding: 20px;
+            background-color: #ffffff;
+            border-radius: 8px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+        .header {
+            background-color: #4CAF50;
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-radius: 8px 8px 0 0;
+        }
+        .content {
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .button {
+            display: inline-block;
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 20px;
+            text-decoration: none;
+            border-radius: 4px;
+            margin-top: 20px;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 20px;
+            color: #777;
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">
+        <h1>프로젝트 초대</h1>
+    </div>
+    <div class="content">
+        <p>안녕하세요, <span th:text="${recipientName}">사용자</span>님!</p>
+        <p><span th:text="${inviterName}">초대자</span>님이 <strong th:text="${projectName}">프로젝트</strong>에 초대하셨습니다.</p>
+        <p>아래 버튼을 클릭하여 프로젝트에 참여하세요.</p>
+        <div style="text-align: center;">
+            <a th:href="${inviteUrl}" class="button">프로젝트 입장하기</a>
+        </div>
+        <p>초대 링크는 7일간 유효합니다. << 아직아님 추가할건지??</p>
+    </div>
+    <div class="footer">
+        <p>이 이메일은 자동으로 발송되었습니다. 문의사항이 있으시면 관리자에게 연락해주세요.</p>
+    </div>
+</div>
+</body>
+</html>

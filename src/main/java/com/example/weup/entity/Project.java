@@ -4,13 +4,14 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
-@Table(name = "jwt_project")
+@Table(name = "project")
 @Data
 public class Project {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "project_id")
+    private Long projectId;
 
     @Column(nullable = false)
     private String name;

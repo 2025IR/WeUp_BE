@@ -8,7 +8,6 @@ import org.springframework.http.HttpStatus;
 @Getter
 @RequiredArgsConstructor
 public enum ErrorInfo {
-
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "잘못된 요청입니다."),
 
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 에러가 발생했습니다."),
@@ -20,6 +19,8 @@ public enum ErrorInfo {
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증에 실패하였습니다."),
 
     FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
+
+    AlREADY_IN_PROJECT(HttpStatus.CONFLICT, "이미 프로젝트에 속해 있는 유저입니다."),
 
     EMAIL_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "이메일 인증이 완료되지 않았습니다."),
     

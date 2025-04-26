@@ -76,7 +76,7 @@ public class ProjectService {
             Member savedMember = memberRepository.save(member);
 
             Map<String, Object> result = new HashMap<>();
-            result.put("projectId", savedProject.getId());
+            result.put("projectId", savedProject.getProjectId());
             result.put("projectName", savedProject.getName());
             result.put("userId", user.getUserId());
             result.put("userName", user.getName());
