@@ -44,9 +44,9 @@ public class MemberService {
             }
 
             String[] emails = emailsString.split(",");
-            List<String> invitedEmails = new ArrayList<>();         //초대됨
-            List<String> notFoundEmails = new ArrayList<>();        //없음
-            List<String> alreadyMemberEmails = new ArrayList<>();   //이미멤버임
+            List<String> invitedEmails = new ArrayList<>();         //초대한 이메일
+            List<String> notFoundEmails = new ArrayList<>();        //없는 이메일
+            List<String> alreadyMemberEmails = new ArrayList<>();   //이미 멤버인 이메일
 
             for (String email : emails) {
                 email = email.trim();
@@ -227,39 +227,15 @@ public class MemberService {
 
     @Transactional
     public Map<String, Object> editRole(Long userId, Long projectId, Long memberId, String roleName, Byte roleColor) {
-        /**
-         * 매개변수 바탕으로 role에 행 만들고
-         * 멤버아이디랑 role 행 연결하고 - memberRole
-         *
-         * projID memID roleName,Color 반환하고
-         *
-         * 아이디 있는지 확인하고
-         *
-         * 입력받은 롤네임이 있으면 멤버롤에만 추가, 없으면 롤에 생성하고 멤버롤에 추가
-         *
-         */
+
         try {
             if (!projectService.hasAccess(userId, projectId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
-            //요청자 확인
-//            User requestUser = userRepository.findById(userId)
-//                    .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-            
+
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.INTERNAL_ERROR));
 
-//            Member requestMember = memberRepository.findByUserAndProject(requestUser, project)
-//                    .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
-//
-//            if (!"LEADER".equals(requestMember.getRole())) {
-//                throw new GeneralException(ErrorInfo.FORBIDDEN);
-//            }
-            /**
-             * 위의 주석 처리 부분 - 요청자의 권한이 리더일 경우
-             */
-            
-            // 대상자 확인
             Member member = memberRepository.findById(memberId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
@@ -270,7 +246,7 @@ public class MemberService {
             Optional<Role> existingRole = roleRepository.findByProjectAndRoleName(project, roleName);
             
             if (existingRole.isPresent()) {
-                // 갖다쓰고
+                // 가져다 사용함
                 role = existingRole.get();
             } else {
                 // 없으면 입력값에 기반해 생성
@@ -292,8 +268,7 @@ public class MemberService {
                 // 없으면 저장
                 memberRoleRepository.save(memberRole);
             }
-            
-            // 결과 반환
+
             result.put("projectId", projectId);
             result.put("memberId", memberId);
             result.put("roleName", roleName);
@@ -314,7 +289,6 @@ public class MemberService {
             if (!projectService.hasAccess(userId, projectId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
-            //요청자 확인
             User requestUser = userRepository.findById(userId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
@@ -346,19 +320,6 @@ public class MemberService {
             if (!projectService.hasAccess(userId, projectId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
-            //요청자 확인 - 여기도 요청자가 리더인지 확인하는 부분
-//            User requestUser = userRepository.findById(userId)
-//                    .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-//
-//            Project project = projectRepository.findById(projectId)
-//                    .orElseThrow(() -> new GeneralException(ErrorInfo.INTERNAL_ERROR));
-//
-//            Member requestMember = memberRepository.findByUserAndProject(requestUser, project)
-//                    .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
-//
-//            if (!"LEADER".equals(requestMember.getRole())) {
-//                throw new GeneralException(ErrorInfo.FORBIDDEN);
-//            }
 
             // 대상자 확인
             Member member = memberRepository.findById(memberId)
@@ -395,11 +356,9 @@ public class MemberService {
         Map<String, Object> result = deleteRole(userId, projectId, memberId, roleName);
 
         try {
-            // roleName으로 Role 다시 조회
             Role role = roleRepository.findByRoleName(roleName)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
-            // 프로젝트의 타 멤버가 역할 안 쓰는거 맞는지 확인하고 삭제
             boolean isRoleStillUsed = memberRoleRepository.existsByRole(role);
             if (!isRoleStillUsed) {
                 roleRepository.delete(role);

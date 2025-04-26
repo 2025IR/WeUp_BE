@@ -17,8 +17,8 @@ public class AccountSocial {
     private Long userId;
 
     @OneToOne
-    @MapsId // PK를 공유하며 외래키도 된다.
-    @JoinColumn(name = "user_id") // 이 필드에 외래키가 들어간다.
+    @MapsId
+    @JoinColumn(name = "user_id")
     private User user;
 
     @Column(nullable = false, unique = true)

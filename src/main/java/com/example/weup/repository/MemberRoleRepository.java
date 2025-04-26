@@ -13,13 +13,12 @@ import java.util.Optional;
 
 @Repository
 public interface MemberRoleRepository extends JpaRepository<Member_Role, Long> {
-    // 프로젝트 내 모든 멤버별 역할을 한 번에 조회
+    // 프로젝트 내 모든 멤버별 역할을 한 번에 조회 - n대m 관계를 피하기 위해 사용
     @Query("SELECT mr FROM Member_Role mr " +
             "JOIN FETCH mr.member m " +
             "JOIN FETCH mr.role r " +
             "WHERE m.project.projectId = :projectId")
     List<Member_Role> findAllByProjectId(@Param("projectId") Long projectId);
-    //n대m 관계를 피하기 위한 방법..?
 
     boolean existsByMemberAndRole(Member member, Role role);
 
