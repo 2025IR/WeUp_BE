@@ -73,6 +73,7 @@ public class UserService {
                 .name(user.getName())
                 .email(user.getAccountSocial().getEmail())
                 .profileImage(user.getProfileImage())
+                .phoneNumber(user.getPhoneNumber())
                 .build();
     }
 
@@ -106,7 +107,6 @@ public class UserService {
 
     @Transactional
     public void editProfile(String token, ProfileEditRequestDTO profileEditRequestDTO) {
-
         Long userId = jwtUtil.getUserId(token);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
@@ -117,6 +117,10 @@ public class UserService {
 
         if (profileEditRequestDTO.getProfileImage() != null && !profileEditRequestDTO.getProfileImage().isEmpty()) {
             user.setProfileImage(profileEditRequestDTO.getProfileImage());
+        }
+        
+        if (profileEditRequestDTO.getPhoneNumber() != null && !profileEditRequestDTO.getPhoneNumber().isEmpty()) {
+            user.setPhoneNumber(profileEditRequestDTO.getPhoneNumber());
         }
     }
 

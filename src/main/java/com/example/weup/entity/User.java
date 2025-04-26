@@ -29,11 +29,17 @@ public class User implements UserDetails {
     @Column(name = "profile_image", nullable = false)
     private String profileImage;
 
+    @Column(name = "phone_number")
+    private String phoneNumber;
+
     @Column(nullable = false)
     private String role;
 
     @Column(name = "is_user_withdrawal", nullable = false)
     private boolean isUserWithdrawal;
+
+    @Column(name = "refresh_token")
+    private String refreshToken;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true) //고아 처리??
     private AccountSocial accountSocial;

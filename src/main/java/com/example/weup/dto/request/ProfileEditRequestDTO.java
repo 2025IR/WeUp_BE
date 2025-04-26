@@ -10,5 +10,6 @@ import lombok.Setter;
 public class ProfileEditRequestDTO {
     private String name;
     private String profileImage;
+    private String phoneNumber;
 }
 
