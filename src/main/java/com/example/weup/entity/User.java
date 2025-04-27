@@ -30,7 +30,7 @@ public class User implements UserDetails {
     private String profileImage;
 
     @Column(name = "phone_number")
-    private String phoneNumber;
+    private String phoneNumber = "-";
 
     @Column(nullable = false)
     private String role;
