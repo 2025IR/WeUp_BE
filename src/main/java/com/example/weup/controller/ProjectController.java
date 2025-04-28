@@ -3,19 +3,14 @@ package com.example.weup.controller;
 import com.example.weup.dto.request.CreateProjectDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
-import com.example.weup.dto.response.ListUpProjectResponseDTO;
 import com.example.weup.dto.response.ResponseDTO;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.service.ProjectService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.List;
-import java.util.Map;
 
 @Slf4j
 @RestController
@@ -33,10 +28,8 @@ public class ProjectController {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
-        log.debug("token id: {}", userId);
 
         Long projectId = projectService.createProject(createProjectDto);
-        log.debug("project id: {}", projectId);
 
         // 멤버 테이블에 팀장 추가하는 코드 필요
 
@@ -76,7 +69,6 @@ public class ProjectController {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
-        log.debug("token id: {}", userId);
 
         // 이 수정은 팀장만 가능한데, 해당 로직은 나중에 추가.
 
@@ -92,7 +84,6 @@ public class ProjectController {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
-        log.debug("token id: {}", userId);
 
         // 이 수정은 팀장만 가능한데, 해당 로직은 나중에 추가.
 
