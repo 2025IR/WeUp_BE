@@ -2,91 +2,85 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.entity.Member;
+import com.example.weup.dto.request.CreateProjectDTO;
+import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.entity.Project;
-import com.example.weup.entity.User;
-import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
-import com.example.weup.repository.UserRepository;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
-import java.util.HashMap;
-import java.util.Map;
-
+@Slf4j
 @Service
 @RequiredArgsConstructor
-@Slf4j
 public class ProjectService {
 
-    private final MemberRepository memberRepository;
-    private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
 
-    public boolean hasAccess(Long userId, Long projectId) {
+    @Transactional
+    public Long createProject(CreateProjectDTO createProjectDto) {
 
-        User user = userRepository.findById(userId)
-                .orElse(null);
+        Project newProject = Project.builder()
+                .projectName(createProjectDto.getProjectName())
+                .projectImage(createProjectDto.getProjectImage())
+                .build();
 
-        if (user == null) {
-            return false;
-        }
+        return projectRepository.save(newProject).getProjectId();
+    }
 
-        if ("ROLE_ADMIN".equals(user.getRole())) {
-            return true;
-        }
+//    @Transactional
+//    public List<ListUpProjectResponseDTO> listUpProject(Long userId) {
+//
+//        ListUpProjectResponseDTO list;
+//    }
 
-        try {
-            Project project = projectRepository.findById(projectId)
-                    .orElse(null);
+    @Transactional
+    public DetailProjectResponseDTO detailProject(Long projectId) {
 
-            if (project == null) {
-                return false;
-            }
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-            try {
-                return memberRepository.existsByUserAndProject(user, project);
-            } catch (Exception e) {
-                return false;
-            }
-        } catch (Exception e) {
-            return false;
-        }
+        return DetailProjectResponseDTO.builder()
+                .projectName(project.getProjectName())
+                .projectImage(project.getProjectImage())
+                .description(project.getDescription())
+                .build();
     }
 
     @Transactional
-    public Map<String, Object> createTestProjects(Long userId) {
+    public void changeProjectStatus(Long projectId, Boolean status) {
 
-        try {
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-            Project project = new Project();
-            project.setName("이름 - " + user.getName());
+        project.setStatus(status);
 
-            Project savedProject = projectRepository.save(project);
-
-            Member member = new Member();
-            member.setUser(user);
-            member.setProject(savedProject);
-            member.setRole("LEADER");
-
-            Member savedMember = memberRepository.save(member);
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("projectId", savedProject.getId());
-            result.put("projectName", savedProject.getName());
-            result.put("userId", user.getUserId());
-            result.put("userName", user.getName());
-            result.put("memberRole", savedMember.getRole());
-            
-            return result;
-        } catch (GeneralException e) {
-            throw e;
-        } catch (Exception e) {
-            throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
-        }
+        projectRepository.save(project);
     }
+
+    @Transactional
+    public void editProject(Long projectId, CreateProjectDTO createProjectDto) {
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+
+        project.setProjectName(createProjectDto.getProjectName());
+        project.setProjectImage(createProjectDto.getProjectImage());
+        project.setDescription(project.getDescription());
+
+        projectRepository.save(project);
+    }
+
+    @Transactional
+    public void editProjectDescription(Long projectId, String description) {
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+
+        project.setDescription(description);
+
+        projectRepository.save(project);
+    }
+
 } 
