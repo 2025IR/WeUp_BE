@@ -13,4 +13,5 @@ public class GetProfileResponseDTO {
     private String name;
     private String email;
     private String profileImage;
+    private String phoneNumber;
 } 
