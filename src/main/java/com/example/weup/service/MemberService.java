@@ -247,8 +247,8 @@ public class MemberService {
             Optional<Role> existingRole = roleRepository.findByProjectAndRoleName(project, roleName);
             
             if (existingRole.isPresent()) {
-                // 가져다 사용함
-                role = existingRole.get();
+                // 이미 존재하는 역할명임을 에러 메시지로 반환
+                throw new GeneralException(ErrorInfo.ROLE_ALREADY_EXIST);
             } else {
                 // 없으면 입력값에 기반해 생성
                 role = Role.builder()
