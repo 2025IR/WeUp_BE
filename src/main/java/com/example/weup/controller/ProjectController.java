@@ -64,15 +64,15 @@ public class ProjectController {
     }
 
     // 프로젝트 상태 변경
-    @PutMapping("/change/state/{projectId}")
-    public ResponseEntity<ResponseDTO> changeProjectState(HttpServletRequest request, @PathVariable Long projectId, @RequestParam Integer status) {
+    @PutMapping("/change/status/{projectId}")
+    public ResponseEntity<ResponseDTO> changeProjectStatus(HttpServletRequest request, @PathVariable Long projectId, @RequestParam Boolean status) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
         // 이 수정은 팀장만 가능한데, 해당 로직은 나중에 추가.
 
-        projectService.changeProjectState(projectId, status);
+        projectService.changeProjectStatus(projectId, status);
 
         return ResponseEntity.ok()
                 .body(new ResponseDTO(true, "프로젝트 상태 변경 : " + projectId));

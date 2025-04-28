@@ -49,7 +49,7 @@ public class ProjectService {
     }
 
     @Transactional
-    public void changeProjectState(Long projectId, Integer status) {
+    public void changeProjectStatus(Long projectId, Boolean status) {
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));

@@ -31,7 +31,7 @@ public class Project {
 
     @Column(nullable = false)
     @Builder.Default
-    private int status = 1;
+    private boolean status = true;
 
     @Column(name = "project_created_time", nullable = false)
     @Builder.Default
