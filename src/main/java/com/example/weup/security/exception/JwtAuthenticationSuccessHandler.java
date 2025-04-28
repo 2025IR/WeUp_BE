@@ -1,5 +1,8 @@
 package com.example.weup.security.exception;
 
+import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.response.DataResponseDTO;
+import com.example.weup.dto.response.ErrorResponseDTO;
 import com.example.weup.entity.User;
 import com.example.weup.security.JwtDto;
 import com.example.weup.security.JwtUtil;
@@ -36,10 +39,11 @@ public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHan
                 .refreshToken(refreshToken)
                 .build();
 
+        DataResponseDTO<JwtDto> dataResponse = DataResponseDTO.of(jwtDto, "");
+
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("application/json;charset=UTF-8");
-        response.getWriter().write(objectMapper.writeValueAsString(jwtDto));
-
+        response.getWriter().write(objectMapper.writeValueAsString(dataResponse));
         log.info("로그인 성공 - USER_ID : {}", user.getUserId());
     }
 }

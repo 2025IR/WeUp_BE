@@ -1,7 +1,12 @@
 package com.example.weup.security;
 
+import com.example.weup.GeneralException;
+import com.example.weup.constant.ErrorInfo;
+import com.example.weup.entity.User;
+import com.example.weup.repository.UserRepository;
 import io.jsonwebtoken.*;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
@@ -17,6 +22,8 @@ public class JwtUtil {
 
     private final SecretKey secretKey;
 
+    private final UserRepository userRepository;
+
     public String createAccessToken(Long userId, String role) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + jwtProperties.getAccessTokenExpiration());
@@ -31,17 +38,25 @@ public class JwtUtil {
                 .compact();
     }
 
+    @Transactional
     public String createRefreshToken(Long userId) {
         Date now = new Date();
         Date expiration = new Date(now.getTime() + jwtProperties.getRefreshTokenExpiration());
 
-        return Jwts.builder()
+        String refreshToken = Jwts.builder()
                 .setSubject("RefreshToken")
                 .setIssuedAt(now)
                 .setExpiration(expiration)
                 .claim("userId", userId)
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+        user.setRefreshToken(refreshToken);
+        userRepository.save(user);
+
+        return refreshToken;
     }
 
     public String resolveToken(HttpServletRequest request) {

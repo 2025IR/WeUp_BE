@@ -20,26 +20,29 @@ public class User implements UserDetails {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "id", nullable = false, updatable = false)
+    @Column(name = "user_id", nullable = false, updatable = false)
     private Long userId;
 
     @Column(nullable = false, length = 10)
     private String name;
 
-    @Column(nullable = false, unique = true)
-    private String email;
-
-    @Column(nullable = false)
-    private String password;
-
     @Column(name = "profile_image", nullable = false)
     private String profileImage;
+
+    @Column(name = "phone_number")
+    private String phoneNumber;
 
     @Column(nullable = false)
     private String role;
 
     @Column(name = "is_user_withdrawal", nullable = false)
     private boolean isUserWithdrawal;
+
+    @Column(name = "refresh_token")
+    private String refreshToken;
+
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true) //고아 처리??
+    private AccountSocial accountSocial;
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
@@ -48,7 +51,12 @@ public class User implements UserDetails {
 
     @Override
     public String getUsername() {
-        return this.email;
+        return accountSocial.getEmail();
+    }
+
+    @Override
+    public String getPassword() {
+        return accountSocial.getPassword();
     }
 
     @Override
