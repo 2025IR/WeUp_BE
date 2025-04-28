@@ -56,6 +56,24 @@ public class ProjectService {
         }
     }
 
+    public boolean isDeletedMember(Long memberId) {
+
+        Member member = memberRepository.findById(memberId)
+                .orElse(null);
+
+        if (member == null) {
+            return true;
+        }
+
+        try {
+            if (member.isMemberDeleted())
+                return true;
+        } catch (Exception e) {
+            return false;
+        }
+        return false;
+    }
+
     @Transactional
     public Map<String, Object> createTestProjects(Long userId) {
 

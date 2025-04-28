@@ -143,7 +143,7 @@ public class MemberService {
              * member를 스트림으로 돌려서 user 정보 가져오고
              * 멤버랑 일치하는 역할 부여 [List<String> roles]
              */
-            List<Member> members = memberRepository.findByProject_ProjectId(projectId);
+            List<Member> members = memberRepository.findByProject_ProjectIdAndIsMemberDeletedFalse(projectId);
             List<Member_Role> memberRoles = memberRoleRepository.findAllByProjectId(projectId);
 
             Map<Long, List<String>> memberIdToRoleNames = memberRoles.stream()
@@ -190,7 +190,7 @@ public class MemberService {
             User formerLeader = userRepository.findById(formerLeaderId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-            User newLeader = userRepository.findById(newLeaderId)
+            Member newLeaderMember = memberRepository.findById(newLeaderId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
             Member formerLeaderMember = memberRepository.findByUserAndProject(formerLeader, project)
@@ -203,8 +203,9 @@ public class MemberService {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
-            Member newLeaderMember = memberRepository.findByUserAndProject(newLeader, project)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+            if (projectService.isDeletedMember(newLeaderMember.getMemberId())){
+                throw new GeneralException(ErrorInfo.FORBIDDEN);
+            }
 
             formerLeaderMember.setRole("MEMBER");
             newLeaderMember.setRole("LEADER");
@@ -229,7 +230,7 @@ public class MemberService {
     public Map<String, Object> editRole(Long userId, Long projectId, Long memberId, String roleName, Byte roleColor) {
 
         try {
-            if (!projectService.hasAccess(userId, projectId)) {
+            if (!projectService.hasAccess(userId, projectId) || projectService.isDeletedMember(memberId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
@@ -317,7 +318,7 @@ public class MemberService {
 
     public Map<String, Object> deleteRole(Long userId, Long projectId, Long memberId, String roleName) {
         try {
-            if (!projectService.hasAccess(userId, projectId)) {
+            if (!projectService.hasAccess(userId, projectId) || projectService.isDeletedMember(memberId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
