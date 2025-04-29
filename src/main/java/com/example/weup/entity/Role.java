@@ -30,6 +30,5 @@ public class Role {
     private String roleName;
 
     @Column(name = "role_color", nullable = false)
-    private byte roleColor;
-    //tinyint >> byte??
+    private String roleColor;
 }

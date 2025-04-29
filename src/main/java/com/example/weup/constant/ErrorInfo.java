@@ -22,7 +22,7 @@ public enum ErrorInfo {
 
     AlREADY_IN_PROJECT(HttpStatus.CONFLICT, "이미 프로젝트에 속해 있는 유저입니다."),
 
-    ROLE_ALREADY_EXIST(HttpStatus.CONFLICT, "해당 프로젝트에 이미 존재하는 역할 이름입니다."),
+    ROLE_ALREADY_GIVEN(HttpStatus.CONFLICT, "해당 멤버에게 이미 부여된 역할입니다."),
 
     EMAIL_NOT_VERIFIED(HttpStatus.BAD_REQUEST, "이메일 인증이 완료되지 않았습니다."),
     

@@ -3,6 +3,7 @@ package com.example.weup.service;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -14,6 +15,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class MailService {
@@ -91,8 +93,11 @@ public class MailService {
     }
 
     @Async
-    public CompletableFuture<Void> sendProjectInviteEmail(String recipientEmail, String recipientName, 
-                                                         String inviterName, Long projectId, String projectName) {
+    public CompletableFuture<Void> sendProjectInviteEmail(
+            String recipientEmail,
+            String recipientName,
+            String inviterName,
+            String projectName) {
         try {
             MimeMessage message = javaMailSender.createMimeMessage();
             MimeMessageHelper helper = new MimeMessageHelper(message, true, "UTF-8");
@@ -105,22 +110,17 @@ public class MailService {
             context.setVariable("recipientName", recipientName);
             context.setVariable("inviterName", inviterName);
             context.setVariable("projectName", projectName);
-            
-            //todo. 연결한 후 초대 URL 수정 필요 (localhost)
-            String inviteUrl = "http://localhost:8080/projects/join/" + projectId;
-            context.setVariable("inviteUrl", inviteUrl);
 
             String emailContent = templateEngine.process("InviteEmail", context);
             helper.setText(emailContent, true);
 
             javaMailSender.send(message);
-            
-            System.out.println("초대 이메일 전송 완료: " + recipientEmail);
+
+            log.info("초대 이메일 전송 완료: {}", recipientEmail);
         } catch (MessagingException e) {
-            System.err.println("초대 이메일 전송 실패: " + e.getMessage());
-            e.printStackTrace();
+            log.error("초대 이메일 전송 실패: {}", e.getMessage(), e);
         }
-        
+
         return CompletableFuture.completedFuture(null);
     }
 }

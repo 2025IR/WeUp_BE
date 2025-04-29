@@ -4,6 +4,7 @@ import com.example.weup.entity.Member;
 import com.example.weup.entity.Member_Role;
 import com.example.weup.entity.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -25,4 +26,7 @@ public interface MemberRoleRepository extends JpaRepository<Member_Role, Long> {
     Optional<Member_Role> findByMemberAndRole(Member member, Role role);
 
     boolean existsByRole(Role role);
+
+    @Modifying
+    void deleteByRole(Role role);
 }
