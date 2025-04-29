@@ -1,13 +1,18 @@
 package com.example.weup.entity;
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
+import java.time.LocalDateTime;
+
+@Getter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "member", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"user_id", "project_id"})
 })
-@Data
 public class Member {
 
     @Id
@@ -19,13 +24,21 @@ public class Member {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
-    @Column(nullable = false)
-    private String role = "MEMBER";
+    @Column(name = "available_time")
+    private Long availableTime;
 
-    @Column(nullable = false)
+    @Column(name = "is_member_deleted", nullable = false)
+    @Builder.Default
     private boolean isMemberDeleted = false;
+
+    @Column(name = "last_access_time", nullable = false)
+    private LocalDateTime lastAccessTime;
+
+    @Column(name = "is_leader", nullable = false)
+    @Builder.Default
+    private boolean isLeader = false;
 } 
