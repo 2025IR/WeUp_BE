@@ -47,7 +47,6 @@ public class UserService {
 
         User signUpUser = User.builder()
                 .name(signUpRequestDto.getName())
-                .profileImage("base_image")
                 .role("ROLE_USER")
                 .build();
 
