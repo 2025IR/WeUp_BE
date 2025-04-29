@@ -20,6 +20,8 @@ public enum ErrorInfo {
 
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증에 실패하였습니다."),
 
+    PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "프로젝트를 찾을 수 없습니다."),
+
     FORBIDDEN(HttpStatus.FORBIDDEN, "접근 권한이 없습니다."),
 
     AlREADY_IN_PROJECT(HttpStatus.CONFLICT, "이미 프로젝트에 속해 있는 유저입니다."),
