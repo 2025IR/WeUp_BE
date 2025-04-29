@@ -1,81 +1,110 @@
 package com.example.weup.controller;
 
-import com.example.weup.GeneralException;
-import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.request.CreateProjectDTO;
 import com.example.weup.dto.response.DataResponseDTO;
+import com.example.weup.dto.response.DetailProjectResponseDTO;
+import com.example.weup.dto.response.ResponseDTO;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.service.ProjectService;
-import io.jsonwebtoken.JwtException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.Map;
-
+@Slf4j
 @RestController
 @RequestMapping("/project")
 @RequiredArgsConstructor
 public class ProjectController {
 
     private final ProjectService projectService;
+
     private final JwtUtil jwtUtil;
 
-    @GetMapping("/{projectId}")
-    public ResponseEntity<DataResponseDTO<Map<String, Object>>> getProject(@PathVariable Long projectId, @RequestHeader("Authorization") String token) {
+    // 프로젝트 생성
+    @PostMapping("/create")
+    public ResponseEntity<ResponseDTO> createProject(HttpServletRequest request, @RequestBody CreateProjectDTO createProjectDto) {
 
-        if (token == null || !token.startsWith("Bearer ")) {
-            throw new GeneralException(ErrorInfo.UNAUTHORIZED);
-        }
-        
-        String tokenWithoutPrefix = token.substring(7);
-        
-        try {
-            Long userId = jwtUtil.getUserId(tokenWithoutPrefix);
-            
-            try {
-                boolean hasAccess = projectService.hasAccess(userId, projectId);
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
 
-                if (!hasAccess) {
-                    throw new GeneralException(ErrorInfo.FORBIDDEN);
-                }
+        Long projectId = projectService.createProject(createProjectDto);
 
-                Map<String, Object> projectInfo = new HashMap<>();
-                projectInfo.put("id", projectId);
-                
-                return ResponseEntity.ok(DataResponseDTO.of(projectInfo, "프로젝트 생성 확인 완료"));
-            } catch (GeneralException e) {
-                throw e;
-            } catch (Exception e) {
-                throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
-            }
-        } catch (JwtException | IllegalArgumentException e) {
-            throw new GeneralException(ErrorInfo.UNAUTHORIZED);
-        } catch (Exception e) {
-            throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
-        }
+        // 멤버 테이블에 팀장 추가하는 코드 필요
+
+        return ResponseEntity
+                .ok()
+                .body(new ResponseDTO(true, "프로젝트 생성자 : " + userId));
     }
 
-    @PostMapping("/testcreate")
-    public ResponseEntity<DataResponseDTO<Map<String, Object>>> createTestProject(
-            @RequestHeader("Authorization") String token) {
-        
-        if (token == null || !token.startsWith("Bearer ")) {
-            throw new GeneralException(ErrorInfo.UNAUTHORIZED);
-        }
-        
-        String tokenWithoutPrefix = token.substring(7);
-        
-        try {
-            Long userId = jwtUtil.getUserId(tokenWithoutPrefix);
+    // 프로젝트 리스트 불러오기. -> Member 코드가 있어야 가능함.
+//    @PostMapping("/list")
+//    public ResponseEntity<DataResponseDTO<ListUpProjectResponseDTO>> listUpProject(HttpServletRequest request) {
+//
+//        String token = jwtUtil.resolveToken(request);
+//        Long userId = jwtUtil.getUserId(token);
+//        log.debug("token id: {}", userId);
+//
+//        List<ListUpProjectResponseDTO> data = projectService.listUpProject(userId);
+//
+//    }
 
-            Map<String, Object> result = projectService.createTestProjects(userId);
+    // 프로젝트 상세 불러오기
+    @PostMapping("/detail/{projectId}")
+    public ResponseEntity<DataResponseDTO<DetailProjectResponseDTO>> detailProject(HttpServletRequest request, @PathVariable Long projectId) {
 
-            return ResponseEntity.ok(DataResponseDTO.of(result, "테스트 프로젝트 생성 완료"));
-        } catch (JwtException e) {
-            throw new GeneralException(ErrorInfo.UNAUTHORIZED);
-        } catch (Exception e) {
-            throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
-        }
+        jwtUtil.resolveToken(request);
+
+        DetailProjectResponseDTO data = projectService.detailProject(projectId);
+
+        return ResponseEntity
+                .ok()
+                .body(DataResponseDTO.of(data, "프로젝트 상세 정보 : " + projectId));
     }
+
+    // 프로젝트 상태 변경
+    @PutMapping("/change/status/{projectId}")
+    public ResponseEntity<ResponseDTO> changeProjectStatus(HttpServletRequest request, @PathVariable Long projectId, @RequestParam Boolean status) {
+
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
+
+        // 이 수정은 팀장만 가능한데, 해당 로직은 나중에 추가.
+
+        projectService.changeProjectStatus(projectId, status);
+
+        return ResponseEntity.ok()
+                .body(new ResponseDTO(true, "프로젝트 상태 변경 : " + projectId));
+    }
+
+    // 프로젝트 수정
+    @PutMapping("/edit/{projectId}")
+    public ResponseEntity<ResponseDTO> editProject(HttpServletRequest request, @PathVariable Long projectId, @RequestBody CreateProjectDTO createProjectDto) {
+
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
+
+        // 이 수정은 팀장만 가능한데, 해당 로직은 나중에 추가.
+
+        projectService.editProject(projectId, createProjectDto);
+
+        return ResponseEntity.ok()
+                .body(new ResponseDTO(true, "프로젝트 정보 수정 : " + projectId));
+    }
+
+
+    // 프로젝트 설명 수정
+    @PutMapping("/edit/description/{projectId}")
+    public ResponseEntity<ResponseDTO> editProjectDescription(HttpServletRequest request, @PathVariable Long projectId, @RequestParam String description) {
+
+        jwtUtil.resolveToken(request);
+
+        //String descriptionData = description.get("description");
+        projectService.editProjectDescription(projectId, description);
+
+        return ResponseEntity.ok()
+                .body(new ResponseDTO(true, "프로젝트 설명 수정 : " + projectId));
+    }
+
 }
