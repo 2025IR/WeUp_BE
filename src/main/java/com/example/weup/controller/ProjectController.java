@@ -55,7 +55,7 @@ public class ProjectController {
 
         return ResponseEntity
                 .ok()
-                .body(DataResponseDTO.of(data, "성공?"));
+                .body(DataResponseDTO.of(data, "프로젝트 리스트 출력 : " + userId));
     }
 
     // 프로젝트 상세 불러오기
@@ -78,9 +78,7 @@ public class ProjectController {
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        // 이 수정은 팀장만 가능한데, 해당 로직은 나중에 추가.
-
-        projectService.changeProjectStatus(projectId, status);
+        projectService.changeProjectStatus(userId, projectId, status);
 
         return ResponseEntity.ok()
                 .body(new ResponseDTO(true, "프로젝트 상태 변경 : " + projectId));
@@ -93,9 +91,7 @@ public class ProjectController {
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        // 이 수정은 팀장만 가능한데, 해당 로직은 나중에 추가.
-
-        projectService.editProject(projectId, createProjectDto);
+        projectService.editProject(userId, projectId, createProjectDto);
 
         return ResponseEntity.ok()
                 .body(new ResponseDTO(true, "프로젝트 정보 수정 : " + projectId));
@@ -108,7 +104,6 @@ public class ProjectController {
 
         jwtUtil.resolveToken(request);
 
-        //String descriptionData = description.get("description");
         projectService.editProjectDescription(projectId, description);
 
         return ResponseEntity.ok()

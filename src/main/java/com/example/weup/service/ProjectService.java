@@ -7,8 +7,10 @@ import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
 import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
+import com.example.weup.entity.User;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
+import com.example.weup.repository.UserRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -16,6 +18,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -26,6 +29,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
 
     private final MemberRepository memberRepository;
+    private final UserRepository userRepository;
 
     @Transactional
     public Project createProject(CreateProjectDTO createProjectDto) {
@@ -83,10 +87,14 @@ public class ProjectService {
     }
 
     @Transactional
-    public void changeProjectStatus(Long projectId, Boolean status) {
+    public void changeProjectStatus(Long userId, Long projectId, Boolean status) {
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+
+        if(!isLeader(userId, project)) {
+            throw new GeneralException(ErrorInfo.FORBIDDEN);
+        }
 
         project.setStatus(status);
 
@@ -94,10 +102,14 @@ public class ProjectService {
     }
 
     @Transactional
-    public void editProject(Long projectId, CreateProjectDTO createProjectDto) {
+    public void editProject(Long userId, Long projectId, CreateProjectDTO createProjectDto) {
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+
+        if(!isLeader(userId, project)) {
+            throw new GeneralException(ErrorInfo.FORBIDDEN);
+        }
 
         project.setProjectName(createProjectDto.getProjectName());
         project.setProjectImage(createProjectDto.getProjectImage());
@@ -115,6 +127,16 @@ public class ProjectService {
         project.setDescription(description);
 
         projectRepository.save(project);
+    }
+
+    private boolean isLeader(Long userId, Project project) {
+
+        User user = userRepository.findById(userId)
+                        .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+        Optional<Member> member = memberRepository.findByUserAndProject(user, project);
+
+        return member.isPresent() && member.get().isLeader();
     }
 
 } 
