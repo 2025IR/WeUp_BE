@@ -9,7 +9,7 @@ import lombok.Data;
         @UniqueConstraint(columnNames = {"member_id", "role_id"})
 })
 @Data
-public class Member_Role {
+public class MemberRole {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)

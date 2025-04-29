@@ -3,14 +3,19 @@ package com.example.weup.controller;
 import com.example.weup.dto.request.CreateProjectDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
+import com.example.weup.dto.response.ListUpProjectResponseDTO;
 import com.example.weup.dto.response.ResponseDTO;
+import com.example.weup.entity.Project;
 import com.example.weup.security.JwtUtil;
+import com.example.weup.service.MemberService;
 import com.example.weup.service.ProjectService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @Slf4j
 @RestController
@@ -22,6 +27,8 @@ public class ProjectController {
 
     private final JwtUtil jwtUtil;
 
+    private final MemberService memberService;
+
     // 프로젝트 생성
     @PostMapping("/create")
     public ResponseEntity<ResponseDTO> createProject(HttpServletRequest request, @RequestBody CreateProjectDTO createProjectDto) {
@@ -29,26 +36,27 @@ public class ProjectController {
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        Long projectId = projectService.createProject(createProjectDto);
-
-        // 멤버 테이블에 팀장 추가하는 코드 필요
+        Project newProject = projectService.createProject(createProjectDto);
+        memberService.addProjectCreater(userId, newProject);
 
         return ResponseEntity
                 .ok()
-                .body(new ResponseDTO(true, "프로젝트 생성자 : " + userId));
+                .body(new ResponseDTO(true, "프로젝트 생성자 : " + userId + ", 프로젝트 : " + newProject.getProjectId()));
     }
 
-    // 프로젝트 리스트 불러오기. -> Member 코드가 있어야 가능함.
-//    @PostMapping("/list")
-//    public ResponseEntity<DataResponseDTO<ListUpProjectResponseDTO>> listUpProject(HttpServletRequest request) {
-//
-//        String token = jwtUtil.resolveToken(request);
-//        Long userId = jwtUtil.getUserId(token);
-//        log.debug("token id: {}", userId);
-//
-//        List<ListUpProjectResponseDTO> data = projectService.listUpProject(userId);
-//
-//    }
+     // 프로젝트 리스트 불러오기
+    @PostMapping("/list")
+    public ResponseEntity<DataResponseDTO<List<ListUpProjectResponseDTO>>> listUpProject(HttpServletRequest request) {
+
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
+
+        List<ListUpProjectResponseDTO> data = projectService.listUpProject(userId);
+
+        return ResponseEntity
+                .ok()
+                .body(DataResponseDTO.of(data, "성공?"));
+    }
 
     // 프로젝트 상세 불러오기
     @PostMapping("/detail/{projectId}")

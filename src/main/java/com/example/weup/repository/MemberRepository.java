@@ -4,6 +4,8 @@ import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
 import com.example.weup.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -18,4 +20,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     Optional<Member> findByUserAndProject(User user, Project project);
 
     Optional<Member> findByMemberId(Long memberId);
+
+    @Query("SELECT member FROM Member member JOIN FETCH member.project project " +
+            "WHERE member.user.userId = :userId AND member.isMemberDeleted = false")
+    List<Member> findActiveMemberByUserId(@Param("userId") Long userId);
+
 } 

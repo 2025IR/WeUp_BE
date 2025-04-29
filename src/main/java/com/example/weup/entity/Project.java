@@ -4,6 +4,8 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 @Getter
 @Setter
@@ -43,5 +45,9 @@ public class Project {
     @Column(name = "is_revealed_number", nullable = false)
     @Builder.Default
     private boolean isRevealedNumber = false;
+
+    @OneToMany(mappedBy = "project", cascade = CascadeType.REMOVE)
+    @Builder.Default
+    private List<Member> members = new ArrayList<>();
 
 }
