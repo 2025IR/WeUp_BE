@@ -30,7 +30,7 @@ public class User implements UserDetails {
     private String profileImage;
 
     @Column(name = "phone_number")
-    private String phoneNumber;
+    private String phoneNumber = "-";
 
     @Column(nullable = false)
     private String role;
@@ -41,7 +41,7 @@ public class User implements UserDetails {
     @Column(name = "refresh_token")
     private String refreshToken;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true) //고아 처리??
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
     private AccountSocial accountSocial;
 
     @Override

@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>프로젝트 초대 안내</title>
+    <style>
+        .container {
+            max-width: 600px;
+            margin: auto;
+            padding: 30px;
+            border: 1px solid #e0e0e0;
+            border-radius: 10px;
+            font-family: 'Arial', sans-serif;
+            background-color: #fafafa;
+        }
+        .header {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .content {
+            font-size: 16px;
+            color: #555;
+            line-height: 1.5;
+        }
+        .button {
+            margin-top: 30px;
+            text-align: center;
+        }
+        .button a {
+            background-color: #4CAF50;
+            color: white;
+            padding: 12px 20px;
+            text-decoration: none;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        .footer {
+            margin-top: 40px;
+            font-size: 12px;
+            color: #999;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+<div class="container">
+    <div class="header">[we:up] 프로젝트 초대 안내</div>
+
+    <div class="content">
+        <p><strong th:text="${recipientName}"></strong>님,</p>
+
+        <p><strong th:text="${inviterName}"></strong>님이 <strong th:text="${projectName}"></strong> 프로젝트에 초대했습니다!</p>
+
+        <p>만약 의도하신 프로젝트 참여가 아니라면, 해당 프로젝트로 이동하여 탈퇴하기를 눌러주세요.</p>
+
+    <div class="footer">
+        이 메일은 발신 전용입니다. 문의사항은 관리자에게 연락해주세요.
+    </div>
+</div>
+</body>
+</html>

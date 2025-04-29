@@ -1,11 +1,16 @@
 package com.example.weup.dto.response;
 
+import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
+import lombok.NoArgsConstructor;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Data
+@AllArgsConstructor
+@NoArgsConstructor
 @Builder
 public class ListUpProjectResponseDTO {
 
@@ -17,9 +22,8 @@ public class ListUpProjectResponseDTO {
 
     private LocalDate projectCreatedTime;
 
-    private LocalDate projectEndedTime;
+    private LocalDateTime finalTime;
 
-    // private int people;
+    private int memberCount;
 
-    // private LocalDate lastAccessTime;
 }

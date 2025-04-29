@@ -4,12 +4,19 @@ import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.CreateProjectDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
+import com.example.weup.dto.response.ListUpProjectResponseDTO;
+import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
+import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -18,22 +25,49 @@ public class ProjectService {
 
     private final ProjectRepository projectRepository;
 
+    private final MemberRepository memberRepository;
+
     @Transactional
-    public Long createProject(CreateProjectDTO createProjectDto) {
+    public Project createProject(CreateProjectDTO createProjectDto) {
 
         Project newProject = Project.builder()
                 .projectName(createProjectDto.getProjectName())
                 .projectImage(createProjectDto.getProjectImage())
                 .build();
 
-        return projectRepository.save(newProject).getProjectId();
+        projectRepository.save(newProject);
+
+        return newProject;
     }
 
-//    @Transactional
-//    public List<ListUpProjectResponseDTO> listUpProject(Long userId) {
-//
-//        ListUpProjectResponseDTO list;
-//    }
+    @Transactional
+    public List<ListUpProjectResponseDTO> listUpProject(Long userId) {
+
+        List<Member> activeMember = memberRepository.findActiveMemberByUserId(userId);
+
+        return activeMember.stream().map(member -> {
+
+            Project project = member.getProject();
+
+            int memberCount = (int) project.getMembers().stream()
+                    .filter(m -> !m.isMemberDeleted())
+                    .count();
+
+            LocalDateTime time = project.getProjectEndedTime() != null
+                    ? project.getProjectEndedTime().atStartOfDay()
+                    : member.getLastAccessTime();
+
+            return ListUpProjectResponseDTO.builder()
+                    .projectId(project.getProjectId())
+                    .projectName(project.getProjectName())
+                    .projectImage(project.getProjectImage())
+                    .projectCreatedTime(project.getProjectCreatedTime())
+                    .finalTime(time)
+                    .memberCount(memberCount)
+                    .build();
+            })
+                .collect(Collectors.toList());
+    }
 
     @Transactional
     public DetailProjectResponseDTO detailProject(Long projectId) {
