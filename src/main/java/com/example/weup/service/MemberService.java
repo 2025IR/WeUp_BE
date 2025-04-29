@@ -73,7 +73,7 @@ public class MemberService {
                             email,
                             user.getName(),
                             inviter.getName(),
-                            project.getName()
+                            project.getProjectName()
                     );
 
                     Member member = new Member();
