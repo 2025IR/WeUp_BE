@@ -4,7 +4,7 @@ import jakarta.persistence.*;
 import lombok.Data;
 
 @Entity
-@Table(name = "jwt_member", uniqueConstraints = {
+@Table(name = "member", uniqueConstraints = {
     @UniqueConstraint(columnNames = {"user_id", "project_id"})
 })
 @Data
@@ -12,7 +12,8 @@ public class Member {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @Column(name = "member_id", nullable = false, updatable = false)
+    private Long memberId;
 
     @ManyToOne
     @JoinColumn(name = "user_id", nullable = false)
@@ -25,4 +26,6 @@ public class Member {
     @Column(nullable = false)
     private String role = "MEMBER";
 
+    @Column(nullable = false)
+    private boolean isMemberDeleted = false;
 } 
