@@ -16,6 +16,4 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
     List<Member> findByProject_ProjectIdAndIsMemberDeletedFalse(Long projectId);
 
     Optional<Member> findByUserAndProject(User user, Project project);
-
-    Optional<Member> findByMemberId(Long memberId);
 } 

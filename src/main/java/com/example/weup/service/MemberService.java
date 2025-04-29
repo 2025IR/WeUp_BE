@@ -3,6 +3,7 @@ package com.example.weup.service;
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.response.MemberInfoResponseDTO;
+import com.example.weup.dto.response.RoleListResponseDTO;
 import com.example.weup.entity.*;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
@@ -26,7 +27,6 @@ public class MemberService {
     private final ProjectRepository projectRepository;
     private final MemberRepository memberRepository;
     private final MailService mailService;
-    private final ProjectService projectService;
     private final RoleRepository roleRepository;
     private final MemberRoleRepository memberRoleRepository;
 
@@ -37,9 +37,9 @@ public class MemberService {
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
             Project project = projectRepository.findById(projectId)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.INTERNAL_ERROR));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-            if (!projectService.hasAccess(inviterId, projectId)) {
+            if (!hasAccess(inviterId, projectId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
@@ -111,7 +111,7 @@ public class MemberService {
     @Transactional
     public List<MemberInfoResponseDTO> getProjectMembers(Long userId, Long projectId) {
         try {
-            if (!projectService.hasAccess(userId, projectId)) {
+            if (!hasAccess(userId, projectId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
@@ -123,7 +123,7 @@ public class MemberService {
              * 멤버랑 일치하는 역할 부여 [List<String> roles]
              */
             List<Member> members = memberRepository.findByProject_ProjectIdAndIsMemberDeletedFalse(projectId);
-            List<Member_Role> memberRoles = memberRoleRepository.findAllByProjectId(projectId);
+            List<MemberRole> memberRoles = memberRoleRepository.findAllByProjectId(projectId);
 
             Map<Long, List<String>> memberIdToRoleNames = memberRoles.stream()
                     .collect(Collectors.groupingBy(
@@ -159,12 +159,12 @@ public class MemberService {
     @Transactional
     public Map<String, Object> delegateLeader(Long formerLeaderUserId, Long projectId, Long newLeaderMemberId) {
         try {
-            if (!projectService.hasAccess(formerLeaderUserId, projectId)) {
+            if (!hasAccess(formerLeaderUserId, projectId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
             Project project = projectRepository.findById(projectId)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.INTERNAL_ERROR));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
             User formerLeaderUser = userRepository.findById(formerLeaderUserId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
@@ -183,7 +183,7 @@ public class MemberService {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
-            if (projectService.isDeletedMember(newLeaderMember.getMemberId())){
+            if (isDeletedMember(newLeaderMember.getMemberId())){
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
@@ -207,61 +207,53 @@ public class MemberService {
     }
 
     @Transactional
-    public Map<String, Object> createRole(Long userId, Long projectId, Long memberId, String roleName, String roleColor) {
-
+    public List<RoleListResponseDTO> listRoles(Long userId, Long projectId) {
         try {
-            if (!projectService.hasAccess(userId, projectId) || projectService.isDeletedMember(memberId)) {
+            if (!hasAccess(userId, projectId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
             Project project = projectRepository.findById(projectId)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.INTERNAL_ERROR));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-            Member member = memberRepository.findById(memberId)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+            List<Role> roles = roleRepository.findAllByProject(project);
 
-            Map<String, Object> result = new HashMap<>();
+            return roles.stream()
+                    .map(role -> new RoleListResponseDTO(role.getRoleId(), role.getRoleName(), role.getRoleColor()))
+                    .collect(Collectors.toList());
 
-            Optional<Role> existingRole = roleRepository.findByProjectAndRoleName(project, roleName);
-            Role role;
+        } catch (GeneralException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("역할 조회 중 오류 발생", e);
+            throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
+        }
+    }
 
-            if (existingRole.isPresent()) {
-                // 이미 프로젝트에 역할이 존재하는 경우
-                role = existingRole.get();
 
-                // 해당 멤버가 이미 그 역할을 갖고 있을 시 에러
-                if (memberRoleRepository.existsByMemberAndRole(member, role)) {
-                    throw new GeneralException(ErrorInfo.ROLE_ALREADY_GIVEN);
-                }
 
-                // 멤버가 역할을 갖고 있지 않으면 연결만 해준다.
-                Member_Role memberRole = new Member_Role();
-                memberRole.setMember(member);
-                memberRole.setRole(role);
-                memberRoleRepository.save(memberRole);
-
-            } else {
-                // 프로젝트에 역할이 없으면 생성 후 연결
-                role = Role.builder()
-                        .project(project)
-                        .roleName(roleName)
-                        .roleColor(roleColor)
-                        .build();
-
-                role = roleRepository.save(role);
-
-                Member_Role memberRole = new Member_Role();
-                memberRole.setMember(member);
-                memberRole.setRole(role);
-                memberRoleRepository.save(memberRole);
+    @Transactional
+    public Role createRole(Long userId, Long projectId, String roleName, String roleColor) {
+        try {
+            if (!hasAccess(userId, projectId)) {
+                throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
-            result.put("projectId", projectId);
-            result.put("memberId", memberId);
-            result.put("roleName", roleName);
-            result.put("roleColor", role.getRoleColor());
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-            return result;
+            // 프로젝트에 같은 이름의 역할이 이미 존재하면 예외
+            if (roleRepository.findByProjectAndRoleName(project, roleName).isPresent()) {
+                throw new GeneralException(ErrorInfo.ROLE_ALREADY_EXISTS);
+            }
+
+            Role role = Role.builder()
+                    .project(project)
+                    .roleName(roleName)
+                    .roleColor(roleColor)
+                    .build();
+
+            return roleRepository.save(role);
 
         } catch (GeneralException e) {
             throw e;
@@ -271,11 +263,60 @@ public class MemberService {
         }
     }
 
+    @Transactional
+    public Map<String, Object> assignRoleToMember(Long userId, Long projectId, Long memberId, String roleName, String roleColor) {
+        try {
+            if (!hasAccess(userId, projectId) || isDeletedMember(memberId)) {
+                throw new GeneralException(ErrorInfo.FORBIDDEN);
+            }
+
+            Project project = projectRepository.findById(projectId)
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+
+            Member member = memberRepository.findById(memberId)
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+
+            Map<String, Object> result = new HashMap<>();
+
+            // 프로젝트 내 역할을 찾고
+            Optional<Role> existingRole = roleRepository.findByProjectAndRoleName(project, roleName);
+            Role role;
+
+            // 역할이 없으면 새로 생성하여
+            role = existingRole.orElseGet(() -> createRole(userId, projectId, roleName, roleColor));
+
+            // 단, 멤버가 이미 이 역할을 갖고 있으면 예외
+            if (memberRoleRepository.existsByMemberAndRole(member, role)) {
+                throw new GeneralException(ErrorInfo.ROLE_ALREADY_GIVEN);
+            }
+
+            // 멤버에게 역할 부여
+            MemberRole memberRole = new MemberRole();
+            memberRole.setMember(member);
+            memberRole.setRole(role);
+            memberRoleRepository.save(memberRole);
+
+            result.put("projectId", projectId);
+            result.put("memberId", memberId);
+            result.put("roleName", role.getRoleName());
+            result.put("roleColor", role.getRoleColor());
+
+            return result;
+
+        } catch (GeneralException e) {
+            throw e;
+        } catch (Exception e) {
+            log.error("역할 부여 중 오류 발생", e);
+            throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
+        }
+    }
+
+
 
     @Transactional
     public Map<String, Object> editRole(Long userId, Long projectId, Long roleId, String roleName, String roleColor) {
         try {
-            if (!projectService.hasAccess(userId, projectId)) {
+            if (!hasAccess(userId, projectId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
@@ -313,14 +354,14 @@ public class MemberService {
     @Transactional
     public void deleteMember(Long userId, Long projectId, Long memberId) {
         try {
-            if (!projectService.hasAccess(userId, projectId)) {
+            if (!hasAccess(userId, projectId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
             User requestUser = userRepository.findById(userId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
             Project project = projectRepository.findById(projectId)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.INTERNAL_ERROR));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
             Member requestMember = memberRepository.findByUserAndProject(requestUser, project)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
@@ -351,7 +392,7 @@ public class MemberService {
 
     public Map<String, Object> deleteRole(Long userId, Long projectId, Long memberId, String roleName) {
         try {
-            if (!projectService.hasAccess(userId, projectId) || projectService.isDeletedMember(memberId)) {
+            if (!hasAccess(userId, projectId) || isDeletedMember(memberId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
@@ -362,7 +403,7 @@ public class MemberService {
             Role role = roleRepository.findByRoleName(roleName)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
-            Member_Role memberRole = memberRoleRepository.findByMemberAndRole(member, role)
+            MemberRole memberRole = memberRoleRepository.findByMemberAndRole(member, role)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
             memberRoleRepository.delete(memberRole);
@@ -406,5 +447,54 @@ public class MemberService {
             log.error("역할 완전 삭제 처리 중 오류 발생", e);
             throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
         }
+    }
+
+    public boolean hasAccess(Long userId, Long projectId) {
+
+        User user = userRepository.findById(userId)
+                .orElse(null);
+
+        if (user == null) {
+            return false;
+        }
+
+        if ("ROLE_ADMIN".equals(user.getRole())) {
+            return true;
+        }
+
+        try {
+            Project project = projectRepository.findById(projectId)
+                    .orElse(null);
+
+            if (project == null) {
+                return false;
+            }
+
+            try {
+                return memberRepository.existsByUserAndProject(user, project);
+            } catch (Exception e) {
+                return false;
+            }
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    public boolean isDeletedMember(Long memberId) {
+
+        Member member = memberRepository.findById(memberId)
+                .orElse(null);
+
+        if (member == null) {
+            return true;
+        }
+
+        try {
+            if (member.isMemberDeleted())
+                return true;
+        } catch (Exception e) {
+            return false;
+        }
+        return false;
     }
 }

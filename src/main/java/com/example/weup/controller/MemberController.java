@@ -3,6 +3,7 @@ package com.example.weup.controller;
 import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.MemberInfoResponseDTO;
+import com.example.weup.dto.response.RoleListResponseDTO;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.service.MemberService;
 import lombok.RequiredArgsConstructor;
@@ -71,7 +72,24 @@ public class MemberController {
         return ResponseEntity.ok(DataResponseDTO.of(result, "팀장 위임이 완료되었습니다."));
     }
 
-    @PostMapping("role/create")
+    @PostMapping("/role/list")
+    public ResponseEntity<DataResponseDTO<List<RoleListResponseDTO>>> listRoles(
+            HttpServletRequest request,
+            @RequestBody ListRoleRequestDTO listRoleRequestDTO) {
+
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
+
+        List<RoleListResponseDTO> roleList = memberService.listRoles(
+                userId,
+                listRoleRequestDTO.getProjectId()
+        );
+
+        return ResponseEntity.ok(DataResponseDTO.of(roleList, "역할 목록 조회가 완료되었습니다."));
+    }
+
+
+    @PostMapping("/role/create")
     public ResponseEntity<DataResponseDTO<Map<String, Object>>> createRole(
             HttpServletRequest request,
             @RequestBody EditRoleRequestDTO editRoleRequestDTO) {
@@ -79,7 +97,7 @@ public class MemberController {
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        Map<String, Object> result = memberService.createRole(
+        Map<String, Object> result = memberService.assignRoleToMember(
                 userId,
                 editRoleRequestDTO.getProjectId(),
                 editRoleRequestDTO.getMemberId(),
@@ -90,7 +108,7 @@ public class MemberController {
         return ResponseEntity.ok(DataResponseDTO.of(result, "역할이 추가되었습니다."));
     }
 
-    @PutMapping("role/edit")
+    @PutMapping("/role/edit")
     public ResponseEntity<DataResponseDTO<Map<String, Object>>> editRole(
             HttpServletRequest request,
             @RequestBody EditRoleRequestDTO editRoleRequestDTO) {
@@ -126,10 +144,9 @@ public class MemberController {
         String message = "프로젝트 탈퇴 처리가 정상적으로 완료되었습니다.";
 
         return ResponseEntity.ok(DataResponseDTO.of(message));
-
     }
 
-    @PutMapping("role/delete")
+    @PutMapping("/role/delete")
     public ResponseEntity<DataResponseDTO<Map<String, Object>>> deleteRole(
             HttpServletRequest request,
             @RequestBody DeleteRoleRequestDTO deleteRoleRequestDTO) {
@@ -147,7 +164,7 @@ public class MemberController {
         return ResponseEntity.ok(DataResponseDTO.of(result, "역할이 해제되었습니다."));
     }
 
-    @DeleteMapping("role/remove")
+    @DeleteMapping("/role/remove")
     public ResponseEntity<DataResponseDTO<Map<String, Object>>> removeRole(
             HttpServletRequest request,
             @RequestBody DeleteRoleRequestDTO deleteRoleRequestDTO) {
