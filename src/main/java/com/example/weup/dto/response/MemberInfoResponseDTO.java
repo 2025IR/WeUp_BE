@@ -17,7 +17,7 @@ public class MemberInfoResponseDTO {
     private String email;
     private String profileImage;
     private String phoneNumber;
-    private String role;
+    private Boolean isLeader;
     private List<String> roles;
     //todo. 프로젝트 역할 추가하기
 }

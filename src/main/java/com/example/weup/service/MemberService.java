@@ -32,6 +32,23 @@ public class MemberService {
     private final MemberRoleRepository memberRoleRepository;
 
     @Transactional
+    public void addProjectCreater(Long userId, Project project) {
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+        Member newMember = Member.builder()
+                .user(user)
+                .project(project)
+                .isLeader(true)
+                .lastAccessTime(LocalDateTime.now())
+                .build();
+
+        project.getMembers().add(newMember);
+        memberRepository.save(newMember);
+    }
+
+    @Transactional
     public Map<String, Object> inviteUsers(Long inviterId, Long projectId, String emailList) {
         try {
             User inviter = userRepository.findById(inviterId)
@@ -80,7 +97,8 @@ public class MemberService {
                     Member member = new Member();
                     member.setUser(user);
                     member.setProject(project);
-                    member.setRole("MEMBER");
+                    member.setLeader(false);
+                    member.setLastAccessTime(LocalDateTime.now());
 
                     newMembers.add(member);
                     invitedEmails.add(email);
@@ -143,7 +161,7 @@ public class MemberService {
                                 .email(user.getAccountSocial().getEmail())
                                 .profileImage(user.getProfileImage())
                                 .phoneNumber(user.getPhoneNumber())
-                                .role(member.getRole())
+                                .isLeader(false)
                                 .roles(roles)
                                 .build();
                     })
@@ -176,7 +194,7 @@ public class MemberService {
             Member formerLeaderMember = memberRepository.findByUserAndProject(formerLeaderUser, project)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
-            if (!"LEADER".equals(formerLeaderMember.getRole())) {
+            if (!formerLeaderMember.isLeader()) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
@@ -188,8 +206,8 @@ public class MemberService {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
-            formerLeaderMember.setRole("MEMBER");
-            newLeaderMember.setRole("LEADER");
+            formerLeaderMember.setLeader(false);
+            newLeaderMember.setLeader(true);
 
             memberRepository.save(formerLeaderMember);
             memberRepository.save(newLeaderMember);
@@ -370,12 +388,12 @@ public class MemberService {
             Member targetMember = memberRepository.findById(memberId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-            if ("LEADER".equals(targetMember.getRole())) {
+            if (targetMember.isLeader()) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
             // 삭제 대상이 리더일 경우 불가
 
-            if (!"LEADER".equals(requestMember.getRole()) && !requestMember.getMemberId().equals(memberId)) {
+            if (!requestMember.isLeader() && !requestMember.getMemberId().equals(memberId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
             //요청자가 리더거나 본인이거나.
