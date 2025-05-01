@@ -29,6 +29,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
 
     private final MemberRepository memberRepository;
+
     private final UserRepository userRepository;
 
     @Transactional

@@ -55,7 +55,7 @@ public class SecurityConfig {
 
                  .authorizeHttpRequests(auth -> auth
                          .requestMatchers("/error").permitAll()
-                         .requestMatchers("/user/signIn", "/user/signup", "/user/reissuetoken", "user/email", "user/email/check").permitAll()
+                         .requestMatchers("/user/signIn", "/user/signup", "/user/reissuetoken", "/user/email", "/user/email/check", "/test").permitAll()
                          .requestMatchers("/text").hasRole("USER")
                          .anyRequest().authenticated()
                  )
