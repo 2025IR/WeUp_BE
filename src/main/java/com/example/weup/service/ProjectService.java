@@ -5,9 +5,11 @@ import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.CreateProjectDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
+import com.example.weup.entity.ChatRoom;
 import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
 import com.example.weup.entity.User;
+import com.example.weup.repository.ChatRoomRepository;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
 import com.example.weup.repository.UserRepository;
@@ -29,7 +31,10 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
 
     private final MemberRepository memberRepository;
+
     private final UserRepository userRepository;
+
+    private final ChatRoomRepository chatRoomRepository;
 
     @Transactional
     public Project createProject(CreateProjectDTO createProjectDto) {
@@ -39,7 +44,12 @@ public class ProjectService {
                 .projectImage(createProjectDto.getProjectImage())
                 .build();
 
+        ChatRoom chatRoom = ChatRoom.builder()
+                .project(newProject)
+                .build();
+
         projectRepository.save(newProject);
+        chatRoomRepository.save(chatRoom);
 
         return newProject;
     }
