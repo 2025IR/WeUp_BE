@@ -46,6 +46,9 @@ public class Project {
     @Builder.Default
     private boolean isRevealedNumber = false;
 
+    @Column
+    private String roomName;
+
     @OneToMany(mappedBy = "project", cascade = CascadeType.REMOVE)
     @Builder.Default
     private List<Member> members = new ArrayList<>();
