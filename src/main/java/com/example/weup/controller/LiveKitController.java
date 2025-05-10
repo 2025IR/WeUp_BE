@@ -1,18 +1,13 @@
 package com.example.weup.controller;
 
-import com.example.weup.dto.request.UserIdRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.ResponseDTO;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.service.LiveKitService;
 import jakarta.servlet.http.HttpServletRequest;
-import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
