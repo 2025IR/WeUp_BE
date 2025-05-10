@@ -17,6 +17,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -66,11 +67,13 @@ public class ProjectService {
                     .projectId(project.getProjectId())
                     .projectName(project.getProjectName())
                     .projectImage(project.getProjectImage())
+                    .status(project.isStatus())
                     .projectCreatedTime(project.getProjectCreatedTime())
                     .finalTime(time)
                     .memberCount(memberCount)
                     .build();
             })
+                .sorted(Comparator.comparing(ListUpProjectResponseDTO::getProjectCreatedTime).reversed())
                 .collect(Collectors.toList());
     }
 
@@ -81,8 +84,6 @@ public class ProjectService {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
         return DetailProjectResponseDTO.builder()
-                .projectName(project.getProjectName())
-                .projectImage(project.getProjectImage())
                 .description(project.getDescription())
                 .build();
     }

@@ -20,6 +20,8 @@ public class ListUpProjectResponseDTO {
 
     private String projectImage;
 
+    private boolean status;
+
     private LocalDate projectCreatedTime;
 
     private LocalDateTime finalTime;
