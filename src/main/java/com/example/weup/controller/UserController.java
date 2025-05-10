@@ -14,7 +14,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Map;
 
 @RestController
@@ -68,11 +70,16 @@ public class UserController {
     }
 
     @PutMapping("/profile/edit")
-    public ResponseEntity<DataResponseDTO<String>> editProfile(HttpServletRequest request, @RequestBody ProfileEditRequestDTO profileEditRequestDTO) {
+    public ResponseEntity<DataResponseDTO<String>> editProfile(
+            HttpServletRequest request,
+            @RequestParam String name,
+            @RequestParam String phoneNumber,
+            @RequestPart(required = false) MultipartFile file) throws IOException {
+
         String token = jwtUtil.resolveToken(request);
-        userService.editProfile(token, profileEditRequestDTO);
-        String message = "회원 정보가 성공적으로 수정되었습니다.";
-        return ResponseEntity.ok(DataResponseDTO.of(message));
+        userService.editProfile(token, name, phoneNumber, file);
+
+        return ResponseEntity.ok(DataResponseDTO.of("회원 정보가 성공적으로 수정되었습니다."));
     }
 
     @PutMapping("/withdraw")

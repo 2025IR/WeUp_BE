@@ -2,8 +2,6 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.controller.MailController;
-import com.example.weup.dto.request.ProfileEditRequestDTO;
 import com.example.weup.dto.request.SignUpRequestDto;
 import com.example.weup.dto.request.TokenRequestDTO;
 import com.example.weup.dto.request.PasswordRequestDTO;
@@ -12,12 +10,13 @@ import com.example.weup.entity.AccountSocial;
 import com.example.weup.entity.User;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.security.JwtUtil;
-import com.example.weup.service.MailService;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.util.Map;
 
 @Service
@@ -32,14 +31,15 @@ public class UserService {
 
     private final MailService mailService;
 
+    private final S3Service s3Service;
+
     @Transactional
     public void signUp(SignUpRequestDto signUpRequestDto) {
 
         if (userRepository.existsByAccountSocialEmail(signUpRequestDto.getEmail())) {
             throw new GeneralException(ErrorInfo.EMAIL_ALREADY_EXIST);
         }
-        
-        // 이메일 인증 상태 확인
+
         String email = signUpRequestDto.getEmail();
         if (!mailService.isEmailVerified(email)) {
             throw new GeneralException(ErrorInfo.EMAIL_NOT_VERIFIED);
@@ -71,7 +71,7 @@ public class UserService {
         return GetProfileResponseDTO.builder()
                 .name(user.getName())
                 .email(user.getAccountSocial().getEmail())
-                .profileImage(user.getProfileImage())
+                .profileImage(s3Service.getPresignedUrl(user.getProfileImage()))
                 .phoneNumber(user.getPhoneNumber())
                 .build();
     }
@@ -105,21 +105,27 @@ public class UserService {
     }
 
     @Transactional
-    public void editProfile(String token, ProfileEditRequestDTO profileEditRequestDTO) {
+    public void editProfile(String token, String name, String phoneNumber, MultipartFile file) throws IOException {
         Long userId = jwtUtil.getUserId(token);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-        if (profileEditRequestDTO.getName() != null && !profileEditRequestDTO.getName().isEmpty()) {
-            user.setName(profileEditRequestDTO.getName());
+        if (name != null) {
+            user.setName(name.trim());
         }
 
-        if (profileEditRequestDTO.getProfileImage() != null && !profileEditRequestDTO.getProfileImage().isEmpty()) {
-            user.setProfileImage(profileEditRequestDTO.getProfileImage());
+        if (phoneNumber != null) {
+            user.setPhoneNumber(phoneNumber.trim());
         }
-        
-        if (profileEditRequestDTO.getPhoneNumber() != null && !profileEditRequestDTO.getPhoneNumber().isEmpty()) {
-            user.setPhoneNumber(profileEditRequestDTO.getPhoneNumber());
+
+        if (file != null && !file.isEmpty()) {
+            String existingImage = user.getProfileImage();
+            if (existingImage != null && !existingImage.isEmpty()) {
+                s3Service.deleteFile(existingImage);
+            }
+
+            String storedFileName = s3Service.uploadSingleFile(file).getStoredFileName();
+            user.setProfileImage(storedFileName);
         }
     }
 
