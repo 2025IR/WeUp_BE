@@ -1,9 +1,12 @@
 package com.example.weup.controller;
 
 import com.example.weup.dto.request.UserIdRequestDTO;
+import com.example.weup.dto.response.DataResponseDTO;
+import com.example.weup.dto.response.ResponseDTO;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.service.LiveKitService;
 import jakarta.servlet.http.HttpServletRequest;
+import lombok.Data;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -13,7 +16,7 @@ import java.util.Map;
 
 @RestController
 @RequiredArgsConstructor
-@RequestMapping("/livekit")
+@RequestMapping("/meeting")
 public class LiveKitController {
 
     private final JwtUtil jwtUtil;
@@ -21,34 +24,43 @@ public class LiveKitController {
     private final LiveKitService liveKitService;
 
     @PostMapping("/enter/{projectId}")
-    public ResponseEntity<Map<String, Object>> enterRoom(@PathVariable Long projectId, @RequestBody UserIdRequestDTO dto) {
+    public ResponseEntity<DataResponseDTO<String>> enterRoom(@PathVariable Long projectId, HttpServletRequest request) {
 
-//        String token = jwtUtil.resolveToken(request);
-//        Long userId = jwtUtil.getUserId(token);
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
 
-        String liveKitToken = liveKitService.generateLiveKitToken(projectId, dto.getUserId());
+        String liveKitToken = liveKitService.generateLiveKitToken(projectId, userId);
 
-        liveKitService.enterRoom(projectId, dto.getUserId());
+        liveKitService.enterRoom(projectId, userId);
 
-        Map<String, Object> response = new HashMap<>();
-        response.put("livekitToken", liveKitToken);
-
-        return ResponseEntity.ok(response);
+        return ResponseEntity
+                .ok()
+                .body(DataResponseDTO.of(liveKitToken, "livekit token 발급"));
     }
 
-    // 어떻게 user_id를 넘겨받을지..?
     @PostMapping("/leave/{projectId}")
-    public ResponseEntity<String> leaveRoom(@PathVariable Long projectId, @RequestBody UserIdRequestDTO dto) {
+    public ResponseEntity<ResponseDTO> leaveRoom(@PathVariable Long projectId, HttpServletRequest request) {
 
-        liveKitService.leaveRoom(projectId, dto.getUserId());
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
 
-        return ResponseEntity.ok("퇴장 처리 완료");
+        liveKitService.leaveRoom(projectId, userId);
+
+        return ResponseEntity
+                .ok()
+                .body(new ResponseDTO(true, "회의실 연결이 종료되었습니다."));
     }
 
     @GetMapping("/count/{projectId}")
-    public ResponseEntity<Long> getRoomUserCount(@PathVariable Long projectId) {
-        Long count = liveKitService.getRoomUserCount(projectId);
-        return ResponseEntity.ok(count);
+    public ResponseEntity<DataResponseDTO<String>> getRoomUserCount(@PathVariable Long projectId, HttpServletRequest request) {
+
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
+
+        Long count = liveKitService.getRoomUserCount(projectId, userId);
+        return ResponseEntity
+                .ok()
+                .body(DataResponseDTO.of(String.valueOf(count), "화상 회의실 현재 참여 인원 수 : " + projectId));
     }
 
 }

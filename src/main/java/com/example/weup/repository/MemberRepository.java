@@ -25,4 +25,5 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
             "WHERE member.user.userId = :userId AND member.isMemberDeleted = false")
     List<Member> findActiveMemberByUserId(@Param("userId") Long userId);
 
+    boolean existsByUser_UserIdAndProject_ProjectId(Long userId, Long projectId);
 } 
