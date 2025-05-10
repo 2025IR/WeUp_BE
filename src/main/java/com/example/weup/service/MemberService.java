@@ -28,6 +28,7 @@ public class MemberService {
     private final ProjectRepository projectRepository;
     private final MemberRepository memberRepository;
     private final MailService mailService;
+    private final S3Service s3Service;
     private final RoleRepository roleRepository;
     private final MemberRoleRepository memberRoleRepository;
 
@@ -134,13 +135,6 @@ public class MemberService {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
-            /**
-             * memberRoles를 스트림으로 돌려서
-             * memberId - roleName 매핑
-             *
-             * member를 스트림으로 돌려서 user 정보 가져오고
-             * 멤버랑 일치하는 역할 부여 [List<String> roles]
-             */
             List<Member> members = memberRepository.findByProject_ProjectIdAndIsMemberDeletedFalse(projectId);
             List<MemberRole> memberRoles = memberRoleRepository.findAllByProjectId(projectId);
 
@@ -159,7 +153,7 @@ public class MemberService {
                                 .userId(user.getUserId())
                                 .name(user.getName())
                                 .email(user.getAccountSocial().getEmail())
-                                .profileImage(user.getProfileImage())
+                                .profileImage(s3Service.getPresignedUrl(user.getProfileImage()))
                                 .phoneNumber(user.getPhoneNumber())
                                 .isLeader(false)
                                 .roles(roles)
@@ -261,7 +255,6 @@ public class MemberService {
             Project project = projectRepository.findById(projectId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-            // 프로젝트에 같은 이름의 역할이 이미 존재하면 예외
             if (roleRepository.findByProjectAndRoleName(project, roleName).isPresent()) {
                 throw new GeneralException(ErrorInfo.ROLE_ALREADY_EXISTS);
             }
@@ -297,19 +290,15 @@ public class MemberService {
 
             Map<String, Object> result = new HashMap<>();
 
-            // 프로젝트 내 역할을 찾고
             Optional<Role> existingRole = roleRepository.findByProjectAndRoleName(project, roleName);
             Role role;
 
-            // 역할이 없으면 새로 생성하여
             role = existingRole.orElseGet(() -> createRole(userId, projectId, roleName, roleColor));
 
-            // 단, 멤버가 이미 이 역할을 갖고 있으면 예외
             if (memberRoleRepository.existsByMemberAndRole(member, role)) {
                 throw new GeneralException(ErrorInfo.ROLE_ALREADY_GIVEN);
             }
 
-            // 멤버에게 역할 부여
             MemberRole memberRole = new MemberRole();
             memberRole.setMember(member);
             memberRole.setRole(role);
@@ -391,12 +380,10 @@ public class MemberService {
             if (targetMember.isLeader()) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
-            // 삭제 대상이 리더일 경우 불가
 
             if (!requestMember.isLeader() && !requestMember.getMemberId().equals(memberId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
-            //요청자가 리더거나 본인이거나.
 
             targetMember.setMemberDeleted(true);
             memberRepository.save(targetMember);
@@ -415,7 +402,6 @@ public class MemberService {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
-            // 대상자 확인
             Member member = memberRepository.findById(memberId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
@@ -446,7 +432,6 @@ public class MemberService {
 
     @Transactional
     public Map<String, Object> removeRole(Long userId, Long projectId, Long memberId, String roleName) {
-        // 먼저 역할 매핑 삭제
         Map<String, Object> result = deleteRole(userId, projectId, memberId, roleName);
 
         try {
