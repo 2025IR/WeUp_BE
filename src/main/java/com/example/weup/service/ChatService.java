@@ -117,7 +117,7 @@ public class ChatService{
     public Page<ChatMessageResponseDto> getChatMessages(Long roomId, int page, int size) throws JsonProcessingException {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sentAt"));
-        Page<ChatMessage> chatMessages = chatMessageRepository.findByChatRoomId(roomId, pageable);
+        Page<ChatMessage> chatMessages = chatMessageRepository.findByChatRoom_ChatRoomId(roomId, pageable);
 
         String key = "chat:room:" + roomId;
         List<String> redisMessages = redisTemplate.opsForList().range(key, 0, -1);

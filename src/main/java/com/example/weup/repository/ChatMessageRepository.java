@@ -9,6 +9,6 @@ import org.springframework.stereotype.Repository;
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
-    Page<ChatMessage> findByChatRoomId(Long chatRoomId, Pageable pageable);
+    Page<ChatMessage> findByChatRoom_ChatRoomId(Long chatRoomId, Pageable pageable);
 
 }
