@@ -39,7 +39,7 @@ public class User implements UserDetails {
 
     @Column(nullable = false)
     @Builder.Default
-    private byte isDarkMode = 0;
+    private byte isDarkMode = 1;
 
     @Column(name = "is_user_withdrawal", nullable = false)
     private boolean isUserWithdrawal;
