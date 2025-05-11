@@ -11,4 +11,6 @@ import java.util.Optional;
 @Repository
 public interface FileRepository extends JpaRepository<File, Long> {
     List<File> findAllByBoard(Board board);
+
+    boolean existsByBoard(Board board);
 }

@@ -8,5 +8,5 @@ public class BoardListRequestDTO {
     private String tag;
     private String search;
     private int page = 0;
-    private int size = 20;
+    private int size = 10;
 }

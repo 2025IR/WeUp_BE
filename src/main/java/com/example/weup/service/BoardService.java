@@ -90,6 +90,15 @@ public class BoardService {
 
     public Page<BoardListResponseDTO> getBoardList(Long userId, Long projectId, String tag, String search, Pageable pageable) {
 
+        log.info("Board List Service");
+
+        log.info("userId:{}", userId);
+        log.info("projectId:{}", projectId);
+
+        log.info("tag:{}", tag);
+        log.info("search:{}", search);
+
+
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
@@ -99,16 +108,21 @@ public class BoardService {
 
         Page<Board> boards = boardRepository.findByProjectIdAndFilters(projectId, tag, search, pageable);
 
+        log.info("boards:{}", boards);
+
         return boards.map(board -> {
             User user = board.getMember().getUser();
+
+            boolean hasFile = fileRepository.existsByBoard(board);
 
             return BoardListResponseDTO.builder()
                     .boardId(board.getBoardId())
                     .nickname(user.getName())
-                    .profileImage(user.getProfileImage())
+                    .profileImage(s3Service.getPresignedUrl(user.getProfileImage()))
                     .title(board.getTitle())
                     .boardCreatedTime(board.getBoardCreateTime())
                     .tag(board.getTag().getTagName())
+                    .hasFile(hasFile)
                     .build();
         });
     }

@@ -14,4 +14,5 @@ public class BoardListResponseDTO {
     private String title;
     private LocalDateTime boardCreatedTime;
     private String tag;
+    private boolean hasFile;
 }
