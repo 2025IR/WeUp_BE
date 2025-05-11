@@ -7,8 +7,8 @@ import com.example.weup.entity.User;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
 import com.example.weup.repository.UserRepository;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.livekit.server.RoomJoin;
+import io.livekit.server.RoomName;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -16,9 +16,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Map;
+import io.livekit.server.AccessToken;
 
 @Slf4j
 @Service
@@ -59,20 +57,14 @@ public class LiveKitService {
             projectRepository.save(project);
         }
 
-        long expMillis = System.currentTimeMillis() + 3600_000;
+        AccessToken token = new AccessToken(apiKey, apiSecret);
+        token.setName(user.getName());
+        token.setIdentity(userId.toString());
+        token.setMetadata(user.getProfileImage());
+        token.setTtl(3600);
+        token.addGrants(new RoomJoin(true), new RoomName(project.getProjectId().toString()));
 
-        Map<String, Object> livekitClaims = new HashMap<>();
-        livekitClaims.put("room", project.getRoomName());
-        livekitClaims.put("userId", user.getUserId());
-        livekitClaims.put("profileImage", user.getProfileImage());
-
-        return Jwts.builder()
-                .setSubject(user.getUserId().toString())
-                .setIssuer(apiKey)
-                .addClaims(livekitClaims)
-                .setExpiration(new Date(expMillis))
-                .signWith(SignatureAlgorithm.HS256, apiSecret)
-                .compact();
+        return token.toJwt();
     }
 
     @Transactional

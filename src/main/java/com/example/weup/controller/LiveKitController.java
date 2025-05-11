@@ -53,6 +53,7 @@ public class LiveKitController {
         Long userId = jwtUtil.getUserId(token);
 
         Long count = liveKitService.getRoomUserCount(projectId, userId);
+
         return ResponseEntity
                 .ok()
                 .body(DataResponseDTO.of(String.valueOf(count), "화상 회의실 현재 참여 인원 수 : " + projectId));
