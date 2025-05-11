@@ -27,6 +27,7 @@ public class User implements UserDetails {
     private String name;
 
     @Column(name = "profile_image", nullable = false)
+    @Builder.Default
     private String profileImage = "baseImage.jpg";
 
     @Column(name = "phone_number")
@@ -38,7 +39,7 @@ public class User implements UserDetails {
 
     @Column(nullable = false)
     @Builder.Default
-    private byte isDarkMode = 0;
+    private byte isDarkMode = 1;
 
     @Column(name = "is_user_withdrawal", nullable = false)
     private boolean isUserWithdrawal;

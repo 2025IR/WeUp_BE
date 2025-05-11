@@ -59,7 +59,7 @@ public class SecurityConfig {
 
                  .authorizeHttpRequests(auth -> auth
                          .requestMatchers("/error").permitAll()
-                         .requestMatchers("/user/signIn", "/user/signup", "/user/reissuetoken", "/user/email", "/user/email/check", "/test").permitAll()
+                         .requestMatchers("/user/signIn", "/user/signup", "/user/reissuetoken", "user/email", "user/email/check").permitAll()
                          .requestMatchers("/text").hasRole("USER")
                          .anyRequest().authenticated()
                  )
@@ -94,7 +94,7 @@ public class SecurityConfig {
      @Bean
      public CorsConfigurationSource corsConfigurationSource() {
          CorsConfiguration configuration = new CorsConfiguration();
-         configuration.addAllowedOriginPattern("http://localhost:5173");
+         configuration.addAllowedOrigin("http://localhost:5173");
          configuration.addAllowedMethod("*");
          configuration.addAllowedHeader("*");
          configuration.setAllowCredentials(true);

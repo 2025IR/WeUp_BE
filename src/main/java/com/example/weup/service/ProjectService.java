@@ -15,7 +15,9 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
@@ -33,17 +35,23 @@ public class ProjectService {
 
     private final UserRepository userRepository;
 
+    private final S3Service s3Service;
+
     @Transactional
-    public Project createProject(CreateProjectDTO createProjectDto) {
+    public Project createProject(String projectName, MultipartFile file) throws IOException {
+        String storedFileName = null;
+
+        if (file != null && !file.isEmpty()) {
+            storedFileName = s3Service.uploadSingleFile(file).getStoredFileName();
+            System.out.println(storedFileName);
+        }
 
         Project newProject = Project.builder()
-                .projectName(createProjectDto.getProjectName())
-                .projectImage(createProjectDto.getProjectImage())
+                .projectName(projectName)
+                .projectImage(storedFileName)
                 .build();
 
-        projectRepository.save(newProject);
-
-        return newProject;
+        return projectRepository.save(newProject);
     }
 
     @Transactional
@@ -66,7 +74,7 @@ public class ProjectService {
             return ListUpProjectResponseDTO.builder()
                     .projectId(project.getProjectId())
                     .projectName(project.getProjectName())
-                    .projectImage(project.getProjectImage())
+                    .projectImage(s3Service.getPresignedUrl(project.getProjectImage()))
                     .status(project.isStatus())
                     .projectCreatedTime(project.getProjectCreatedTime())
                     .finalTime(time)
@@ -104,18 +112,26 @@ public class ProjectService {
     }
 
     @Transactional
-    public void editProject(Long userId, Long projectId, CreateProjectDTO createProjectDto) {
+    public void editProject(Long userId, Long projectId, String projectName, MultipartFile file) throws IOException {
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-        if(!isLeader(userId, project)) {
+        if (!isLeader(userId, project)) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        project.setProjectName(createProjectDto.getProjectName());
-        project.setProjectImage(createProjectDto.getProjectImage());
-        project.setDescription(project.getDescription());
+        project.setProjectName(projectName);
+
+        if (file != null && !file.isEmpty()) {
+            String existingImage = project.getProjectImage();
+            if (existingImage != null && !existingImage.isEmpty()) {
+                s3Service.deleteFile(existingImage);
+            }
+
+            String storedFileName = s3Service.uploadSingleFile(file).getStoredFileName();
+            project.setProjectImage(storedFileName);
+        }
 
         projectRepository.save(project);
     }
