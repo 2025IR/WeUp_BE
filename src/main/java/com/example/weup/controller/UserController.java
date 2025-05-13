@@ -1,14 +1,12 @@
 package com.example.weup.controller;
 
 import com.example.weup.dto.request.PasswordRequestDTO;
-import com.example.weup.dto.request.ProfileEditRequestDTO;
 import com.example.weup.dto.request.SignUpRequestDto;
 import com.example.weup.dto.request.TokenRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
 import com.example.weup.security.JwtDto;
 import com.example.weup.security.JwtUtil;
-import com.example.weup.repository.UserRepository;
 import com.example.weup.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;

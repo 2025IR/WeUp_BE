@@ -1,5 +1,6 @@
 package com.example.weup.controller;
 
+import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
@@ -64,9 +65,10 @@ public class ProjectController {
     @PostMapping("/detail/{projectId}")
     public ResponseEntity<DataResponseDTO<DetailProjectResponseDTO>> detailProject(HttpServletRequest request, @PathVariable Long projectId) {
 
-        jwtUtil.resolveToken(request);
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
 
-        DetailProjectResponseDTO data = projectService.detailProject(projectId);
+        DetailProjectResponseDTO data = projectService.detailProject(projectId, userId);
 
         return ResponseEntity
                 .ok()
@@ -74,37 +76,31 @@ public class ProjectController {
     }
 
     // 프로젝트 상태 변경
-    @PutMapping("/change/status/{projectId}")
-    public ResponseEntity<ResponseDTO> changeProjectStatus(HttpServletRequest request, @PathVariable Long projectId, @RequestParam Boolean status) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
-
-        projectService.changeProjectStatus(userId, projectId, status);
-
-        return ResponseEntity.ok()
-                .body(new ResponseDTO(true, "프로젝트 상태 변경 : " + projectId));
-    }
+//    @PutMapping("/change/status/{projectId}")
+//    public ResponseEntity<ResponseDTO> changeProjectStatus(HttpServletRequest request, @PathVariable Long projectId, @RequestParam Boolean status) {
+//
+//        String token = jwtUtil.resolveToken(request);
+//        Long userId = jwtUtil.getUserId(token);
+//
+//        projectService.changeProjectStatus(userId, projectId, status);
+//
+//        return ResponseEntity.ok()
+//                .body(new ResponseDTO(true, "프로젝트 상태 변경 : " + projectId));
+//    }
 
     // 프로젝트 수정
-    @PutMapping(value = "/edit/{projectId}")
-    public ResponseEntity<ResponseDTO> editProject(
-            HttpServletRequest request,
-            @PathVariable Long projectId,
-            @RequestPart String projectName,
-            @RequestPart(required = false) MultipartFile file
-    ) throws IOException {
+    @PutMapping("/edit/{projectId}")
+    public ResponseEntity<ResponseDTO> editProject(HttpServletRequest request, @PathVariable Long projectId,
+                                                   @ModelAttribute ProjectEditRequestDTO dto) throws IOException {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        projectService.editProject(userId, projectId, projectName, file);
+        projectService.editProject(userId, projectId, dto);
 
         return ResponseEntity.ok()
                 .body(new ResponseDTO(true, "프로젝트 정보 수정 : " + projectId));
     }
-
-
 
     // 프로젝트 설명 수정
     @PutMapping("/edit/description/{projectId}")
