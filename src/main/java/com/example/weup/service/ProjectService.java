@@ -105,26 +105,10 @@ public class ProjectService {
                 .build();
     }
 
-//    @Transactional
-//    public void changeProjectStatus(Long userId, Long projectId, Boolean status) {
-//
-//        Project project = projectRepository.findById(projectId)
-//                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
-//
-//        if(!isLeader(userId, project)) {
-//            throw new GeneralException(ErrorInfo.FORBIDDEN);
-//        }
-//
-//        project.setStatus(status);
-//
-//        projectRepository.save(project);
-//    }
-
     @Transactional
     public void editProject(Long userId, Long projectId, ProjectEditRequestDTO dto) throws IOException {
 
-        log.debug("DTO 확인 - image : " + dto.getProjectImage());
-        log.debug("DTO 확인 - isRevealed : " + dto.isRevealedNumber());
+        log.debug("DTO 확인 - isRevealedNumber : " + dto.isRevealedNumber());
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
@@ -142,7 +126,6 @@ public class ProjectService {
             }
 
             String storedFileName = s3Service.uploadSingleFile(image).getStoredFileName();
-            log.debug("DTO 확인 - image2 : " + dto.getProjectImage());
             project.setProjectImage(storedFileName);
         }
 
