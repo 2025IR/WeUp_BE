@@ -61,6 +61,19 @@ public class UserController {
                 .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료"));
     }
 
+    @PostMapping("/reissue")
+    public ResponseEntity<DataResponseDTO<JwtDto>> reissue(@RequestParam Long UserId) {
+        Map<String, String> tokens = userService.reissue(UserId);
+        String newAccessToken = tokens.get("access_token");
+
+        JwtDto jwtDto = JwtDto.builder()
+                .accessToken(newAccessToken)
+                .build();
+
+        return ResponseEntity.ok()
+                .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료 - 임시 API"));
+    }
+
     @PostMapping("/password")
     public ResponseEntity<DataResponseDTO<String>> changePassword(HttpServletRequest request, @RequestBody PasswordRequestDTO passwordRequestDTO) {
         String token = jwtUtil.resolveToken(request);

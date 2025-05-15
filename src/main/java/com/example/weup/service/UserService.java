@@ -91,6 +91,20 @@ public class UserService {
     }
 
     @Transactional
+    public Map<String, String> reissue(Long userId){
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+        String newAccessToken = jwtUtil.createAccessToken(userId, user.getRole());
+
+        return Map.of("access_token", newAccessToken);
+        // 원래는 리프레시 토큰을 받아서 > 토큰에서 유저아이디를 뽑고 > 그걸로 Role로 뽑아서
+        // 아이디, Role로 액세스 토큰을 만드는 건데,
+        // 아이디를 받아서 토큰을 찾고 다시 아이디를 뽑아서 액세스 토큰을 만든다 >>???
+        // 일단 그냥 userId 받아서 바로 새로운 액세스토큰 발급하게끔
+    }
+
+    @Transactional
     public void changePassword(String token, PasswordRequestDTO passwordRequestDTO) {
 
         Long userId = jwtUtil.getUserId(token);
