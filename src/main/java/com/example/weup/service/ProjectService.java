@@ -2,7 +2,6 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.dto.request.CreateProjectDTO;
 import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
