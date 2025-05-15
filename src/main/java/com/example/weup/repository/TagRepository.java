@@ -1,6 +1,5 @@
 package com.example.weup.repository;
 
-import com.example.weup.entity.Project;
 import com.example.weup.entity.Tag;
 import org.springframework.data.jpa.repository.JpaRepository;
 

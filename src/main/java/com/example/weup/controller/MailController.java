@@ -12,8 +12,6 @@ import java.util.HashMap;
 
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.dto.response.ErrorResponseDTO;
-import org.springframework.http.HttpStatus;
 
 @RestController
 @RequestMapping("/user")

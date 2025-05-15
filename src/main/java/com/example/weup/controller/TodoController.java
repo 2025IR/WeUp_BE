@@ -2,11 +2,8 @@ package com.example.weup.controller;
 
 import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.DataResponseDTO;
-import com.example.weup.dto.response.MemberInfoResponseDTO;
 import com.example.weup.dto.response.TodoListResponseDTO;
 import com.example.weup.security.JwtUtil;
-import com.example.weup.service.MemberService;
-import com.example.weup.service.ProjectService;
 import com.example.weup.service.TodoService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;

@@ -19,5 +19,4 @@ public class MemberInfoResponseDTO {
     private String phoneNumber;
     private Boolean isLeader;
     private List<String> roles;
-    //todo. 프로젝트 역할 추가하기
 }
