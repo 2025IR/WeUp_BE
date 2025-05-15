@@ -165,7 +165,7 @@ public class BoardService {
     @Transactional
     public Map<String, Object> editBoard(Long userId, Long projectId, Long boardId,
                                          String title, String tagName, String contents,
-                                         MultipartFile file) throws IOException, IOException {
+                                         MultipartFile file) throws IOException {
 
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));

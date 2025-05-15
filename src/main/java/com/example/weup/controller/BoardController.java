@@ -12,10 +12,8 @@ import org.springframework.data.domain.Pageable;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
-import java.util.List;
 import java.util.Map;
 
 @RestController
@@ -26,25 +24,21 @@ public class BoardController {
     private final BoardService boardService;
     private final JwtUtil jwtUtil;
 
-    @PostMapping(value = "/create")
+    @PostMapping("/create")
     public ResponseEntity<DataResponseDTO<Map<String, Object>>> createBoard(
             HttpServletRequest request,
-            @RequestParam Long projectId,
-            @RequestParam String title,
-            @RequestParam String contents,
-            @RequestParam String tag,
-            @RequestPart(value = "file", required = false) List<MultipartFile> files) {
+            @ModelAttribute BoardCreateRequestDTO boardCreateRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
         Map<String, Object> result = boardService.createBoard(
                 userId,
-                projectId,
-                title,
-                contents,
-                tag,
-                files
+                boardCreateRequestDTO.getProjectId(),
+                boardCreateRequestDTO.getTitle(),
+                boardCreateRequestDTO.getContents(),
+                boardCreateRequestDTO.getTag(),
+                boardCreateRequestDTO.getFile()
         );
 
         return ResponseEntity.ok(DataResponseDTO.of(result, "게시글 작성이 완료되었습니다."));
@@ -92,22 +86,24 @@ public class BoardController {
     }
 
     @PutMapping("/edit")
-    public ResponseEntity<DataResponseDTO<String>> editBoard(
-            @RequestParam Long projectId,
-            @RequestParam Long boardId,
-            @RequestParam(required = false) String title,
-            @RequestParam(required = false) String tag,
-            @RequestParam(required = false) String contents,
-            @RequestPart(required = false) MultipartFile file,
-            HttpServletRequest request
+    public ResponseEntity<DataResponseDTO<Map<String, Object>>> editBoard(
+            HttpServletRequest request,
+            @ModelAttribute EditBoardRequestDTO editBoardRequestDTO
     ) throws IOException {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        boardService.editBoard(userId, projectId, boardId, title, tag, contents, file);
+        Map<String, Object> result = boardService.editBoard(
+                userId,
+                editBoardRequestDTO.getProjectId(),
+                editBoardRequestDTO.getBoardId(),
+                editBoardRequestDTO.getTitle(),
+                editBoardRequestDTO.getTag(),
+                editBoardRequestDTO.getContents(),
+                editBoardRequestDTO.getFile());
 
-        return ResponseEntity.ok(DataResponseDTO.of("게시글 수정 완료: " + boardId));
+        return ResponseEntity.ok(DataResponseDTO.of(result, "게시글 수정이 완료되었습니다."));
     }
 
 

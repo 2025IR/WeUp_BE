@@ -1,5 +1,7 @@
 package com.example.weup.controller;
 
+import com.example.weup.dto.request.ProjectCreateRequestDTO;
+import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
@@ -13,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -34,13 +35,12 @@ public class ProjectController {
     @PostMapping("/create")
     public ResponseEntity<ResponseDTO> createProject(
             HttpServletRequest request,
-            @RequestParam String projectName,
-            @RequestPart(required = false) MultipartFile file) throws IOException {
+            @ModelAttribute ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        Project newProject = projectService.createProject(projectName, file);
+        Project newProject = projectService.createProject(projectCreateRequestDTO);
         memberService.addProjectCreater(userId, newProject);
 
         return ResponseEntity.ok(DataResponseDTO.of("프로젝트가 성공적으로 생성되었습니다."));
@@ -87,24 +87,18 @@ public class ProjectController {
     }
 
     // 프로젝트 수정
-    @PutMapping(value = "/edit/{projectId}")
-    public ResponseEntity<ResponseDTO> editProject(
-            HttpServletRequest request,
-            @PathVariable Long projectId,
-            @RequestPart String projectName,
-            @RequestPart(required = false) MultipartFile file
-    ) throws IOException {
+    @PutMapping("/edit/{projectId}")
+    public ResponseEntity<ResponseDTO> editProject(HttpServletRequest request, @PathVariable Long projectId,
+                                                   @ModelAttribute ProjectEditRequestDTO dto) throws IOException {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        projectService.editProject(userId, projectId, projectName, file);
+        projectService.editProject(userId, projectId, dto);
 
         return ResponseEntity.ok()
                 .body(new ResponseDTO(true, "프로젝트 정보 수정 : " + projectId));
     }
-
-
 
     // 프로젝트 설명 수정
     @PutMapping("/edit/description/{projectId}")

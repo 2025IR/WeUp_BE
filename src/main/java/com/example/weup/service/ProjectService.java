@@ -2,7 +2,8 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.dto.request.CreateProjectDTO;
+import com.example.weup.dto.request.ProjectCreateRequestDTO;
+import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
 import com.example.weup.entity.Member;
@@ -38,16 +39,16 @@ public class ProjectService {
     private final S3Service s3Service;
 
     @Transactional
-    public Project createProject(String projectName, MultipartFile file) throws IOException {
+    public Project createProject(ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
         String storedFileName = null;
 
-        if (file != null && !file.isEmpty()) {
-            storedFileName = s3Service.uploadSingleFile(file).getStoredFileName();
-            System.out.println(storedFileName);
+        MultipartFile image = projectCreateRequestDTO.getProjectImage();
+        if (image != null && !image.isEmpty()) {
+            storedFileName = s3Service.uploadSingleFile(image).getStoredFileName();
         }
 
         Project newProject = Project.builder()
-                .projectName(projectName)
+                .projectName(projectCreateRequestDTO.getProjectName())
                 .projectImage(storedFileName)
                 .build();
 
@@ -112,7 +113,10 @@ public class ProjectService {
     }
 
     @Transactional
-    public void editProject(Long userId, Long projectId, String projectName, MultipartFile file) throws IOException {
+    public void editProject(Long userId, Long projectId, ProjectEditRequestDTO dto) throws IOException {
+
+        log.debug("DTO 확인 - image : " + dto.getProjectImage());
+        log.debug("DTO 확인 - isRevealed : " + dto.isRevealedNumber());
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
@@ -121,19 +125,29 @@ public class ProjectService {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        project.setProjectName(projectName);
-
-        if (file != null && !file.isEmpty()) {
+        MultipartFile image = dto.getProjectImage();
+        if (image != null && !image.isEmpty()) {
             String existingImage = project.getProjectImage();
             if (existingImage != null && !existingImage.isEmpty()) {
                 s3Service.deleteFile(existingImage);
             }
 
-            String storedFileName = s3Service.uploadSingleFile(file).getStoredFileName();
+            String storedFileName = s3Service.uploadSingleFile(image).getStoredFileName();
+            log.debug("DTO 확인 - image2 : " + dto.getProjectImage());
             project.setProjectImage(storedFileName);
         }
 
         projectRepository.save(project);
+        log.debug("service - setProjectImage : " + project.getProjectImage());
+
+        project.setProjectName(dto.getProjectName());
+        log.debug("service - setProjectName : " + project.getProjectName());
+
+        project.setStatus(dto.isStatus());
+        log.debug("service - setStatus : " + project.isStatus());
+
+        project.setRevealedNumber(dto.isRevealedNumber());
+        log.debug("service - setRevealedNumber : " + project.isRevealedNumber());
     }
 
     @Transactional

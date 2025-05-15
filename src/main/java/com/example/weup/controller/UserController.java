@@ -8,13 +8,11 @@ import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
 import com.example.weup.security.JwtDto;
 import com.example.weup.security.JwtUtil;
-import com.example.weup.repository.UserRepository;
 import com.example.weup.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.Map;
@@ -85,15 +83,18 @@ public class UserController {
     @PutMapping("/profile/edit")
     public ResponseEntity<DataResponseDTO<String>> editProfile(
             HttpServletRequest request,
-            @RequestParam String name,
-            @RequestParam String phoneNumber,
-            @RequestPart(required = false) MultipartFile file) throws IOException {
+            @ModelAttribute ProfileEditRequestDTO profileEditRequestDTO) throws IOException {
 
         String token = jwtUtil.resolveToken(request);
-        userService.editProfile(token, name, phoneNumber, file);
+        userService.editProfile(
+                token,
+                profileEditRequestDTO.getName(),
+                profileEditRequestDTO.getPhoneNumber(),
+                profileEditRequestDTO.getProfileImage());
 
         return ResponseEntity.ok(DataResponseDTO.of("회원 정보가 성공적으로 수정되었습니다."));
     }
+
 
     @PutMapping("/withdraw")
     public ResponseEntity<DataResponseDTO<String>> withdrawUser(HttpServletRequest request) {
