@@ -3,7 +3,6 @@ package com.example.weup.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
-import java.math.BigInteger;
 import java.time.LocalDateTime;
 
 @Setter
