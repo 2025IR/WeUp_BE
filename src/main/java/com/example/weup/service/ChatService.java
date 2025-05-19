@@ -41,13 +41,13 @@ public class ChatService{
     public void saveChatMessage(Long roomId, ChatMessageRequestDto dto) throws JsonProcessingException {
 
         String key = "chat:room:" + roomId;
-
         String jsonMessage = objectMapper.writeValueAsString(dto);
 
         redisTemplate.opsForList().rightPush(key, jsonMessage);
     }
 
     // 5분에 한번씩 Redis에 저장된 메시지들 Main DB로 이동
+    @Transactional
     @Scheduled(fixedDelay = 300000)
     public void flushAllRooms() throws JsonProcessingException {
 
@@ -64,15 +64,14 @@ public class ChatService{
 
         Set<String> keys = redisTemplate.keys("chat:room:*");
 
-        if (keys.isEmpty()) {
+        if (Objects.requireNonNull(keys).isEmpty()) {
             return Collections.emptyList();
         }
 
         return keys.stream()
                 .map(key -> {
                     String[] parts = key.split(":");
-
-                    return Long.parseLong(parts[2]);
+                    return Long.parseLong(parts[2]);  // roomId만 추출
                 })
                 .collect(Collectors.toList());
     }
@@ -87,7 +86,7 @@ public class ChatService{
             List<ChatMessage> chatMessageList = new ArrayList<>();
 
             ChatRoom chatRoom = chatRoomRepository.findById(roomId)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));  // 임의로..
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
 
             for (String json : messages) {
                 ChatMessageRequestDto dto = objectMapper.readValue(json, ChatMessageRequestDto.class);
@@ -111,7 +110,6 @@ public class ChatService{
         }
     }
 
-    // TODO. 중복 코드 지우기
     // 채팅 내역 불러오기 (페이징 기법 이용)
     @Transactional(readOnly = true)
     public Page<ChatMessageResponseDto> getChatMessages(Long roomId, int page, int size) throws JsonProcessingException {
@@ -127,7 +125,7 @@ public class ChatService{
         if (redisMessages != null) {
 
             ChatRoom chatRoom = chatRoomRepository.findById(roomId)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));  // 임의로..
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
 
             for (String json : redisMessages) {
                 ChatMessageRequestDto dto = objectMapper.readValue(json, ChatMessageRequestDto.class);

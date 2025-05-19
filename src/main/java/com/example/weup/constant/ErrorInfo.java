@@ -38,7 +38,9 @@ public enum ErrorInfo {
 
     TAG_NOT_FOUND(HttpStatus.NOT_FOUND, "존재하지 않는 게시글 태그입니다."),
     
-    BOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다.");
+    BOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),
+
+    CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

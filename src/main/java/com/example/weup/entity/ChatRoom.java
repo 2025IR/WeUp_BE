@@ -26,5 +26,5 @@ public class ChatRoom {
 
     @Column(name = "created_at", nullable = false)
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private LocalDateTime createdAt = LocalDateTime.now();  // 이게 필요한가 ?
 }
