@@ -30,8 +30,9 @@ public class Member {
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
-    @Column(name = "available_time")
-    private BigInteger availableTime;
+    @Column(name = "available_time", length = 350)
+    @Builder.Default
+    private String availableTime = "0";
 
     @Column(name = "is_member_deleted", nullable = false)
     @Builder.Default

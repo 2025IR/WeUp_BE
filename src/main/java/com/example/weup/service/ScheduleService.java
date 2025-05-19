@@ -25,29 +25,20 @@ public class ScheduleService {
 
         List<Member> getMember = memberRepository.findByProject_ProjectIdAndIsMemberDeletedFalse(projectId);
 
-        final int TOTAL_SLOT_COUNT = 48;
-
         return getMember.stream()
                 .collect(Collectors.toMap(
                         Member::getMemberId,
-                        member -> {
-                            BigInteger data = member.getAvailableTime();
-                            return String.format("%" + TOTAL_SLOT_COUNT + "s", data.toString(2))
-                                    .replace(' ', '0');
-                        }
+                        Member::getAvailableTime
                 ));
     }
 
     @Transactional
     public void editSchedule(EditScheduleRequestDTO editScheduleRequestDTO) {
 
-        String binaryTime = editScheduleRequestDTO.getAvailableTime();
-        BigInteger availableTIme = new BigInteger(binaryTime, 2);
-
         Member member = memberRepository.findById(editScheduleRequestDTO.getMemberId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUNT));
 
-        member.setAvailableTime(availableTIme);
+        member.setAvailableTime(editScheduleRequestDTO.getAvailableTime());
     }
 
 }

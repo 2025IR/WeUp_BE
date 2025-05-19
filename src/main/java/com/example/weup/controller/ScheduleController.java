@@ -33,7 +33,7 @@ public class ScheduleController {
     }
 
     @PutMapping("/edit")
-    public ResponseEntity<ResponseDTO> editSchedule(HttpServletRequest request, @RequestParam EditScheduleRequestDTO editScheduleRequestDTO) {
+    public ResponseEntity<ResponseDTO> editSchedule(HttpServletRequest request, @RequestBody EditScheduleRequestDTO editScheduleRequestDTO) {
 
         jwtUtil.resolveToken(request);
 
