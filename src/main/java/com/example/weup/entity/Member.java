@@ -3,6 +3,7 @@ package com.example.weup.entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.math.BigInteger;
 import java.time.LocalDateTime;
 
 @Setter
@@ -30,7 +31,7 @@ public class Member {
     private Project project;
 
     @Column(name = "available_time")
-    private Long availableTime;
+    private BigInteger availableTime;
 
     @Column(name = "is_member_deleted", nullable = false)
     @Builder.Default
