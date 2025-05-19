@@ -1,14 +1,14 @@
 package com.example.weup.controller;
 
+import com.example.weup.dto.request.EditScheduleRequestDTO;
+import com.example.weup.dto.response.DataResponseDTO;
+import com.example.weup.dto.response.ResponseDTO;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.service.ScheduleService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import java.util.Map;
 
@@ -21,10 +21,26 @@ public class ScheduleController {
     private final JwtUtil jwtUtil;
 
     @PostMapping("/{projectId}")
-    public ResponseEntity<Map<Long, String>> getSchedule(HttpServletRequest request, @PathVariable Long projectId) {
+    public ResponseEntity<DataResponseDTO<Map<Long, String>>> getSchedule(HttpServletRequest request, @PathVariable Long projectId) {
 
-        String token = jwtUtil.resolveToken(request);
+        jwtUtil.resolveToken(request);
 
-        scheduleService.getSchedule(projectId);
+        Map<Long, String> availableSchedule = scheduleService.getSchedule(projectId);
+
+        return ResponseEntity
+                .ok()
+                .body(DataResponseDTO.of(availableSchedule, "프로젝트 팀원의 이용 가능 시간 출력 완료"));
+    }
+
+    @PutMapping("/edit")
+    public ResponseEntity<ResponseDTO> editSchedule(HttpServletRequest request, @RequestParam EditScheduleRequestDTO editScheduleRequestDTO) {
+
+        jwtUtil.resolveToken(request);
+
+        scheduleService.editSchedule(editScheduleRequestDTO);
+
+        return ResponseEntity
+                .ok()
+                .body(new ResponseDTO(true, "Available TIme 수정 : " + editScheduleRequestDTO.getMemberId()));
     }
 }
