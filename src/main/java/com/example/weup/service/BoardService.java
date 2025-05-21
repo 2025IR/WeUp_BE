@@ -156,7 +156,7 @@ public class BoardService {
                 .profileImage(member.getUser().getProfileImage())
                 .title(board.getTitle())
                 .contents(board.getContents())
-                .createdTime(board.getBoardCreateTime())
+                .boardCreatedTime(board.getBoardCreateTime())
                 .tag(tag != null ? tag.getTagName() : null)
                 .files(fileDTOs)
                 .build();

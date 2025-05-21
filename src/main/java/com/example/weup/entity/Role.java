@@ -30,5 +30,6 @@ public class Role {
     private String roleName;
 
     @Column(name = "role_color", nullable = false)
-    private String roleColor;
+    @Builder.Default
+    private String roleColor = "Beige";
 }

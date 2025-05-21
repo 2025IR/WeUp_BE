@@ -27,16 +27,19 @@ public class MemberController {
             HttpServletRequest request,
             @RequestBody ProjectInviteRequestDTO projectInviteRequestDTO) {
 
+        System.out.println(">>> projectId: " + projectInviteRequestDTO.getProjectId());
+        System.out.println(">>> email: " + projectInviteRequestDTO.getEmail());
+
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        Map<String, Object> result = memberService.inviteUsers(
+        String result = memberService.inviteUser(
                 userId,
                 projectInviteRequestDTO.getProjectId(),
-                projectInviteRequestDTO.getEmails()
+                projectInviteRequestDTO.getEmail()
         );
 
-        return ResponseEntity.ok(DataResponseDTO.of(result, "초대 처리가 완료되었습니다."));
+        return ResponseEntity.ok(DataResponseDTO.of(result));
     }
 
     @PostMapping("/list")
@@ -72,6 +75,25 @@ public class MemberController {
         return ResponseEntity.ok(DataResponseDTO.of(result, "팀장 위임이 완료되었습니다."));
     }
 
+    @PutMapping("/delete")
+    public ResponseEntity<DataResponseDTO<String>> deleteMember(
+            HttpServletRequest request,
+            @RequestBody DeleteMemberRequestDTO deleteMemberRequestDTO){
+
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
+
+        memberService.deleteMember(
+                userId,
+                deleteMemberRequestDTO.getProjectId(),
+                deleteMemberRequestDTO.getMemberId()
+        );
+
+        String message = "프로젝트 탈퇴 처리가 정상적으로 완료되었습니다.";
+
+        return ResponseEntity.ok(DataResponseDTO.of(message));
+    }
+
     @PostMapping("/role/list")
     public ResponseEntity<DataResponseDTO<List<RoleListResponseDTO>>> listRoles(
             HttpServletRequest request,
@@ -88,21 +110,37 @@ public class MemberController {
         return ResponseEntity.ok(DataResponseDTO.of(roleList, "역할 목록 조회가 완료되었습니다."));
     }
 
-
-    @PostMapping("/role/create")
-    public ResponseEntity<DataResponseDTO<Map<String, Object>>> createRole(
+    @PutMapping("/role/assign")
+    public ResponseEntity<String> assignRoleToMember(
             HttpServletRequest request,
-            @RequestBody EditRoleRequestDTO editRoleRequestDTO) {
+            @RequestBody AssignRoleRequestDTO assignRoleRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        Map<String, Object> result = memberService.assignRoleToMember(
+        memberService.assignRoleToMember(
                 userId,
-                editRoleRequestDTO.getProjectId(),
-                editRoleRequestDTO.getMemberId(),
-                editRoleRequestDTO.getRoleName(),
-                editRoleRequestDTO.getRoleColor()
+                assignRoleRequestDTO.getProjectId(),
+                assignRoleRequestDTO.getMemberId(),
+                assignRoleRequestDTO.getRoleName()
+                );
+
+        return ResponseEntity.ok("역할이 추가되었습니다.");  // Response로 바꿔야 함
+    }
+
+    @PostMapping("/role/create")
+    public ResponseEntity<DataResponseDTO<Map<String, Object>>> createRole(
+            HttpServletRequest request,
+            @RequestBody CreateRoleRequestDTO createRoleRequestDTO) {
+
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
+
+        Map<String, Object> result = memberService.createRole(
+                userId,
+                createRoleRequestDTO.getProjectId(),
+                createRoleRequestDTO.getRoleName(),
+                createRoleRequestDTO.getRoleColor()
         );
 
         return ResponseEntity.ok(DataResponseDTO.of(result, "역할이 추가되었습니다."));
@@ -127,58 +165,38 @@ public class MemberController {
         return ResponseEntity.ok(DataResponseDTO.of(result, "역할이 수정되었습니다."));
     }
 
-    @PutMapping("/delete")
-    public ResponseEntity<DataResponseDTO<String>> deleteMember(
-            HttpServletRequest request,
-            @RequestBody DeleteMemberRequestDTO deleteMemberRequestDTO){
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
-
-        memberService.deleteMember(
-                userId,
-                deleteMemberRequestDTO.getProjectId(),
-                deleteMemberRequestDTO.getMemberId()
-        );
-
-        String message = "프로젝트 탈퇴 처리가 정상적으로 완료되었습니다.";
-
-        return ResponseEntity.ok(DataResponseDTO.of(message));
-    }
-
-    @PutMapping("/role/delete")
-    public ResponseEntity<DataResponseDTO<Map<String, Object>>> deleteRole(
-            HttpServletRequest request,
-            @RequestBody DeleteRoleRequestDTO deleteRoleRequestDTO) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
-
-        Map<String, Object> result = memberService.deleteRole(
-                userId,
-                deleteRoleRequestDTO.getProjectId(),
-                deleteRoleRequestDTO.getMemberId(),
-                deleteRoleRequestDTO.getRoleName()
-        );
-
-        return ResponseEntity.ok(DataResponseDTO.of(result, "역할이 해제되었습니다."));
-    }
+//    @PutMapping("/role/delete")
+//    public ResponseEntity<DataResponseDTO<Map<String, Object>>> deleteRole(
+//            HttpServletRequest request,
+//            @RequestBody DeleteRoleRequestDTO deleteRoleRequestDTO) {
+//
+//        String token = jwtUtil.resolveToken(request);
+//        Long userId = jwtUtil.getUserId(token);
+//
+//        Map<String, Object> result = memberService.deleteRole(
+//                userId,
+//                deleteRoleRequestDTO.getProjectId(),
+//                deleteRoleRequestDTO.getMemberId(),
+//                deleteRoleRequestDTO.getRoleName()
+//        );
+//
+//        return ResponseEntity.ok(DataResponseDTO.of(result, "역할이 해제되었습니다."));
+//    }
 
     @DeleteMapping("/role/remove")
-    public ResponseEntity<DataResponseDTO<Map<String, Object>>> removeRole(
+    public ResponseEntity<DataResponseDTO<String>> removeRole(
             HttpServletRequest request,
             @RequestBody DeleteRoleRequestDTO deleteRoleRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        Map<String, Object> result = memberService.removeRole(
+        memberService.removeRole(
                 userId,
                 deleteRoleRequestDTO.getProjectId(),
-                deleteRoleRequestDTO.getMemberId(),
-                deleteRoleRequestDTO.getRoleName()
+                deleteRoleRequestDTO.getRoleId()
         );
 
-        return ResponseEntity.ok(DataResponseDTO.of(result, "역할이 삭제되었습니다."));
+        return ResponseEntity.ok(DataResponseDTO.of("역할이 삭제되었습니다."));
     }
 }

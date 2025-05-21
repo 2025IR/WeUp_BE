@@ -13,7 +13,7 @@ public class BoardDetailResponseDTO {
     private String profileImage;
     private String title;
     private String contents;
-    private LocalDateTime createdTime;
+    private LocalDateTime boardCreatedTime;
     private String tag;
     private List<FileResponseDTO> files;
 }

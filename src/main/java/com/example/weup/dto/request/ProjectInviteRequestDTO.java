@@ -7,5 +7,5 @@ import lombok.Setter;
 @Setter
 public class ProjectInviteRequestDTO {
     private Long projectId;
-    private String emails;
+    private String email;
 }

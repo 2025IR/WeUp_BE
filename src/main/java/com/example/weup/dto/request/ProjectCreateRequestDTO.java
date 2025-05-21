@@ -9,6 +9,6 @@ public class ProjectCreateRequestDTO {
 
     private String projectName;
 
-    private MultipartFile projectImage;
+    private MultipartFile file;
 
 }

@@ -16,6 +16,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -39,12 +40,15 @@ public class ProjectService {
     private final S3Service s3Service;
 
     @Transactional
-    public Project createProject(ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
+    public Project createProject(@ModelAttribute ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
         String storedFileName = null;
+        MultipartFile image = projectCreateRequestDTO.getFile();
 
-        MultipartFile image = projectCreateRequestDTO.getProjectImage();
+
         if (image != null && !image.isEmpty()) {
             storedFileName = s3Service.uploadSingleFile(image).getStoredFileName();
+        } else {
+            storedFileName = "086d1ece-d1dd-424b-97ae-892075355026-smiley1.png";
         }
 
         Project newProject = Project.builder()

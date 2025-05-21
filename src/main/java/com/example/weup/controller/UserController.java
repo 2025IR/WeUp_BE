@@ -60,8 +60,8 @@ public class UserController {
     }
 
     @PostMapping("/reissue")
-    public ResponseEntity<DataResponseDTO<JwtDto>> reissue(@RequestParam Long UserId) {
-        Map<String, String> tokens = userService.reissue(UserId);
+    public ResponseEntity<DataResponseDTO<JwtDto>> reissue(@RequestParam Long userId) {
+        Map<String, String> tokens = userService.reissue(userId);
         String newAccessToken = tokens.get("access_token");
 
         JwtDto jwtDto = JwtDto.builder()

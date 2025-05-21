@@ -12,7 +12,7 @@ import java.util.List;
 @NoArgsConstructor
 @AllArgsConstructor
 public class MemberInfoResponseDTO {
-    private Long userId;
+    private Long memberId;
     private String name;
     private String email;
     private String profileImage;

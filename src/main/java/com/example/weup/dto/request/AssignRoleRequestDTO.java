@@ -3,9 +3,12 @@ package com.example.weup.dto.request;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.util.List;
+
 @Getter
 @Setter
-public class DeleteRoleRequestDTO {
+public class AssignRoleRequestDTO {
     private Long projectId;
-    private Long roleId;
+    private Long memberId;
+    private List<String> roleName;
 }
