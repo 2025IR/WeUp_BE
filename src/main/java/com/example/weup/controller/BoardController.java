@@ -52,6 +52,7 @@ public class BoardController {
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
+        //todo. 얘도 서비스로
         Pageable pageable = PageRequest.of(
                 boardListRequestDTO.getPage(),
                 boardListRequestDTO.getSize(),
@@ -69,6 +70,7 @@ public class BoardController {
         return ResponseEntity.ok(DataResponseDTO.of(boards, "게시글 조회가 완료되었습니다."));
     }
 
+    //todo. detail, edit, delete boardId path로 빼서 자체적으로 찾게끔?
     @PostMapping("/detail")
     public ResponseEntity<DataResponseDTO<BoardDetailResponseDTO>> getBoardDetail(
             HttpServletRequest request,
@@ -105,7 +107,6 @@ public class BoardController {
 
         return ResponseEntity.ok(DataResponseDTO.of(result, "게시글 수정이 완료되었습니다."));
     }
-
 
     @DeleteMapping("/delete")
     public ResponseEntity<DataResponseDTO<String>> deleteBoard(

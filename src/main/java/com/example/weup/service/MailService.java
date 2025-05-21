@@ -29,7 +29,9 @@ public class MailService {
 
     // 이메일별 인증 번호
     private final Map<String, Integer> emailVerificationMap = new ConcurrentHashMap<>();
-    
+
+    //todo. 인증 요청 세 번 보내서 중복방지 되는지 확인하기
+
     // 이메일별 인증 완료 상태
     private final Map<String, Boolean> emailVerifiedMap = new ConcurrentHashMap<>();
 
@@ -44,6 +46,7 @@ public class MailService {
         sendEmailAsync(mail, number);
     }
 
+    //todo. 비동기 처리 안 되는 이유 찾아 수정하기
     @Async
     public CompletableFuture<Void> sendEmailAsync(String mail, int number) {
         MimeMessage message = javaMailSender.createMimeMessage();

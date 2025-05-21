@@ -23,6 +23,8 @@ public class MemberController {
     private final JwtUtil jwtUtil;
 
     @PostMapping("/invite")
+    //todo. 이름 inviteUser로 변경
+    //todo. print 빼기
     public ResponseEntity<DataResponseDTO<Map<String, Object>>> inviteUsers(
             HttpServletRequest request,
             @RequestBody ProjectInviteRequestDTO projectInviteRequestDTO) {
@@ -45,6 +47,7 @@ public class MemberController {
     @PostMapping("/list")
     public ResponseEntity<DataResponseDTO<List<MemberInfoResponseDTO>>> getProjectMembers(
             HttpServletRequest request,
+            //todo. pathvariable로 변경 -> dto에 하나만 있을 경우
             @RequestBody ProjectMemberRequestDTO projectMemberRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
@@ -97,6 +100,7 @@ public class MemberController {
     @PostMapping("/role/list")
     public ResponseEntity<DataResponseDTO<List<RoleListResponseDTO>>> listRoles(
             HttpServletRequest request,
+            //todo. pathvariable로 변경
             @RequestBody ListRoleRequestDTO listRoleRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
@@ -111,7 +115,7 @@ public class MemberController {
     }
 
     @PutMapping("/role/assign")
-    public ResponseEntity<String> assignRoleToMember(
+    public ResponseEntity<DataResponseDTO<String>> assignRoleToMember(
             HttpServletRequest request,
             @RequestBody AssignRoleRequestDTO assignRoleRequestDTO) {
 
@@ -125,7 +129,7 @@ public class MemberController {
                 assignRoleRequestDTO.getRoleName()
                 );
 
-        return ResponseEntity.ok("역할이 추가되었습니다.");  // Response로 바꿔야 함
+        return ResponseEntity.ok(DataResponseDTO.of("역할이 추가되었습니다"));  // Response로 바꿔야 함
     }
 
     @PostMapping("/role/create")

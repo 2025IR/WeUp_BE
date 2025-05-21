@@ -103,19 +103,15 @@ public class MemberService {
         } catch (GeneralException e) {
             throw e;
         } catch (Exception e) {
-            e.printStackTrace();
             log.error("사용자 초대 중 오류 발생", e);
             throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
         }
     }
 
-
-
+    //todo. 역할 이름/색깔로 수정하기
     @Transactional
     public List<MemberInfoResponseDTO> getProjectMembers(Long userId, Long projectId) {
         try {
-            log.error(String.valueOf(userId));
-            log.error(String.valueOf(projectId));
 
             if (!hasAccess(userId, projectId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
@@ -192,6 +188,7 @@ public class MemberService {
             memberRepository.save(formerLeaderMember);
             memberRepository.save(newLeaderMember);
 
+            //todo. 리턴값 맵인 얘들 다 없애도 됨
             Map<String, Object> result = new HashMap<>();
             result.put("projectId", projectId);
             result.put("previousLeaderUserId", formerLeaderUserId);
@@ -353,6 +350,7 @@ public class MemberService {
                 throw new GeneralException(ErrorInfo.BAD_REQUEST);
             }
 
+            //todo. 이름 색깔이 db에 저장된 값하고 둘 다 동일하면 수정 x
             Role role = roleRepository.findById(roleId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.BAD_REQUEST));
 
@@ -399,6 +397,7 @@ public class MemberService {
         }
     }
 
+    //todo. memberservice 대신 다른 곳으로 빼기 - 권한 설정 같은 로직들
     public boolean hasAccess(Long userId, Long projectId) {
 
         User user = userRepository.findById(userId)
@@ -408,6 +407,7 @@ public class MemberService {
             return false;
         }
 
+        //todo. admin 필요한지 윤석이 형한테 물어보기
         if ("ROLE_ADMIN".equals(user.getRole())) {
             return true;
         }

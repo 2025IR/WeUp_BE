@@ -64,6 +64,7 @@ public class BoardService {
                 .build();
         boardRepository.save(board);
 
+        //todo. dto 대신 file로 할 수 있는지
         List<FileFullResponseDTO> fileFullResponseDTOS = s3Service.uploadFiles(files);
 
         if (!fileFullResponseDTOS.isEmpty()) {
@@ -90,15 +91,6 @@ public class BoardService {
 
     public Page<BoardListResponseDTO> getBoardList(Long userId, Long projectId, String tag, String search, Pageable pageable) {
 
-        log.info("Board List Service");
-
-        log.info("userId:{}", userId);
-        log.info("projectId:{}", projectId);
-
-        log.info("tag:{}", tag);
-        log.info("search:{}", search);
-
-
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
@@ -107,8 +99,6 @@ public class BoardService {
         }
 
         Page<Board> boards = boardRepository.findByProjectIdAndFilters(projectId, tag, search, pageable);
-
-        log.info("boards:{}", boards);
 
         return boards.map(board -> {
             User user = board.getMember().getUser();
@@ -149,15 +139,13 @@ public class BoardService {
                         .build())
                 .collect(Collectors.toList());
 
-        Tag tag = board.getTag();
-
         return BoardDetailResponseDTO.builder()
                 .name(member.getUser().getName())
                 .profileImage(member.getUser().getProfileImage())
                 .title(board.getTitle())
                 .contents(board.getContents())
                 .boardCreatedTime(board.getBoardCreateTime())
-                .tag(tag != null ? tag.getTagName() : null)
+                .tag(board.getTag().getTagName())
                 .files(fileDTOs)
                 .build();
     }
@@ -183,11 +171,7 @@ public class BoardService {
 
         if (title != null) {
             board.setTitle(title.trim());
-        } else {
-            throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
-        }
-
-        if (contents != null) {
+        } else if (contents != null) {
             board.setContents(contents.trim());
         } else {
             throw new GeneralException(ErrorInfo.INTERNAL_ERROR);

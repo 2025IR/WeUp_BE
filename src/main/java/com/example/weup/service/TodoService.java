@@ -96,6 +96,7 @@ public class TodoService {
                 .map(todo -> {
                     List<TodoAssigneeResponseDTO> assignees = todo.getTodoMembers().stream()
                             .map(tm -> {
+                                //todo. 먼저 선언하지 말고 빌더 안에서 바로바로 쓰기
                                 Member member = tm.getMember();
                                 User user = member.getUser();
 
@@ -162,6 +163,7 @@ public class TodoService {
 
         todoMemberRepository.deleteByTodo_TodoId(todoId);
 
+        //todo. stream으로 혼자 짜보기
         for (Long memberId : memberIds) {
             Member member = memberRepository.findById(memberId)
                     .orElseThrow(() -> new IllegalArgumentException("멤버를 찾을 수 없습니다: " + memberId));
