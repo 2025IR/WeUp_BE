@@ -18,7 +18,7 @@ public enum ErrorInfo {
 
     PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 프로젝트를 찾을 수 없습니다."),
 
-    MEMBER_NOT_FOUNT(HttpStatus.NOT_FOUND, "일치하는 멤버가 없습니다."),
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "일치하는 멤버가 없습니다."),
 
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증에 실패하였습니다."),
 

@@ -15,7 +15,7 @@ public class ChatMessageRequestDto {
 
     private Long projectId;  // ????
 
-    private String senderId;
+    private String senderId;  // Long ?
 
     private String message;
 

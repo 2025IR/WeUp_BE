@@ -47,6 +47,7 @@ public class ChatService{
     }
 
     // 5분에 한번씩 Redis에 저장된 메시지들 Main DB로 이동
+    // TODO. 개수로 바꿔야 하나...
     @Transactional
     @Scheduled(fixedDelay = 300000)
     public void flushAllRooms() throws JsonProcessingException {

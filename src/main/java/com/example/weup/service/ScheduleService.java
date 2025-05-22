@@ -35,7 +35,7 @@ public class ScheduleService {
     public void editSchedule(EditScheduleRequestDTO editScheduleRequestDTO) {
 
         Member member = memberRepository.findById(editScheduleRequestDTO.getMemberId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUNT));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
         member.setAvailableTime(editScheduleRequestDTO.getAvailableTime());
     }
