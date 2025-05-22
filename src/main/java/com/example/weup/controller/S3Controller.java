@@ -19,7 +19,7 @@ public class S3Controller {
     private final S3Service s3Service;
 
     @PostMapping("/upload")
-    public ResponseEntity<DataResponseDTO<List<FileFullResponseDTO>>> uploadFiles(@RequestParam("files") List<MultipartFile> files) {
+    public ResponseEntity<DataResponseDTO<List<FileFullResponseDTO>>> uploadFiles(@RequestParam List<MultipartFile> files) {
         List<FileFullResponseDTO> uploadedFiles = s3Service.uploadFiles(files);
         return ResponseEntity.ok(DataResponseDTO.of(uploadedFiles, "파일 업로드 성공"));
     }
