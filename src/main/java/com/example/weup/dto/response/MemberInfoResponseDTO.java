@@ -1,5 +1,6 @@
 package com.example.weup.dto.response;
 
+import com.example.weup.entity.Role;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -18,5 +19,5 @@ public class MemberInfoResponseDTO {
     private String profileImage;
     private String phoneNumber;
     private Boolean isLeader;
-    private List<String> roles;
+    private List<Long> roleIds;
 }

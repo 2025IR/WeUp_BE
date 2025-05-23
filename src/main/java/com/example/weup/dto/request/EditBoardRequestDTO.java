@@ -9,7 +9,6 @@ import org.springframework.web.multipart.MultipartFile;
 @Setter
 public class EditBoardRequestDTO {
     private Long boardId;
-    private Long projectId;
     private String title;
     private String contents;
     private String tag;

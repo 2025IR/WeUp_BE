@@ -10,5 +10,5 @@ import java.util.List;
 public class AssignRoleRequestDTO {
     private Long projectId;
     private Long memberId;
-    private List<String> roleName;
+    private List<Long> roleIds;
 }

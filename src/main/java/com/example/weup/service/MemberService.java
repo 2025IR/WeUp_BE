@@ -2,6 +2,7 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.MemberInfoResponseDTO;
 import com.example.weup.dto.response.RoleListResponseDTO;
 import com.example.weup.entity.*;
@@ -50,19 +51,20 @@ public class MemberService {
     }
 
     @Transactional
-    public String inviteUser(Long userId, Long projectId, String email) {
+    public String inviteUser(Long userId, ProjectInviteRequestDTO projectInviteRequestDTO) {
         try {
+
             User inviter = userRepository.findById(userId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-            Project project = projectRepository.findById(projectId)
+            Project project = projectRepository.findById(projectInviteRequestDTO.getProjectId())
                     .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-            if (!hasAccess(userId, projectId)) {
+            if (!hasAccess(userId, projectInviteRequestDTO.getProjectId())) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
-            email = email.trim();
+            String email = projectInviteRequestDTO.getEmail().trim();
             if (email.isEmpty()) {
                 throw new GeneralException(ErrorInfo.BAD_REQUEST);
             }
@@ -108,11 +110,9 @@ public class MemberService {
         }
     }
 
-    //todo. 역할 이름/색깔로 수정하기
     @Transactional
     public List<MemberInfoResponseDTO> getProjectMembers(Long userId, Long projectId) {
         try {
-
             if (!hasAccess(userId, projectId)) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
@@ -120,16 +120,19 @@ public class MemberService {
             List<Member> members = memberRepository.findByProject_ProjectIdAndIsMemberDeletedFalse(projectId);
             List<MemberRole> memberRoles = memberRoleRepository.findAllByProjectId(projectId);
 
-            Map<Long, List<String>> memberIdToRoleNames = memberRoles.stream()
+            Map<Long, List<Long>> memberIdToRoleIds = memberRoles.stream()
                     .collect(Collectors.groupingBy(
                             mr -> mr.getMember().getMemberId(),
-                            Collectors.mapping(mr -> mr.getRole().getRoleName(), Collectors.toList())
+                            Collectors.mapping(
+                                    mr -> mr.getRole().getRoleId(),
+                                    Collectors.toList()
+                            )
                     ));
 
             return members.stream()
                     .map(member -> {
                         User user = member.getUser();
-                        List<String> roles = memberIdToRoleNames.getOrDefault(member.getMemberId(), new ArrayList<>());
+                        List<Long> roleIds = memberIdToRoleIds.getOrDefault(member.getMemberId(), new ArrayList<>());
 
                         return MemberInfoResponseDTO.builder()
                                 .memberId(member.getMemberId())
@@ -138,7 +141,7 @@ public class MemberService {
                                 .profileImage(s3Service.getPresignedUrl(user.getProfileImage()))
                                 .phoneNumber(user.getPhoneNumber())
                                 .isLeader(false)
-                                .roles(roles)
+                                .roleIds(roleIds)
                                 .build();
                     })
                     .collect(Collectors.toList());
@@ -151,20 +154,22 @@ public class MemberService {
         }
     }
 
+
+
     @Transactional
-    public Map<String, Object> delegateLeader(Long formerLeaderUserId, Long projectId, Long newLeaderMemberId) {
+    public void delegateLeader(Long formerLeaderUserId, LeaderDelegateRequestDTO leaderDelegateRequestDTO) {
         try {
-            if (!hasAccess(formerLeaderUserId, projectId)) {
+            if (!hasAccess(formerLeaderUserId, leaderDelegateRequestDTO.getProjectId())) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
-            Project project = projectRepository.findById(projectId)
+            Project project = projectRepository.findById(leaderDelegateRequestDTO.getProjectId())
                     .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
             User formerLeaderUser = userRepository.findById(formerLeaderUserId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-            Member newLeaderMember = memberRepository.findById(newLeaderMemberId)
+            Member newLeaderMember = memberRepository.findById(leaderDelegateRequestDTO.getNewLeaderId())
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
             Member formerLeaderMember = memberRepository.findByUserAndProject(formerLeaderUser, project)
@@ -188,12 +193,6 @@ public class MemberService {
             memberRepository.save(formerLeaderMember);
             memberRepository.save(newLeaderMember);
 
-            //todo. 리턴값 맵인 얘들 다 없애도 됨
-            Map<String, Object> result = new HashMap<>();
-            result.put("projectId", projectId);
-            result.put("previousLeaderUserId", formerLeaderUserId);
-            result.put("newLeaderMemberId", newLeaderMemberId);
-            return result;
         } catch (GeneralException e) {
             throw e;
         } catch (Exception e) {
@@ -264,29 +263,31 @@ public class MemberService {
     }
 
     @Transactional
-    public void assignRoleToMember(Long userId, Long projectId, Long memberId, List<String> roleNames) {
+    public void assignRoleToMember(Long userId, AssignRoleRequestDTO assignRoleRequestDTO) {
         try {
-            if (!hasAccess(userId, projectId) || isDeletedMember(memberId)) {
+            if (!hasAccess(userId, assignRoleRequestDTO.getProjectId()) || isDeletedMember(assignRoleRequestDTO.getMemberId())) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
-            Project project = projectRepository.findById(projectId)
+            Project project = projectRepository.findById(assignRoleRequestDTO.getProjectId())
                     .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-            Member member = memberRepository.findById(memberId)
+            Member member = memberRepository.findById(assignRoleRequestDTO.getMemberId())
                     .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
             memberRoleRepository.deleteByMember(member);
+            List<MemberRole> deleteRoles = memberRoleRepository.findByMember(member);
+            for (MemberRole role : deleteRoles) {
+                log.debug("after deleted data : " + role.getRole().getRoleId() + " : " + role.getRole().getRoleName());
+            }
 
-            List<Role> roles = roleRepository.findByProjectAndRoleNameIn(project, roleNames);
+            List<Role> roles = roleRepository.findByProjectAndRoleIdIn(project, assignRoleRequestDTO.getRoleIds());
 
-            if (roles.size() != roleNames.size()) {
+            if (roles.size() != assignRoleRequestDTO.getRoleIds().size()) {
                 throw new GeneralException(ErrorInfo.ROLE_NOT_FOUND);
             }
 
             for (Role role : roles) {
-                log.debug("roles Data Print : {},{}", role.getRoleName(), role.getRoleId());
-
                 MemberRole memberRole = MemberRole.builder()
                         .member(member)
                         .role(role)
@@ -304,32 +305,26 @@ public class MemberService {
     }
 
     @Transactional
-    public Map<String, Object> createRole(Long userId, Long projectId, String roleName, String roleColor) {
+    public void createRole(Long userId, CreateRoleRequestDTO createRoleRequestDTO) {
         try {
-            if (!hasAccess(userId, projectId)) {
+            if (!hasAccess(userId, createRoleRequestDTO.getProjectId())) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
-            Project project = projectRepository.findById(projectId)
+            Project project = projectRepository.findById(createRoleRequestDTO.getProjectId())
                     .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-            if (roleRepository.findByProjectAndRoleName(project, roleName).isPresent()) {
+            if (roleRepository.findByProjectAndRoleName(project, createRoleRequestDTO.getRoleName()).isPresent()) {
                 throw new GeneralException(ErrorInfo.ROLE_ALREADY_EXISTS);
             }
 
             Role role = Role.builder()
                     .project(project)
-                    .roleName(roleName)
-                    .roleColor(roleColor)
+                    .roleName(createRoleRequestDTO.getRoleName())
+                    .roleColor(createRoleRequestDTO.getRoleColor())
                     .build();
 
             roleRepository.save(role);
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("projectId", projectId);
-            result.put("roleName", roleName);
-
-            return result;
 
         } catch (GeneralException e) {
             throw e;
@@ -340,9 +335,12 @@ public class MemberService {
     }
 
     @Transactional
-    public Map<String, Object> editRole(Long userId, Long projectId, Long roleId, String roleName, String roleColor) {
+    public void editRole(Long userId, EditRoleRequestDTO editRoleRequestDTO) {
         try {
-            if (!hasAccess(userId, projectId)) {
+            String roleName = editRoleRequestDTO.getRoleName();
+            String roleColor = editRoleRequestDTO.getRoleColor();
+
+            if (!hasAccess(userId, editRoleRequestDTO.getProjectId())) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
@@ -350,22 +348,17 @@ public class MemberService {
                 throw new GeneralException(ErrorInfo.BAD_REQUEST);
             }
 
-            //todo. 이름 색깔이 db에 저장된 값하고 둘 다 동일하면 수정 x
-            Role role = roleRepository.findById(roleId)
+            Role role = roleRepository.findById(editRoleRequestDTO.getRoleId())
                     .orElseThrow(() -> new GeneralException(ErrorInfo.BAD_REQUEST));
+
+            if (roleName.equals(role.getRoleName()) && roleColor.equals(role.getRoleColor())) {
+                return;
+            }
 
             role.setRoleName(roleName);
             role.setRoleColor(roleColor);
 
             roleRepository.save(role);
-
-            Map<String, Object> result = new HashMap<>();
-            result.put("projectId", projectId);
-            result.put("roleId", roleId);
-            result.put("roleName", role.getRoleName());
-            result.put("roleColor", role.getRoleColor());
-
-            return result;
 
         } catch (GeneralException e) {
             throw e;
@@ -375,14 +368,15 @@ public class MemberService {
         }
     }
 
+
     @Transactional
-    public void removeRole(Long userId, Long projectId, Long roleId) {
+    public void removeRole(Long userId, DeleteRoleRequestDTO deleteRoleRequestDTO) {
         try {
-            if (!hasAccess(userId, projectId)) {
+            if (!hasAccess(userId, deleteRoleRequestDTO.getProjectId())) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
-            Role role = roleRepository.findById(roleId)
+            Role role = roleRepository.findById(deleteRoleRequestDTO.getRoleId())
                     .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
             memberRoleRepository.deleteByRole(role);
@@ -397,37 +391,9 @@ public class MemberService {
         }
     }
 
-    //todo. memberservice 대신 다른 곳으로 빼기 - 권한 설정 같은 로직들
+    //todo. aop? 찾아보기
     public boolean hasAccess(Long userId, Long projectId) {
-
-        User user = userRepository.findById(userId)
-                .orElse(null);
-
-        if (user == null) {
-            return false;
-        }
-
-        //todo. admin 필요한지 윤석이 형한테 물어보기
-        if ("ROLE_ADMIN".equals(user.getRole())) {
-            return true;
-        }
-
-        try {
-            Project project = projectRepository.findById(projectId)
-                    .orElse(null);
-
-            if (project == null) {
-                return false;
-            }
-
-            try {
-                return memberRepository.existsByUserAndProject(user, project);
-            } catch (Exception e) {
-                return false;
-            }
-        } catch (Exception e) {
-            return false;
-        }
+        return memberRepository.existsByUser_UserIdAndProject_ProjectId(userId, projectId);
     }
 
     public boolean isDeletedMember(Long memberId) {

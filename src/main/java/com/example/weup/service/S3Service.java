@@ -58,7 +58,6 @@ public class S3Service {
         return uploadedFiles;
     }
 
-    //todo. 제너릭, 상속 사용해서 두 가지 경우로
     public FileFullResponseDTO uploadSingleFile(MultipartFile file) throws IOException {
         String originalFileName = Paths.get(file.getOriginalFilename()).getFileName().toString();
         String storedFileName = UUID.randomUUID() + "-" + originalFileName;
@@ -75,7 +74,6 @@ public class S3Service {
                 .storedFileName(storedFileName)
                 .fileSize(file.getSize())
                 .fileType(file.getContentType())
-                .filePath("https://" + s3Properties.getBucket() + ".s3.amazonaws.com/" + storedFileName)
                 .build();
     }
 

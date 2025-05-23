@@ -2,6 +2,9 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.request.CreateTodoRequestDTO;
+import com.example.weup.dto.request.EditTodoRequestDTO;
+import com.example.weup.dto.request.EditTodoStatusRequestDTO;
 import com.example.weup.dto.response.TodoAssigneeResponseDTO;
 import com.example.weup.dto.response.TodoListResponseDTO;
 import com.example.weup.entity.*;
@@ -14,10 +17,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
-import java.time.LocalDate;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -34,36 +34,30 @@ public class TodoService {
     private final TodoMemberRepository todoMemberRepository;
 
     @Transactional
-    public Map<String, Object> createTodo(Long userId,
-                                          Long projectId,
-                                          List<Long> memberIds,
-                                          String todoName,
-                                          LocalDate startDate,
-                                          LocalDate endDate) {
+    public void createTodo(Long userId, CreateTodoRequestDTO createTodoRequestDTO) {
 
-        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
+        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, createTodoRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
-        if (!memberService.hasAccess(userId, projectId) || memberService.isDeletedMember(requestMember.getMemberId())) {
-            log.error("프로젝트 소속이 아니거나, 삭제된 멤버입니다.");
+        if (memberService.isDeletedMember(requestMember.getMemberId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new IllegalArgumentException("프로젝트를 찾을 수 없습니다."));
+        Project project = projectRepository.findById(createTodoRequestDTO.getProjectId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
         Todo todo = Todo.builder()
                 .project(project)
-                .todoName(todoName)
-                .startDate(startDate)
-                .endDate(endDate)
+                .todoName(createTodoRequestDTO.getTodoName())
+                .startDate(createTodoRequestDTO.getStartDate())
+                .endDate(createTodoRequestDTO.getEndDate())
                 .build();
 
         todoRepository.save(todo);
 
-        for (Long memberId : memberIds) {
+        for (Long memberId : createTodoRequestDTO.getMemberIds()) {
             Member member = memberRepository.findById(memberId)
-                    .orElseThrow(() -> new IllegalArgumentException("멤버를 찾을 수 없습니다: " + memberId));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
             TodoMember todoMember = TodoMember.builder()
                     .todo(todo)
@@ -72,12 +66,6 @@ public class TodoService {
 
             todoMemberRepository.save(todoMember);
         }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("todoId", todo.getTodoId());
-        result.put("assignedMemberCount", memberIds.size());
-
-        return result;
     }
 
     public List<TodoListResponseDTO> getTodoList(Long userId, Long projectId) {
@@ -85,8 +73,7 @@ public class TodoService {
         Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
-        if (!memberService.hasAccess(userId, projectId) || memberService.isDeletedMember(requestMember.getMemberId())) {
-            log.error("프로젝트 소속이 아니거나, 삭제된 멤버입니다.");
+        if (memberService.isDeletedMember(requestMember.getMemberId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
@@ -96,7 +83,6 @@ public class TodoService {
                 .map(todo -> {
                     List<TodoAssigneeResponseDTO> assignees = todo.getTodoMembers().stream()
                             .map(tm -> {
-                                //todo. 먼저 선언하지 말고 빌더 안에서 바로바로 쓰기
                                 Member member = tm.getMember();
                                 User user = member.getUser();
 
@@ -134,100 +120,70 @@ public class TodoService {
     }
 
     @Transactional
-    public Map<String, Object> editTodo(Long userId,
-                                        Long projectId,
-                                        Long todoId,
-                                        List<Long> memberIds,
-                                        String todoName,
-                                        LocalDate startDate,
-                                        LocalDate endDate) {
+    public void editTodo(Long userId, EditTodoRequestDTO editTodoRequestDTO) {
 
-        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
+        Todo todo = todoRepository.findById(editTodoRequestDTO.getTodoId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));
+
+        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, todo.getProject().getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
-        if (!memberService.hasAccess(userId, projectId) || memberService.isDeletedMember(requestMember.getMemberId())) {
-            log.error("프로젝트 소속이 아니거나, 삭제된 멤버입니다.");
+        if (memberService.isDeletedMember(requestMember.getMemberId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        Todo todo = todoRepository.findById(todoId)
-                .orElseThrow(() -> new IllegalArgumentException("투두를 찾을 수 없습니다."));
-
-        if (!todo.getProject().getProjectId().equals(projectId)) {
+        if (!todo.getProject().getProjectId().equals(todo.getProject().getProjectId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        todo.setTodoName(todoName);
-        todo.setStartDate(startDate);
-        todo.setEndDate(endDate);
+        todo.setTodoName(editTodoRequestDTO.getTodoName());
+        todo.setStartDate(editTodoRequestDTO.getStartDate());
+        todo.setEndDate(editTodoRequestDTO.getEndDate());
 
-        todoMemberRepository.deleteByTodo_TodoId(todoId);
+        todoMemberRepository.deleteByTodo_TodoId(editTodoRequestDTO.getTodoId());
 
-        //todo. stream으로 혼자 짜보기
-        for (Long memberId : memberIds) {
-            Member member = memberRepository.findById(memberId)
-                    .orElseThrow(() -> new IllegalArgumentException("멤버를 찾을 수 없습니다: " + memberId));
-
-            TodoMember todoMember = TodoMember.builder()
-                    .todo(todo)
-                    .member(member)
-                    .build();
-
-            todoMemberRepository.save(todoMember);
-        }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("todoId", todo.getTodoId());
-
-        return result;
+        editTodoRequestDTO.getMemberIds().stream()
+                .map(memberId -> memberRepository.findById(memberId)
+                        .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND)))
+                .map(member -> TodoMember.builder()
+                        .todo(todo)
+                        .member(member)
+                        .build())
+                .forEach(todoMemberRepository::save);
     }
 
     @Transactional
-    public Map<String, Object> editTodoStatus(Long userId,
-                                                Long projectId,
-                                                Long todoId,
-                                                Byte status) {
+    public void editTodoStatus(Long userId, EditTodoStatusRequestDTO editTodoStatusRequestDTO) {
 
-        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
+        Todo todo = todoRepository.findById(editTodoStatusRequestDTO.getTodoId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));
+
+        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, todo.getProject().getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
-        if (!memberService.hasAccess(userId, projectId) || memberService.isDeletedMember(requestMember.getMemberId())) {
-            log.error("프로젝트 소속이 아니거나, 삭제된 멤버입니다.");
+        if (memberService.isDeletedMember(requestMember.getMemberId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        Todo todo = todoRepository.findById(todoId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 투두를 찾을 수 없습니다."));
-
-        if (!todo.getProject().getProjectId().equals(projectId)) {
+        if (!todo.getProject().getProjectId().equals(todo.getProject().getProjectId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        todo.setTodoStatus(status);
+        todo.setTodoStatus(editTodoStatusRequestDTO.getStatus());
         todoRepository.save(todo);
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("todoId", todo.getTodoId());
-        result.put("status", status);
-
-        return result;
     }
 
     @Transactional
-    public void deleteTodo(Long userId, Long projectId, Long todoId) {
-
-        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
-
-        if (!memberService.hasAccess(userId, projectId) || memberService.isDeletedMember(requestMember.getMemberId())) {
-            log.error("프로젝트 소속이 아니거나, 삭제된 멤버입니다.");
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
+    public void deleteTodo(Long userId, Long todoId) {
 
         Todo todo = todoRepository.findById(todoId)
-                .orElseThrow(() -> new IllegalArgumentException("해당 투두를 찾을 수 없습니다."));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));
 
-        if (!todo.getProject().getProjectId().equals(projectId)) {
+        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, todo.getProject().getProjectId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+
+        if (!memberService.hasAccess(userId, todo.getProject().getProjectId()) || memberService.isDeletedMember(requestMember.getMemberId())) {
+            log.error("프로젝트 소속이 아니거나, 삭제된 멤버입니다.");
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 

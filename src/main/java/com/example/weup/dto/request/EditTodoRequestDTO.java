@@ -9,7 +9,6 @@ import java.util.List;
 @Getter
 @NoArgsConstructor
 public class EditTodoRequestDTO {
-    private Long projectId;
     private Long todoId;
     private String todoName;
     private LocalDate startDate;
