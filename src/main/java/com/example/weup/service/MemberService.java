@@ -391,7 +391,6 @@ public class MemberService {
         }
     }
 
-    //todo. aop? 찾아보기
     public boolean hasAccess(Long userId, Long projectId) {
         return memberRepository.existsByUser_UserIdAndProject_ProjectId(userId, projectId);
     }

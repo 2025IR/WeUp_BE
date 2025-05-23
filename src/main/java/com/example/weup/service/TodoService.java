@@ -132,10 +132,6 @@ public class TodoService {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        if (!todo.getProject().getProjectId().equals(todo.getProject().getProjectId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
-
         todo.setTodoName(editTodoRequestDTO.getTodoName());
         todo.setStartDate(editTodoRequestDTO.getStartDate());
         todo.setEndDate(editTodoRequestDTO.getEndDate());
@@ -162,10 +158,6 @@ public class TodoService {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
         if (memberService.isDeletedMember(requestMember.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
-
-        if (!todo.getProject().getProjectId().equals(todo.getProject().getProjectId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
