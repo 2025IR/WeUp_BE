@@ -36,7 +36,6 @@ public class ChatService{
 
     private final ObjectMapper objectMapper;
 
-    // 메시지 보내면 Redis에 저장
     @Transactional
     public void saveChatMessage(Long roomId, ChatMessageRequestDto dto) throws JsonProcessingException {
 
@@ -46,8 +45,6 @@ public class ChatService{
         redisTemplate.opsForList().rightPush(key, jsonMessage);
     }
 
-    // 5분에 한번씩 Redis에 저장된 메시지들 Main DB로 이동
-    // TODO. 개수로 바꿔야 하나...
     @Transactional
     @Scheduled(fixedDelay = 300000)
     public void flushAllRooms() throws JsonProcessingException {
@@ -60,7 +57,6 @@ public class ChatService{
         }
     }
 
-    // 현재 존재하는 모든 채팅방 ID를 가져오는 로직
     private List<Long> getAllActiveRoomIds() {
 
         Set<String> keys = redisTemplate.keys("chat:room:*");
@@ -77,7 +73,6 @@ public class ChatService{
                 .collect(Collectors.toList());
     }
 
-    // 실제로 Redis에서 Main DB로 이동 후, Redis에서는 해당 데이터를 삭제하는 로직
     private void flushMessagesToDb(Long roomId, String key) throws JsonProcessingException {
 
         List<String> messages = redisTemplate.opsForList().range(key, 0, -1);
@@ -111,7 +106,6 @@ public class ChatService{
         }
     }
 
-    // 채팅 내역 불러오기 (페이징 기법 이용)
     @Transactional(readOnly = true)
     public Page<ChatMessageResponseDto> getChatMessages(Long roomId, int page, int size) throws JsonProcessingException {
 
@@ -148,8 +142,8 @@ public class ChatService{
         List<ChatMessageResponseDto> combinedMessages = new ArrayList<>();
 
         redisChatMessages.sort(Comparator.comparing(ChatMessage::getSentAt).reversed());
-        combinedMessages.addAll(redisChatMessages.stream().map(ChatMessageResponseDto::fromEntity).toList());
 
+        combinedMessages.addAll(redisChatMessages.stream().map(ChatMessageResponseDto::fromEntity).toList());
         combinedMessages.addAll(chatMessages.getContent().stream().map(ChatMessageResponseDto::fromEntity).toList());
 
         return new PageImpl<>(combinedMessages, pageable, chatMessages.getTotalElements() + redisChatMessages.size());

@@ -29,7 +29,7 @@ public class ChatController {
     }
 
     @ResponseBody
-    @GetMapping("/chat/{roomId}/messages")  //api?
+    @GetMapping("/chat/{roomId}/messages")
     public ResponseEntity<DataResponseDTO<Page<ChatMessageResponseDto>>> getChatMessages(@PathVariable Long roomId,
                                                                         @RequestParam(defaultValue = "0") int page,
                                                                         @RequestParam(defaultValue = "20") int size) throws JsonProcessingException {
@@ -38,6 +38,4 @@ public class ChatController {
                 .ok()
                 .body(DataResponseDTO.of(messages, "채팅 내역 조회 완료"));
     }
-
-    // 채팅방 번호 어떻게 줘야 하지...?
 }
