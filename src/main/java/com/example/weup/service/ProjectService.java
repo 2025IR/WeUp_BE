@@ -77,26 +77,26 @@ public class ProjectService {
 
         return activeMember.stream().map(member -> {
 
-            Project project = member.getProject();
+                    Project project = member.getProject();
 
-            int memberCount = (int) project.getMembers().stream()
-                    .filter(m -> !m.isMemberDeleted())
-                    .count();
+                    int memberCount = (int) project.getMembers().stream()
+                            .filter(m -> !m.isMemberDeleted())
+                            .count();
 
-            LocalDateTime time = project.getProjectEndedTime() != null
-                    ? project.getProjectEndedTime().atStartOfDay()
-                    : member.getLastAccessTime();
+                    LocalDateTime time = project.getProjectEndedTime() != null
+                            ? project.getProjectEndedTime().atStartOfDay()
+                            : member.getLastAccessTime();
 
-            return ListUpProjectResponseDTO.builder()
-                    .projectId(project.getProjectId())
-                    .projectName(project.getProjectName())
-                    .projectImage(s3Service.getPresignedUrl(project.getProjectImage()))
-                    .status(project.isStatus())
-                    .projectCreatedTime(project.getProjectCreatedTime())
-                    .finalTime(time)
-                    .memberCount(memberCount)
-                    .build();
-            })
+                    return ListUpProjectResponseDTO.builder()
+                            .projectId(project.getProjectId())
+                            .projectName(project.getProjectName())
+                            .projectImage(s3Service.getPresignedUrl(project.getProjectImage()))
+                            .status(project.isStatus())
+                            .projectCreatedTime(project.getProjectCreatedTime())
+                            .finalTime(time)
+                            .memberCount(memberCount)
+                            .build();
+                })
                 .sorted(Comparator.comparing(ListUpProjectResponseDTO::getProjectCreatedTime).reversed())
                 .collect(Collectors.toList());
     }
@@ -145,7 +145,6 @@ public class ProjectService {
         project.setProjectName(dto.getProjectName());
         project.setStatus(dto.isStatus());
         project.setRevealedNumber(dto.isRevealedNumber());
-        }
     }
 
     @Transactional
@@ -162,11 +161,11 @@ public class ProjectService {
     private boolean isLeader(Long userId, Project project) {
 
         User user = userRepository.findById(userId)
-                        .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
         Optional<Member> member = memberRepository.findByUserAndProject(user, project);
 
         return member.isPresent() && member.get().isLeader();
     }
 
-} 
+}
