@@ -1,5 +1,6 @@
 package com.example.weup.controller;
 
+import com.example.weup.dto.request.ProjectCreateRequestDTO;
 import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
@@ -14,7 +15,6 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
@@ -35,13 +35,12 @@ public class ProjectController {
     @PostMapping("/create")
     public ResponseEntity<ResponseDTO> createProject(
             HttpServletRequest request,
-            @RequestParam String projectName,
-            @RequestPart(required = false) MultipartFile file) throws IOException {
+            @ModelAttribute ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        Project newProject = projectService.createProject(projectName, file);
+        Project newProject = projectService.createProject(projectCreateRequestDTO);
         memberService.addProjectCreater(userId, newProject);
 
         return ResponseEntity.ok(DataResponseDTO.of("프로젝트가 성공적으로 생성되었습니다."));

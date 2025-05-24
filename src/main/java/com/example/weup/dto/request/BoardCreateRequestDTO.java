@@ -4,13 +4,15 @@ import lombok.Getter;
 import lombok.Setter;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.List;
 
 @Getter
 @Setter
-public class EditBoardRequestDTO {
-    private Long boardId;
+public class BoardCreateRequestDTO {
+    private Long projectId;
     private String title;
     private String contents;
     private String tag;
-    private MultipartFile file;
+    private List<MultipartFile> file;
 }
+

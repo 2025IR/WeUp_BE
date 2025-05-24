@@ -74,7 +74,6 @@ public class S3Service {
                 .storedFileName(storedFileName)
                 .fileSize(file.getSize())
                 .fileType(file.getContentType())
-                .filePath("https://" + s3Properties.getBucket() + ".s3.amazonaws.com/" + storedFileName)
                 .build();
     }
 

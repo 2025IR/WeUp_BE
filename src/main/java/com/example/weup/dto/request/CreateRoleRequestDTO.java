@@ -5,6 +5,9 @@ import lombok.Setter;
 
 @Getter
 @Setter
-public class ListRoleRequestDTO {
+public class CreateRoleRequestDTO {
     private Long projectId;
+    private String roleName;
+    private String roleColor;
+
 }

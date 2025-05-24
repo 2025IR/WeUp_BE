@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 public class FileFullResponseDTO {
     private String originalFileName;
     private String storedFileName;
-    private String filePath;
     private Long fileSize;
     private String fileType;
 }

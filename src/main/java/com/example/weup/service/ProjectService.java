@@ -2,6 +2,7 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.request.ProjectCreateRequestDTO;
 import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
@@ -17,6 +18,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
@@ -42,16 +44,19 @@ public class ProjectService {
     private final ChatRoomRepository chatRoomRepository;
 
     @Transactional
-    public Project createProject(String projectName, MultipartFile file) throws IOException {
+    public Project createProject(@ModelAttribute ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
         String storedFileName = null;
+        MultipartFile image = projectCreateRequestDTO.getFile();
 
-        if (file != null && !file.isEmpty()) {
-            storedFileName = s3Service.uploadSingleFile(file).getStoredFileName();
-            System.out.println(storedFileName);
+
+        if (image != null && !image.isEmpty()) {
+            storedFileName = s3Service.uploadSingleFile(image).getStoredFileName();
+        } else {
+            storedFileName = "086d1ece-d1dd-424b-97ae-892075355026-smiley1.png";
         }
 
         Project newProject = Project.builder()
-                .projectName(projectName)
+                .projectName(projectCreateRequestDTO.getProjectName())
                 .projectImage(storedFileName)
                 .build();
 
@@ -140,6 +145,7 @@ public class ProjectService {
         project.setProjectName(dto.getProjectName());
         project.setStatus(dto.isStatus());
         project.setRevealedNumber(dto.isRevealedNumber());
+        }
     }
 
     @Transactional

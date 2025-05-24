@@ -4,7 +4,6 @@ import lombok.Getter;
 
 @Getter
 public class BoardListRequestDTO {
-    private Long projectId;
     private String tag;
     private String search;
     private int page = 0;

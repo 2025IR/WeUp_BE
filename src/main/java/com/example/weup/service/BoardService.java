@@ -2,9 +2,13 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.request.BoardCreateRequestDTO;
+import com.example.weup.dto.request.BoardListRequestDTO;
+import com.example.weup.dto.request.EditBoardRequestDTO;
 import com.example.weup.dto.response.BoardDetailResponseDTO;
 import com.example.weup.dto.response.FileResponseDTO;
 import com.example.weup.dto.response.FileFullResponseDTO;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import com.example.weup.dto.response.BoardListResponseDTO;
 import com.example.weup.entity.*;
@@ -13,6 +17,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -34,37 +39,30 @@ public class BoardService {
     private final S3Service s3Service;
 
     @Transactional
-    public Map<String, Object> createBoard(
-            Long userId,
-            Long projectId,
-            String title,
-            String contents,
-            String tagName,
-            List<MultipartFile> files) {
+    public void createBoard(Long userId, BoardCreateRequestDTO boardCreateRequestDTO) {
 
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
+        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, boardCreateRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
-        if (!memberService.hasAccess(userId, projectId) || memberService.isDeletedMember(member.getMemberId())) {
-            log.error("프로젝트 소속이 아니거나, 삭제된 멤버입니다.");
+        if (memberService.isDeletedMember(member.getMemberId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        Project project = projectRepository.findById(projectId)
+        Project project = projectRepository.findById(boardCreateRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
-        Tag tag = tagRepository.findByTagName(tagName)
+        Tag tag = tagRepository.findByTagName(boardCreateRequestDTO.getTag())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TAG_NOT_FOUND));
 
         Board board = Board.builder()
                 .member(member)
                 .project(project)
-                .title(title)
-                .contents(contents)
+                .title(boardCreateRequestDTO.getTitle())
+                .contents(boardCreateRequestDTO.getContents())
                 .tag(tag)
                 .build();
         boardRepository.save(board);
 
-        List<FileFullResponseDTO> fileFullResponseDTOS = s3Service.uploadFiles(files);
+        List<FileFullResponseDTO> fileFullResponseDTOS = s3Service.uploadFiles(boardCreateRequestDTO.getFile());
 
         if (!fileFullResponseDTOS.isEmpty()) {
             List<File> fileEntities = fileFullResponseDTOS.stream()
@@ -72,7 +70,6 @@ public class BoardService {
                             .board(board)
                             .fileName(dto.getOriginalFileName())
                             .storedName(dto.getStoredFileName())
-                            .filePath(dto.getFilePath())
                             .fileSize(dto.getFileSize())
                             .fileType(dto.getFileType())
                             .build())
@@ -80,39 +77,30 @@ public class BoardService {
 
             fileRepository.saveAll(fileEntities);
         }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("boardId", board.getBoardId());
-        result.put("title", board.getTitle());
-
-        return result;
     }
 
-    public Page<BoardListResponseDTO> getBoardList(Long userId, Long projectId, String tag, String search, Pageable pageable) {
+    public Page<BoardListResponseDTO> getBoardList(Long userId, Long projectId, BoardListRequestDTO boardListRequestDTO) {
 
-        log.info("Board List Service");
+        String tag = boardListRequestDTO.getTag();
+        String search = boardListRequestDTO.getSearch();
 
-        log.info("userId:{}", userId);
-        log.info("projectId:{}", projectId);
-
-        log.info("tag:{}", tag);
-        log.info("search:{}", search);
-
+        Pageable pageable = PageRequest.of(
+                boardListRequestDTO.getPage(),
+                boardListRequestDTO.getSize(),
+                Sort.by(Sort.Direction.DESC, "boardCreateTime")
+        );
 
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
-        if (!memberService.hasAccess(userId, projectId) || memberService.isDeletedMember(member.getMemberId())) {
+        if (memberService.isDeletedMember(member.getMemberId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
         Page<Board> boards = boardRepository.findByProjectIdAndFilters(projectId, tag, search, pageable);
 
-        log.info("boards:{}", boards);
-
         return boards.map(board -> {
             User user = board.getMember().getUser();
-
             boolean hasFile = fileRepository.existsByBoard(board);
 
             return BoardListResponseDTO.builder()
@@ -127,17 +115,18 @@ public class BoardService {
         });
     }
 
-    public BoardDetailResponseDTO getBoardDetail(Long userId, Long boardId, Long projectId) {
 
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
-
-        if (!memberService.hasAccess(userId, projectId) || memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
+    public BoardDetailResponseDTO getBoardDetail(Long userId, Long boardId) {
 
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
+
+        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, board.getProject().getProjectId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+
+        if (memberService.isDeletedMember(member.getMemberId())) {
+            throw new GeneralException(ErrorInfo.FORBIDDEN);
+        }
 
         List<File> files = fileRepository.findAllByBoard(board);
 
@@ -149,33 +138,35 @@ public class BoardService {
                         .build())
                 .collect(Collectors.toList());
 
-        Tag tag = board.getTag();
-
         return BoardDetailResponseDTO.builder()
                 .name(member.getUser().getName())
                 .profileImage(member.getUser().getProfileImage())
                 .title(board.getTitle())
                 .contents(board.getContents())
-                .createdTime(board.getBoardCreateTime())
-                .tag(tag != null ? tag.getTagName() : null)
+                .boardCreatedTime(board.getBoardCreateTime())
+                .tag(board.getTag().getTagName())
                 .files(fileDTOs)
                 .build();
     }
 
     @Transactional
-    public Map<String, Object> editBoard(Long userId, Long projectId, Long boardId,
-                                         String title, String tagName, String contents,
-                                         MultipartFile file) throws IOException, IOException {
+    public void editBoard(Long userId, EditBoardRequestDTO editBoardRequestDTO) throws IOException {
 
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
-
-        if (!memberService.hasAccess(userId, projectId) || memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
+        Long boardId = editBoardRequestDTO.getBoardId();
+        String title = editBoardRequestDTO.getTitle();
+        String contents = editBoardRequestDTO.getContents();
+        String tagName = editBoardRequestDTO.getTag();
+        MultipartFile file = editBoardRequestDTO.getFile();
 
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
+
+        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, board.getProject().getProjectId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+
+        if (memberService.isDeletedMember(member.getMemberId())) {
+            throw new GeneralException(ErrorInfo.FORBIDDEN);
+        }
 
         if (!board.getMember().getMemberId().equals(member.getMemberId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
@@ -183,11 +174,7 @@ public class BoardService {
 
         if (title != null) {
             board.setTitle(title.trim());
-        } else {
-            throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
-        }
-
-        if (contents != null) {
+        } else if (contents != null) {
             board.setContents(contents.trim());
         } else {
             throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
@@ -212,31 +199,24 @@ public class BoardService {
                     .storedName(uploaded.getStoredFileName())
                     .fileType(uploaded.getFileType())
                     .fileSize(uploaded.getFileSize())
-                    .filePath(uploaded.getFilePath())
                     .build();
 
             fileRepository.save(newFile);
         }
-
-        Map<String, Object> result = new HashMap<>();
-        result.put("boardId", board.getBoardId());
-        result.put("title", board.getTitle());
-
-        return result;
     }
 
     @Transactional
-    public void deleteBoard(Long userId, Long boardId, Long projectId) {
-
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
-
-        if (!memberService.hasAccess(userId, projectId) || memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
+    public void deleteBoard(Long userId, Long boardId) {
 
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
+
+        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, board.getProject().getProjectId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+
+        if (memberService.isDeletedMember(member.getMemberId())) {
+            throw new GeneralException(ErrorInfo.FORBIDDEN);
+        }
 
         if (!board.getMember().getMemberId().equals(member.getMemberId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);

@@ -36,10 +36,6 @@ public class UserService {
     @Transactional
     public void signUp(SignUpRequestDto signUpRequestDto) {
 
-        if (userRepository.existsByAccountSocialEmail(signUpRequestDto.getEmail())) {
-            throw new GeneralException(ErrorInfo.EMAIL_ALREADY_EXIST);
-        }
-
         String email = signUpRequestDto.getEmail();
         if (!mailService.isEmailVerified(email)) {
             throw new GeneralException(ErrorInfo.EMAIL_NOT_VERIFIED);
@@ -88,6 +84,16 @@ public class UserService {
         String newRefreshToken = jwtUtil.createRefreshToken(userId);
 
         return Map.of("access_token", newAccessToken, "refresh_token", newRefreshToken);
+    }
+
+    @Transactional
+    public Map<String, String> reissue(Long userId){
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+        String newAccessToken = jwtUtil.createAccessToken(userId, user.getRole());
+
+        return Map.of("access_token", newAccessToken);
     }
 
     @Transactional

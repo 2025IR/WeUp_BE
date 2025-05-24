@@ -5,18 +5,12 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
-@Getter
 @Builder
-@NoArgsConstructor
+@Getter
 @AllArgsConstructor
-public class MemberInfoResponseDTO {
+@NoArgsConstructor
+public class TodoAssigneeResponseDTO {
     private Long memberId;
     private String name;
-    private String email;
     private String profileImage;
-    private String phoneNumber;
-    private Boolean isLeader;
-    private List<Long> roleIds;
 }
