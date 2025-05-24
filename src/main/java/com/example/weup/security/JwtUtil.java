@@ -60,13 +60,7 @@ public class JwtUtil {
     }
 
     public String resolveToken(HttpServletRequest request) {
-        String authorization = request.getHeader("Authorization");
-
-        if (authorization != null && authorization.startsWith("Bearer ")) {
-            return authorization.substring(7);
-        }
-
-        return null;
+        return request.getHeader("Authorization");
     }
 
     public boolean isExpired(String token) {

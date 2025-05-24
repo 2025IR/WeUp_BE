@@ -2,13 +2,17 @@ package com.example.weup.entity;
 
 
 import jakarta.persistence.*;
-import lombok.Data;
+import lombok.*;
 
+@Getter
+@Setter
+@NoArgsConstructor
+@AllArgsConstructor
+@Builder
 @Entity
 @Table(name = "member_role", uniqueConstraints = {
         @UniqueConstraint(columnNames = {"member_id", "role_id"})
 })
-@Data
 public class MemberRole {
 
     @Id

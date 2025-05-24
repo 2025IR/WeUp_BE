@@ -7,7 +7,6 @@ import lombok.Setter;
 @Setter
 public class EditRoleRequestDTO {
     private Long projectId;
-    private Long memberId;
     private Long roleId;
     private String roleName;
     private String roleColor;

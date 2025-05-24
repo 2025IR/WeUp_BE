@@ -8,13 +8,13 @@ import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
 import com.example.weup.security.JwtDto;
 import com.example.weup.security.JwtUtil;
-import com.example.weup.repository.UserRepository;
 import com.example.weup.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.io.IOException;
 import java.util.Map;
 
 @RestController
@@ -59,6 +59,19 @@ public class UserController {
                 .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료"));
     }
 
+    @PostMapping("/reissue")
+    public ResponseEntity<DataResponseDTO<JwtDto>> reissue(@RequestParam Long userId) {
+        Map<String, String> tokens = userService.reissue(userId);
+        String newAccessToken = tokens.get("access_token");
+
+        JwtDto jwtDto = JwtDto.builder()
+                .accessToken(newAccessToken)
+                .build();
+
+        return ResponseEntity.ok()
+                .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료 - 임시 API"));
+    }
+
     @PostMapping("/password")
     public ResponseEntity<DataResponseDTO<String>> changePassword(HttpServletRequest request, @RequestBody PasswordRequestDTO passwordRequestDTO) {
         String token = jwtUtil.resolveToken(request);
@@ -68,12 +81,20 @@ public class UserController {
     }
 
     @PutMapping("/profile/edit")
-    public ResponseEntity<DataResponseDTO<String>> editProfile(HttpServletRequest request, @RequestBody ProfileEditRequestDTO profileEditRequestDTO) {
+    public ResponseEntity<DataResponseDTO<String>> editProfile(
+            HttpServletRequest request,
+            @ModelAttribute ProfileEditRequestDTO profileEditRequestDTO) throws IOException {
+
         String token = jwtUtil.resolveToken(request);
-        userService.editProfile(token, profileEditRequestDTO);
-        String message = "회원 정보가 성공적으로 수정되었습니다.";
-        return ResponseEntity.ok(DataResponseDTO.of(message));
+        userService.editProfile(
+                token,
+                profileEditRequestDTO.getName(),
+                profileEditRequestDTO.getPhoneNumber(),
+                profileEditRequestDTO.getProfileImage());
+
+        return ResponseEntity.ok(DataResponseDTO.of("회원 정보가 성공적으로 수정되었습니다."));
     }
+
 
     @PutMapping("/withdraw")
     public ResponseEntity<DataResponseDTO<String>> withdrawUser(HttpServletRequest request) {

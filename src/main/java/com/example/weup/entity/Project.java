@@ -28,7 +28,7 @@ public class Project {
     @Builder.Default
     private String description = "프로젝트 입니다.";
 
-    @Column(nullable = false, length = 20)
+    @Column(nullable = false)
     private String projectImage;
 
     @Column(nullable = false)
@@ -45,6 +45,9 @@ public class Project {
     @Column(name = "is_revealed_number", nullable = false)
     @Builder.Default
     private boolean isRevealedNumber = false;
+
+    @Column
+    private String roomName;
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.REMOVE)
     @Builder.Default

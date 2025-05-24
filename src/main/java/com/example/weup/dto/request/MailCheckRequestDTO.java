@@ -4,6 +4,6 @@ import lombok.Data;
 
 @Data
 public class MailCheckRequestDTO {
-    private String mail;
-    private int userNumber;
+    private String email;
+    private String checkCode;
 }

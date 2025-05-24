@@ -7,9 +7,5 @@ import lombok.Data;
 @Builder
 public class DetailProjectResponseDTO {
 
-    private String projectName;
-
-    private String projectImage;
-
     private String description;
 }

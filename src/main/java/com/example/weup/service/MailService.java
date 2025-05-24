@@ -1,5 +1,8 @@
 package com.example.weup.service;
 
+import com.example.weup.GeneralException;
+import com.example.weup.constant.ErrorInfo;
+import com.example.weup.repository.AccountSocialRepository;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -21,11 +24,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class MailService {
 
     private final JavaMailSender javaMailSender;
+    private final AccountSocialRepository accountSocialRepository;
     private static final String senderEmail= "badul312836@gmail.com";
 
     // 이메일별 인증 번호
     private final Map<String, Integer> emailVerificationMap = new ConcurrentHashMap<>();
-    
+
     // 이메일별 인증 완료 상태
     private final Map<String, Boolean> emailVerifiedMap = new ConcurrentHashMap<>();
 
@@ -122,5 +126,11 @@ public class MailService {
         }
 
         return CompletableFuture.completedFuture(null);
+    }
+
+    public void validateEmailNotRegistered(String email) {
+        if (accountSocialRepository.existsByEmail(email)) {
+            throw new GeneralException(ErrorInfo.EMAIL_ALREADY_EXIST);
+        }
     }
 }

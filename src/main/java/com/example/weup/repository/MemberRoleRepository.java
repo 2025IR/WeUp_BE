@@ -30,4 +30,8 @@ public interface MemberRoleRepository extends JpaRepository<MemberRole, Long> {
 
     @Modifying
     void deleteByRole(Role role);
+
+    void deleteByMember(Member member);
+
+    List<MemberRole> findByMember(Member member);
 }

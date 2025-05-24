@@ -7,6 +7,5 @@ import lombok.Setter;
 @Setter
 public class DeleteRoleRequestDTO {
     private Long projectId;
-    private Long memberId;
-    private String roleName;
+    private Long roleId;
 }
