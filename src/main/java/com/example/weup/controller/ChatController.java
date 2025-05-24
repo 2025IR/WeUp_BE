@@ -3,8 +3,10 @@ package com.example.weup.controller;
 import com.example.weup.dto.request.ChatMessageRequestDto;
 import com.example.weup.dto.response.ChatMessageResponseDto;
 import com.example.weup.dto.response.DataResponseDTO;
+import com.example.weup.security.JwtUtil;
 import com.example.weup.service.ChatService;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -13,12 +15,17 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
+
+import java.io.IOException;
 
 @Controller
 @RequiredArgsConstructor
 public class ChatController {
 
     private final ChatService chatService;
+
+    private final JwtUtil jwtUtil;
 
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -27,6 +34,22 @@ public class ChatController {
         chatService.saveChatMessage(roomId, messageDto);
         messagingTemplate.convertAndSend("/topic/chat/" + roomId, messageDto);
     }
+
+    @PostMapping("/send/{roomId}/{projectId}/image")
+    public ResponseEntity<DataResponseDTO<String>> sendImageMessage(
+            HttpServletRequest request,
+            @PathVariable Long roomId,
+            @PathVariable Long projectId,
+            @ModelAttribute MultipartFile file) throws IOException {
+
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
+
+        String presignedUrl = chatService.handleImageMessage(projectId, roomId, userId, file);
+        return ResponseEntity.ok(DataResponseDTO.of(presignedUrl, "이미지 전송 완료"));
+    }
+
+
 
     @ResponseBody
     @GetMapping("/chat/{roomId}/messages")

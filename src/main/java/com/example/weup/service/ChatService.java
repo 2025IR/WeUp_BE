@@ -6,19 +6,25 @@ import com.example.weup.dto.request.ChatMessageRequestDto;
 import com.example.weup.dto.response.ChatMessageResponseDto;
 import com.example.weup.entity.ChatMessage;
 import com.example.weup.entity.ChatRoom;
+import com.example.weup.entity.Member;
 import com.example.weup.entity.User;
 import com.example.weup.repository.ChatMessageRepository;
 import com.example.weup.repository.ChatRoomRepository;
+import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.*;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -32,9 +38,15 @@ public class ChatService{
 
     private final UserRepository userRepository;
 
+    private final MemberRepository memberRepository;
+
+    private final S3Service s3Service;
+
     private final StringRedisTemplate redisTemplate;
 
     private final ObjectMapper objectMapper;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public void saveChatMessage(Long roomId, ChatMessageRequestDto dto) throws JsonProcessingException {
@@ -43,6 +55,39 @@ public class ChatService{
         String jsonMessage = objectMapper.writeValueAsString(dto);
 
         redisTemplate.opsForList().rightPush(key, jsonMessage);
+    }
+
+    public String handleImageMessage(Long projectId, Long roomId, Long userId, MultipartFile file) throws IOException {
+        if (file == null || file.isEmpty()) {
+            throw new GeneralException(ErrorInfo.FILE_UPLOAD_FAILED);
+        }
+
+        // 1. senderId(memberId) 조회
+        Optional<Member> memberOpt = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId);
+
+        Long memberId = memberOpt
+                .map(Member::getMemberId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+
+        // 2. S3 업로드
+        String storedFileName = s3Service.uploadSingleFile(file).getStoredFileName();
+        String presignedUrl = s3Service.getPresignedUrl(storedFileName);
+
+        // 3. DTO 구성
+        ChatMessageRequestDto dto = new ChatMessageRequestDto();
+        dto.setProjectId(projectId);
+        dto.setSenderId(memberId);
+        dto.setMessage(presignedUrl);
+        dto.setIsImage(true);
+        dto.setSentAt(LocalDateTime.now());
+
+        saveChatMessage(roomId, dto);
+
+        // 4. WebSocket 전송
+        messagingTemplate.convertAndSend("/topic/chat/" + roomId, dto);
+
+        return presignedUrl;
     }
 
     @Transactional
@@ -148,5 +193,4 @@ public class ChatService{
 
         return new PageImpl<>(combinedMessages, pageable, chatMessages.getTotalElements() + redisChatMessages.size());
     }
-
 }

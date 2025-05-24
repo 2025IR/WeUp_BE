@@ -1,5 +1,6 @@
 package com.example.weup.entity;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -29,6 +30,11 @@ public class ChatMessage {
 
     @Column
     private String message;
+
+    @Column
+    @Builder.Default
+    @JsonProperty("isImage")
+    private Boolean isImage = false;
 
     @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt;

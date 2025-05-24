@@ -18,6 +18,8 @@ public class ChatMessageResponseDto {
 
     private String message;
 
+    private Boolean isImage;
+
     private LocalDateTime sentAt;
 
     public static ChatMessageResponseDto fromEntity(ChatMessage chatMessage) {

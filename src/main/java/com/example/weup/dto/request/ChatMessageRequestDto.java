@@ -4,6 +4,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
 import lombok.NoArgsConstructor;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.time.LocalDateTime;
 
@@ -15,9 +16,11 @@ public class ChatMessageRequestDto {
 
     private Long projectId;
 
-    private String senderId;
+    private Long senderId;
 
     private String message;
+
+    private Boolean isImage;
 
     private LocalDateTime sentAt;
 }
