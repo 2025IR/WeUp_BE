@@ -13,9 +13,9 @@ import java.time.LocalDateTime;
 @Data
 public class ChatMessageRequestDto {
 
-    private Long projectId;  // ????
+    private Long projectId;
 
-    private String senderId;  // Long ?
+    private String senderId;
 
     private String message;
 

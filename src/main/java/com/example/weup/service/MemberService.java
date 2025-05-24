@@ -321,7 +321,6 @@ public class MemberService {
             Role role = Role.builder()
                     .project(project)
                     .roleName(createRoleRequestDTO.getRoleName())
-                    .roleColor(createRoleRequestDTO.getRoleColor())
                     .build();
 
             roleRepository.save(role);
