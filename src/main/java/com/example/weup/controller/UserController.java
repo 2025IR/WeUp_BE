@@ -1,6 +1,7 @@
 package com.example.weup.controller;
 
 import com.example.weup.dto.request.PasswordRequestDTO;
+import com.example.weup.dto.request.ProfileEditRequestDTO;
 import com.example.weup.dto.request.SignUpRequestDto;
 import com.example.weup.dto.request.TokenRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
