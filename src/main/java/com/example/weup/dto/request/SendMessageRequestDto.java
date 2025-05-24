@@ -11,13 +11,12 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Data
-public class ChatMessageRequestDto {
+public class SendMessageRequestDto {
 
-    private Long projectId;
-
-    private String senderId;
+    private Long senderId;
 
     private String message;
 
-    private LocalDateTime sentAt;
+    @Builder.Default
+    private LocalDateTime sentAt = LocalDateTime.now();
 }

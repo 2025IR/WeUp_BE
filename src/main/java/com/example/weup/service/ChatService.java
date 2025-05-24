@@ -2,8 +2,9 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.dto.request.ChatMessageRequestDto;
+import com.example.weup.dto.request.SendMessageRequestDto;
 import com.example.weup.dto.response.ChatMessageResponseDto;
+import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.entity.ChatMessage;
 import com.example.weup.entity.ChatRoom;
 import com.example.weup.entity.User;
@@ -13,6 +14,7 @@ import com.example.weup.repository.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -22,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.*;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ChatService{
@@ -37,12 +40,25 @@ public class ChatService{
     private final ObjectMapper objectMapper;
 
     @Transactional
-    public void saveChatMessage(Long roomId, ChatMessageRequestDto dto) throws JsonProcessingException {
+    public ReceiveMessageResponseDto saveChatMessage(Long roomId, SendMessageRequestDto dto) throws JsonProcessingException {
 
         String key = "chat:room:" + roomId;
         String jsonMessage = objectMapper.writeValueAsString(dto);
 
         redisTemplate.opsForList().rightPush(key, jsonMessage);
+        log.debug("send message service @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+        log.debug("redis ????" + redisTemplate.opsForList().index(key, -1));
+
+        User sendUser = userRepository.findById(dto.getSenderId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+        return ReceiveMessageResponseDto.builder()
+                .senderId(dto.getSenderId())
+                .senderName(sendUser.getName())
+                .senderProfileImage(sendUser.getProfileImage())
+                .message(dto.getMessage())
+                .sentAt(dto.getSentAt())
+                .build();
     }
 
     @Transactional
@@ -85,7 +101,7 @@ public class ChatService{
                     .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
 
             for (String json : messages) {
-                ChatMessageRequestDto dto = objectMapper.readValue(json, ChatMessageRequestDto.class);
+                SendMessageRequestDto dto = objectMapper.readValue(json, SendMessageRequestDto.class);
 
                 User chatUser = userRepository.findById(Long.valueOf(dto.getSenderId()))
                         .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
@@ -123,7 +139,7 @@ public class ChatService{
                     .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
 
             for (String json : redisMessages) {
-                ChatMessageRequestDto dto = objectMapper.readValue(json, ChatMessageRequestDto.class);
+                SendMessageRequestDto dto = objectMapper.readValue(json, SendMessageRequestDto.class);
 
                 User chatUser = userRepository.findById(Long.valueOf(dto.getSenderId()))
                         .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
