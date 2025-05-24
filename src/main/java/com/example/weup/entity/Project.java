@@ -24,7 +24,7 @@ public class Project {
     @Column(name = "project_name", nullable = false, length = 50)
     private String projectName;
 
-    @Column(nullable = false, length = 100)
+    @Column(nullable = false)
     @Builder.Default
     private String description = "프로젝트 입니다.";
 

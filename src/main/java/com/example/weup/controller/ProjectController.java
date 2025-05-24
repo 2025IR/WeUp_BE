@@ -64,9 +64,10 @@ public class ProjectController {
     @PostMapping("/detail/{projectId}")
     public ResponseEntity<DataResponseDTO<DetailProjectResponseDTO>> detailProject(HttpServletRequest request, @PathVariable Long projectId) {
 
-        jwtUtil.resolveToken(request);
+        String token = jwtUtil.resolveToken(request);
+        Long userId = jwtUtil.getUserId(token);
 
-        DetailProjectResponseDTO data = projectService.detailProject(projectId);
+        DetailProjectResponseDTO data = projectService.detailProject(projectId, userId);
 
         return ResponseEntity
                 .ok()
@@ -74,17 +75,17 @@ public class ProjectController {
     }
 
     // 프로젝트 상태 변경
-    @PutMapping("/change/status/{projectId}")
-    public ResponseEntity<ResponseDTO> changeProjectStatus(HttpServletRequest request, @PathVariable Long projectId, @RequestParam Boolean status) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
-
-        projectService.changeProjectStatus(userId, projectId, status);
-
-        return ResponseEntity.ok()
-                .body(new ResponseDTO(true, "프로젝트 상태 변경 : " + projectId));
-    }
+//    @PutMapping("/change/status/{projectId}")
+//    public ResponseEntity<ResponseDTO> changeProjectStatus(HttpServletRequest request, @PathVariable Long projectId, @RequestParam Boolean status) {
+//
+//        String token = jwtUtil.resolveToken(request);
+//        Long userId = jwtUtil.getUserId(token);
+//
+//        projectService.changeProjectStatus(userId, projectId, status);
+//
+//        return ResponseEntity.ok()
+//                .body(new ResponseDTO(true, "프로젝트 상태 변경 : " + projectId));
+//    }
 
     // 프로젝트 수정
     @PutMapping("/edit/{projectId}")

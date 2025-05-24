@@ -7,5 +7,15 @@ import lombok.Data;
 @Builder
 public class DetailProjectResponseDTO {
 
+    private String projectName;
+
+    private String projectImage;
+
     private String description;
+
+    private boolean status;
+
+    private boolean isRevealedNumber;
+
+    private boolean isLeader;
 }

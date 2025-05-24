@@ -13,5 +13,5 @@ public class ProjectEditRequestDTO {
 
     private boolean status;
 
-    private boolean isRevealedNumber;
+    private boolean revealedNumber;
 }

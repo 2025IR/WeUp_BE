@@ -18,6 +18,8 @@ public enum ErrorInfo {
 
     PROJECT_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 프로젝트를 찾을 수 없습니다."),
 
+    MEMBER_NOT_FOUND(HttpStatus.NOT_FOUND, "일치하는 멤버가 없습니다."),
+  
     TODO_NOT_FOUND(HttpStatus.NOT_FOUND, "해당 투두를 찾을 수 없습니다."),
 
     UNAUTHORIZED(HttpStatus.UNAUTHORIZED, "인증에 실패하였습니다."),
@@ -42,6 +44,8 @@ public enum ErrorInfo {
     
     BOARD_NOT_FOUND(HttpStatus.NOT_FOUND, "게시글을 찾을 수 없습니다."),
 
+    CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다.");
+  
     ROLE_NOT_FOUND(HttpStatus.NOT_FOUND, "역할을 찾을 수 없습니다.");
 
     private final HttpStatus httpStatus;

@@ -6,9 +6,11 @@ import com.example.weup.dto.request.ProjectCreateRequestDTO;
 import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
+import com.example.weup.entity.ChatRoom;
 import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
 import com.example.weup.entity.User;
+import com.example.weup.repository.ChatRoomRepository;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
 import com.example.weup.repository.UserRepository;
@@ -39,6 +41,8 @@ public class ProjectService {
 
     private final S3Service s3Service;
 
+    private final ChatRoomRepository chatRoomRepository;
+
     @Transactional
     public Project createProject(@ModelAttribute ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
         String storedFileName = null;
@@ -56,7 +60,14 @@ public class ProjectService {
                 .projectImage(storedFileName)
                 .build();
 
-        return projectRepository.save(newProject);
+        ChatRoom chatRoom = ChatRoom.builder()
+                .project(newProject)
+                .build();
+
+        projectRepository.save(newProject);
+        chatRoomRepository.save(chatRoom);
+
+        return newProject;
     }
 
     @Transactional
@@ -91,36 +102,26 @@ public class ProjectService {
     }
 
     @Transactional
-    public DetailProjectResponseDTO detailProject(Long projectId) {
+    public DetailProjectResponseDTO detailProject(Long projectId, Long userId) {
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
+        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+
         return DetailProjectResponseDTO.builder()
+                .projectName(project.getProjectName())
+                .projectImage(s3Service.getPresignedUrl(project.getProjectImage()))
                 .description(project.getDescription())
+                .status(project.isStatus())
+                .isRevealedNumber(project.isRevealedNumber())
+                .isLeader(member.isLeader())
                 .build();
     }
 
     @Transactional
-    public void changeProjectStatus(Long userId, Long projectId, Boolean status) {
-
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
-
-        if(!isLeader(userId, project)) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
-
-        project.setStatus(status);
-
-        projectRepository.save(project);
-    }
-
-    @Transactional
     public void editProject(Long userId, Long projectId, ProjectEditRequestDTO dto) throws IOException {
-
-        log.debug("DTO 확인 - image : " + dto.getProjectImage());
-        log.debug("DTO 확인 - isRevealed : " + dto.isRevealedNumber());
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
@@ -132,26 +133,19 @@ public class ProjectService {
         MultipartFile image = dto.getProjectImage();
         if (image != null && !image.isEmpty()) {
             String existingImage = project.getProjectImage();
+
             if (existingImage != null && !existingImage.isEmpty()) {
                 s3Service.deleteFile(existingImage);
             }
 
             String storedFileName = s3Service.uploadSingleFile(image).getStoredFileName();
-            log.debug("DTO 확인 - image2 : " + dto.getProjectImage());
             project.setProjectImage(storedFileName);
         }
 
-        projectRepository.save(project);
-        log.debug("service - setProjectImage : " + project.getProjectImage());
-
         project.setProjectName(dto.getProjectName());
-        log.debug("service - setProjectName : " + project.getProjectName());
-
         project.setStatus(dto.isStatus());
-        log.debug("service - setStatus : " + project.isStatus());
-
         project.setRevealedNumber(dto.isRevealedNumber());
-        log.debug("service - setRevealedNumber : " + project.isRevealedNumber());
+        }
     }
 
     @Transactional
