@@ -61,6 +61,7 @@ public class ProjectService {
                 .build();
 
         ChatRoom chatRoom = ChatRoom.builder()
+                .chatRoomId(newProject.getProjectId())
                 .project(newProject)
                 .build();
 
@@ -167,5 +168,4 @@ public class ProjectService {
 
         return member.isPresent() && member.get().isLeader();
     }
-
 }

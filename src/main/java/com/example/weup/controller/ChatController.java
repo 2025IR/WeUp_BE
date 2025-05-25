@@ -1,13 +1,15 @@
 package com.example.weup.controller;
 
-import com.example.weup.dto.request.ChatMessageRequestDto;
+import com.example.weup.dto.request.SendMessageRequestDto;
 import com.example.weup.dto.response.ChatMessageResponseDto;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.security.JwtUtil;
+import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.service.ChatService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
@@ -19,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
+@Slf4j
 @Controller
 @RequiredArgsConstructor
 public class ChatController {
@@ -30,9 +33,16 @@ public class ChatController {
     private final SimpMessagingTemplate messagingTemplate;
 
     @MessageMapping("/send/{roomId}")
-    public void sendMessage(@DestinationVariable Long roomId, ChatMessageRequestDto messageDto) throws JsonProcessingException {
-        chatService.saveChatMessage(roomId, messageDto);
-        messagingTemplate.convertAndSend("/topic/chat/" + roomId, messageDto);
+    public void sendMessage(@DestinationVariable Long roomId, SendMessageRequestDto messageDto) throws JsonProcessingException {
+
+        log.debug("send message controller : {}, {}, {}", messageDto.getSenderId(), messageDto.getMessage(), messageDto.getSentAt());
+
+        ReceiveMessageResponseDto receiveMessage = chatService.saveChatMessage(roomId, messageDto);
+
+        log.debug("send message controller receiveMessage Object @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+        log.debug("{}, {}, {}, {}, {}", receiveMessage.getSenderId(), receiveMessage.getSenderName(), receiveMessage.getSenderProfileImage(), receiveMessage.getSentAt(), receiveMessage.getMessage());
+
+        messagingTemplate.convertAndSend("/topic/chat/" + roomId, receiveMessage);
     }
 
     @PostMapping("/send/{roomId}/{projectId}/image")
@@ -51,7 +61,7 @@ public class ChatController {
 
 
     @ResponseBody
-    @GetMapping("/chat/{roomId}/messages")
+    @GetMapping("/chat/messages/{roomId}")
     public ResponseEntity<DataResponseDTO<Page<ChatMessageResponseDto>>> getChatMessages(@PathVariable Long roomId,
                                                                         @RequestParam(defaultValue = "0") int page,
                                                                         @RequestParam(defaultValue = "20") int size) throws JsonProcessingException {

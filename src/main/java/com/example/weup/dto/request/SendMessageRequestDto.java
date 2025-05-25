@@ -11,7 +11,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Data
-public class ChatMessageRequestDto {
+public class SendMessageRequestDto {
 
     private Long projectId;
 
@@ -19,7 +19,8 @@ public class ChatMessageRequestDto {
 
     private String message;
 
-    private Boolean isImage;
+    @Builder.Default
+    private LocalDateTime sentAt = LocalDateTime.now();
 
-    private LocalDateTime sentAt;
+    private Boolean isImage;
 }
