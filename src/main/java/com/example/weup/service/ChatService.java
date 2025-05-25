@@ -57,7 +57,8 @@ public class ChatService{
         redisTemplate.opsForList().rightPush(key, jsonMessage);
     }
 
-    public String handleImageMessage(Long projectId, Long roomId, Long userId, MultipartFile file) throws IOException {
+    @Transactional
+    public void handleImageMessage(Long projectId, Long roomId, Long userId, MultipartFile file) throws IOException {
         if (file == null || file.isEmpty()) {
             throw new GeneralException(ErrorInfo.FILE_UPLOAD_FAILED);
         }
@@ -69,25 +70,23 @@ public class ChatService{
                 .map(Member::getMemberId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-
         // 2. S3 업로드
         String storedFileName = s3Service.uploadSingleFile(file).getStoredFileName();
-        String presignedUrl = s3Service.getPresignedUrl(storedFileName);
 
         // 3. DTO 구성
-        ChatMessageRequestDto dto = new ChatMessageRequestDto();
-        dto.setProjectId(projectId);
-        dto.setSenderId(memberId);
-        dto.setMessage(presignedUrl);
-        dto.setIsImage(true);
-        dto.setSentAt(LocalDateTime.now());
+        ChatMessageRequestDto dto = ChatMessageRequestDto.builder()
+                .projectId(projectId)
+                .senderId(memberId)
+                .message(s3Service.getPresignedUrl(storedFileName))
+                .isImage(true)
+                .sentAt(LocalDateTime.now())
+                .build();
+
 
         saveChatMessage(roomId, dto);
 
         // 4. WebSocket 전송
         messagingTemplate.convertAndSend("/topic/chat/" + roomId, dto);
-
-        return presignedUrl;
     }
 
     @Transactional
@@ -132,7 +131,7 @@ public class ChatService{
             for (String json : messages) {
                 ChatMessageRequestDto dto = objectMapper.readValue(json, ChatMessageRequestDto.class);
 
-                User chatUser = userRepository.findById(Long.valueOf(dto.getSenderId()))
+                User chatUser = userRepository.findById(dto.getSenderId())
                         .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
                 ChatMessage chatMessage = ChatMessage.builder()
@@ -170,7 +169,7 @@ public class ChatService{
             for (String json : redisMessages) {
                 ChatMessageRequestDto dto = objectMapper.readValue(json, ChatMessageRequestDto.class);
 
-                User chatUser = userRepository.findById(Long.valueOf(dto.getSenderId()))
+                User chatUser = userRepository.findById(dto.getSenderId())
                         .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
                 ChatMessage chatMessage = ChatMessage.builder()

@@ -36,7 +36,7 @@ public class ChatController {
     }
 
     @PostMapping("/send/{roomId}/{projectId}/image")
-    public ResponseEntity<DataResponseDTO<String>> sendImageMessage(
+    public void sendImageMessage(
             HttpServletRequest request,
             @PathVariable Long roomId,
             @PathVariable Long projectId,
@@ -45,8 +45,7 @@ public class ChatController {
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        String presignedUrl = chatService.handleImageMessage(projectId, roomId, userId, file);
-        return ResponseEntity.ok(DataResponseDTO.of(presignedUrl, "이미지 전송 완료"));
+        chatService.handleImageMessage(projectId, roomId, userId, file);
     }
 
 
