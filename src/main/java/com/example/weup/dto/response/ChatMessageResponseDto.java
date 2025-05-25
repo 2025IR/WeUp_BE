@@ -1,13 +1,14 @@
 package com.example.weup.dto.response;
 
 import com.example.weup.entity.ChatMessage;
-import lombok.Builder;
-import lombok.Data;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
+@NoArgsConstructor
+@AllArgsConstructor
 @Builder
-@Data
+@Getter
 public class ChatMessageResponseDto {
 
     private Long messageId;
