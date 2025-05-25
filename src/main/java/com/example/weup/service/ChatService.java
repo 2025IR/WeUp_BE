@@ -70,6 +70,7 @@ public class ChatService{
                 .senderProfileImage(sendUser.getProfileImage())
                 .message(dto.getMessage())
                 .sentAt(dto.getSentAt())
+                .isImage(dto.getIsImage())
                 .build();
     }
 
@@ -90,7 +91,7 @@ public class ChatService{
         String storedFileName = s3Service.uploadSingleFile(file).getStoredFileName();
 
         // 3. DTO 구성
-        ChatMessageRequestDto dto = ChatMessageRequestDto.builder()
+        SendMessageRequestDto dto = SendMessageRequestDto.builder()
                 .projectId(projectId)
                 .senderId(memberId)
                 .message(s3Service.getPresignedUrl(storedFileName))
@@ -155,6 +156,7 @@ public class ChatService{
                         .user(chatUser)
                         .message(dto.getMessage())
                         .sentAt(dto.getSentAt())
+                        .isImage(dto.getIsImage())
                         .build();
 
                 chatMessageList.add(chatMessage);
@@ -193,6 +195,7 @@ public class ChatService{
                         .user(chatUser)
                         .message(dto.getMessage())
                         .sentAt(dto.getSentAt())
+                        .isImage(dto.getIsImage())
                         .build();
 
                 redisChatMessages.add(chatMessage);

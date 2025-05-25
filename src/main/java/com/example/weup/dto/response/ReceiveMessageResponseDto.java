@@ -1,5 +1,6 @@
 package com.example.weup.dto.response;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -22,4 +23,7 @@ public class ReceiveMessageResponseDto {
     private String message;
 
     private LocalDateTime sentAt;
+
+    @JsonProperty("isImage")
+    private boolean isImage;
 }

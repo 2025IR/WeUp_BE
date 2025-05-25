@@ -29,6 +29,7 @@ public class ChatMessageResponseDto {
                 .senderName(chatMessage.getUser().getName())
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())
+                .isImage(chatMessage.getIsImage())
                 .build();
     }
 }
