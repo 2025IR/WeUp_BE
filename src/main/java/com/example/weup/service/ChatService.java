@@ -3,7 +3,7 @@ package com.example.weup.service;
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.SendMessageRequestDto;
-import com.example.weup.dto.response.ChatMessageResponseDto;
+import com.example.weup.dto.response.ChatPageResponseDto;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.entity.ChatMessage;
 import com.example.weup.entity.ChatRoom;
@@ -103,7 +103,7 @@ public class ChatService{
             for (String json : messages) {
                 SendMessageRequestDto dto = objectMapper.readValue(json, SendMessageRequestDto.class);
 
-                User chatUser = userRepository.findById(Long.valueOf(dto.getSenderId()))
+                User chatUser = userRepository.findById(dto.getSenderId())
                         .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
                 ChatMessage chatMessage = ChatMessage.builder()
@@ -123,7 +123,7 @@ public class ChatService{
     }
 
     @Transactional(readOnly = true)
-    public Page<ChatMessageResponseDto> getChatMessages(Long roomId, int page, int size) throws JsonProcessingException {
+    public ChatPageResponseDto getChatMessages(Long roomId, int page, int size) throws JsonProcessingException {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sentAt"));
         Page<ChatMessage> chatMessages = chatMessageRepository.findByChatRoom_ChatRoomId(roomId, pageable);
@@ -141,7 +141,7 @@ public class ChatService{
             for (String json : redisMessages) {
                 SendMessageRequestDto dto = objectMapper.readValue(json, SendMessageRequestDto.class);
 
-                User chatUser = userRepository.findById(Long.valueOf(dto.getSenderId()))
+                User chatUser = userRepository.findById(dto.getSenderId())
                         .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
                 ChatMessage chatMessage = ChatMessage.builder()
@@ -155,14 +155,31 @@ public class ChatService{
             }
         }
 
-        List<ChatMessageResponseDto> combinedMessages = new ArrayList<>();
+        List<ChatMessage> combinedMessages = new ArrayList<>();
+        combinedMessages.addAll(redisChatMessages);
+        combinedMessages.addAll(chatMessages.getContent());
+        combinedMessages.sort(Comparator.comparing(ChatMessage::getSentAt));
 
-        redisChatMessages.sort(Comparator.comparing(ChatMessage::getSentAt).reversed());
+        int totalSize = combinedMessages.size();
+        int start = page * size;
+        int end = Math.min(start + size, totalSize);
+        boolean isLastPage = end >= totalSize;
 
-        combinedMessages.addAll(redisChatMessages.stream().map(ChatMessageResponseDto::fromEntity).toList());
-        combinedMessages.addAll(chatMessages.getContent().stream().map(ChatMessageResponseDto::fromEntity).toList());
+        List<ReceiveMessageResponseDto> messages = combinedMessages.subList(start, end).stream()
+                .map(msg -> ReceiveMessageResponseDto.builder()
+                        .senderId(msg.getUser().getUserId())
+                        .senderName(msg.getUser().getName())
+                        .senderProfileImage(msg.getUser().getProfileImage())
+                        .message(msg.getMessage())
+                        .sentAt(msg.getSentAt())
+                        .build())
+                .toList();
 
-        return new PageImpl<>(combinedMessages, pageable, chatMessages.getTotalElements() + redisChatMessages.size());
+        return ChatPageResponseDto.builder()
+                .messageList(messages)
+                .page(page)
+                .isLastPage(isLastPage)
+                .build();
     }
 
 }

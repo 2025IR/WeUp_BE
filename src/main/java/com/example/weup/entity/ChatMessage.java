@@ -30,6 +30,10 @@ public class ChatMessage {
     @Column
     private String message;
 
+    @Column(name = "is_image")
+    @Builder.Default
+    private Boolean isImage = false;
+
     @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt;
 }

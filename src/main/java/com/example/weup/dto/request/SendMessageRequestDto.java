@@ -19,4 +19,7 @@ public class SendMessageRequestDto {
 
     @Builder.Default
     private LocalDateTime sentAt = LocalDateTime.now();
+
+    @Builder.Default
+    private boolean isImage = false;
 }
