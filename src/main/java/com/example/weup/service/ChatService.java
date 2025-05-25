@@ -2,6 +2,7 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.request.SendImageMessageRequestDTO;
 import com.example.weup.dto.request.SendMessageRequestDto;
 import com.example.weup.dto.response.ChatMessageResponseDto;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
@@ -75,35 +76,46 @@ public class ChatService{
     }
 
     @Transactional
-    public void handleImageMessage(Long projectId, Long roomId, Long userId, MultipartFile file) throws IOException {
-        if (file == null || file.isEmpty()) {
+    public void handleImageMessage(SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
+
+        log.error(String.valueOf(sendImageMessageRequestDTO.getProjectId()));
+        log.error(String.valueOf(sendImageMessageRequestDTO.getRoomId()));
+        log.error(String.valueOf(sendImageMessageRequestDTO.getUserId()));
+
+        if (sendImageMessageRequestDTO.getFile() == null || sendImageMessageRequestDTO.getFile().isEmpty()) {
             throw new GeneralException(ErrorInfo.FILE_UPLOAD_FAILED);
         }
 
         // 1. senderId(memberId) 조회
-        Optional<Member> memberOpt = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId);
+        Optional<Member> memberOpt = memberRepository.findByUser_UserIdAndProject_ProjectId(Long.parseLong(sendImageMessageRequestDTO.getUserId()), Long.parseLong(sendImageMessageRequestDTO.getProjectId()));
 
-        Long memberId = memberOpt
-                .map(Member::getMemberId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+        if (memberOpt.isEmpty()) {
+            log.error("Member 조회 실패: userId={}, projectId={}",
+                    sendImageMessageRequestDTO.getUserId(),
+                    sendImageMessageRequestDTO.getProjectId()
+            );
+            throw new GeneralException(ErrorInfo.TODO_NOT_FOUND);
+        }
+
+//        Long memberId = memberOpt
+//                .map(Member::getMemberId)
+//                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
         // 2. S3 업로드
-        String storedFileName = s3Service.uploadSingleFile(file).getStoredFileName();
+        String storedFileName = s3Service.uploadSingleFile(sendImageMessageRequestDTO.getFile()).getStoredFileName();
 
         // 3. DTO 구성
         SendMessageRequestDto dto = SendMessageRequestDto.builder()
-                .projectId(projectId)
-                .senderId(memberId)
+                .senderId(Long.parseLong(sendImageMessageRequestDTO.getUserId()))
                 .message(s3Service.getPresignedUrl(storedFileName))
                 .isImage(true)
                 .sentAt(LocalDateTime.now())
                 .build();
 
-
-        saveChatMessage(roomId, dto);
+        saveChatMessage(Long.parseLong(sendImageMessageRequestDTO.getRoomId()), dto);
 
         // 4. WebSocket 전송
-        messagingTemplate.convertAndSend("/topic/chat/" + roomId, dto);
+        messagingTemplate.convertAndSend("/topic/chat/" + sendImageMessageRequestDTO.getRoomId(), dto);
     }
 
     @Transactional

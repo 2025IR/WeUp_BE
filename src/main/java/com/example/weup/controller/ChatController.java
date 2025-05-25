@@ -1,5 +1,6 @@
 package com.example.weup.controller;
 
+import com.example.weup.dto.request.SendImageMessageRequestDTO;
 import com.example.weup.dto.request.SendMessageRequestDto;
 import com.example.weup.dto.response.ChatMessageResponseDto;
 import com.example.weup.dto.response.DataResponseDTO;
@@ -45,17 +46,16 @@ public class ChatController {
         messagingTemplate.convertAndSend("/topic/chat/" + roomId, receiveMessage);
     }
 
-    @PostMapping("/send/{roomId}/{projectId}/image")
+    @PostMapping("/send/image")
+    @ResponseBody
     public void sendImageMessage(
             HttpServletRequest request,
-            @PathVariable Long roomId,
-            @PathVariable Long projectId,
-            @ModelAttribute MultipartFile file) throws IOException {
+            @ModelAttribute SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        chatService.handleImageMessage(projectId, roomId, userId, file);
+        chatService.handleImageMessage(sendImageMessageRequestDTO);
     }
 
 

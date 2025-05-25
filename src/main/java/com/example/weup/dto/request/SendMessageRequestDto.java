@@ -13,8 +13,6 @@ import java.time.LocalDateTime;
 @Data
 public class SendMessageRequestDto {
 
-    private Long projectId;
-
     private Long senderId;
 
     private String message;
@@ -22,5 +20,6 @@ public class SendMessageRequestDto {
     @Builder.Default
     private LocalDateTime sentAt = LocalDateTime.now();
 
-    private Boolean isImage;
+    @Builder.Default
+    private Boolean isImage = false;
 }
