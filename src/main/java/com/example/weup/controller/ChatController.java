@@ -1,5 +1,6 @@
 package com.example.weup.controller;
 
+import com.example.weup.dto.request.GetPageable;
 import com.example.weup.dto.request.SendImageMessageRequestDTO;
 import com.example.weup.dto.request.SendMessageRequestDto;
 import com.example.weup.dto.response.ChatPageResponseDto;
@@ -57,14 +58,17 @@ public class ChatController {
         chatService.handleImageMessage(sendImageMessageRequestDTO);
     }
 
-
-
     @ResponseBody
-    @GetMapping("/chat/messages/{roomId}")
-    public ResponseEntity<DataResponseDTO<ChatPageResponseDto>> getChatMessages(@PathVariable Long roomId,
-                                                                                @RequestParam(defaultValue = "0") int page,
-                                                                                @RequestParam(defaultValue = "20") int size) throws JsonProcessingException {
-        ChatPageResponseDto data = chatService.getChatMessages(roomId, page, size);
+    @PostMapping("/chat/messages/{roomId}")
+    public ResponseEntity<DataResponseDTO<ChatPageResponseDto>> getChatMessages(HttpServletRequest request,
+                                                                                @PathVariable Long roomId,
+                                                                                @RequestBody GetPageable pageable) throws JsonProcessingException {
+        log.debug("\n\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+        log.debug("get chat messages controller 진입 여부 확인 : " + pageable.getPage() + ", " + pageable.getSize());
+
+        jwtUtil.resolveToken(request);
+
+        ChatPageResponseDto data = chatService.getChatMessages(roomId, pageable.getPage(), pageable.getSize());
         return ResponseEntity
                 .ok()
                 .body(DataResponseDTO.of(data, "채팅 내역 조회 완료"));

@@ -11,4 +11,6 @@ public class JwtDto {
 
     private String refreshToken;
 
+    private Long userId;
+
 }

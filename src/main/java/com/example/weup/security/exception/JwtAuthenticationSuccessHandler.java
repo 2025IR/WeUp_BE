@@ -37,6 +37,7 @@ public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHan
         JwtDto jwtDto = JwtDto.builder()
                 .accessToken(accessToken)
                 .refreshToken(refreshToken)
+                .userId(user.getUserId())
                 .build();
 
         DataResponseDTO<JwtDto> dataResponse = DataResponseDTO.of(jwtDto, "");
