@@ -3,7 +3,6 @@ package com.example.weup.service;
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.SendMessageRequestDto;
-import com.example.weup.dto.response.ChatMessageResponseDto;
 import com.example.weup.dto.response.ChatPageResponseDto;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.entity.ChatMessage;

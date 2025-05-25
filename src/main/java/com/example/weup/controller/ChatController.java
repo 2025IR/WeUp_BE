@@ -1,7 +1,6 @@
 package com.example.weup.controller;
 
 import com.example.weup.dto.request.SendMessageRequestDto;
-import com.example.weup.dto.response.ChatMessageResponseDto;
 import com.example.weup.dto.response.ChatPageResponseDto;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
@@ -9,7 +8,6 @@ import com.example.weup.service.ChatService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
