@@ -61,6 +61,7 @@ public class ProjectService {
                 .build();
 
         ChatRoom chatRoom = ChatRoom.builder()
+                .chatRoomId(newProject.getProjectId())
                 .project(newProject)
                 .build();
 

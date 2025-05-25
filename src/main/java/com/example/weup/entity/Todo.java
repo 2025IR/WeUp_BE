@@ -37,5 +37,6 @@ public class Todo {
     private Byte todoStatus = 0;
 
     @OneToMany(mappedBy = "todo", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<TodoMember> todoMembers = new ArrayList<>();
 }
