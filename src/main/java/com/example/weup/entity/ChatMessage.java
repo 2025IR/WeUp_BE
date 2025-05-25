@@ -5,6 +5,7 @@ import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import org.checkerframework.checker.units.qual.C;
 
 import java.time.LocalDateTime;
 
@@ -29,6 +30,10 @@ public class ChatMessage {
 
     @Column
     private String message;
+
+    @Column(name = "is_image")
+    @Builder.Default
+    private Boolean isImage = false;
 
     @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt;

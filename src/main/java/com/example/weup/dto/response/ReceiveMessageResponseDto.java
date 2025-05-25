@@ -22,4 +22,6 @@ public class ReceiveMessageResponseDto {
     private String message;
 
     private LocalDateTime sentAt;
+
+    private boolean isImage;
 }

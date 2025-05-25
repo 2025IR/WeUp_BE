@@ -2,6 +2,7 @@ package com.example.weup.controller;
 
 import com.example.weup.dto.request.SendMessageRequestDto;
 import com.example.weup.dto.response.ChatMessageResponseDto;
+import com.example.weup.dto.response.ChatPageResponseDto;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.service.ChatService;
@@ -40,12 +41,12 @@ public class ChatController {
 
     @ResponseBody
     @GetMapping("/chat/messages/{roomId}")
-    public ResponseEntity<DataResponseDTO<Page<ChatMessageResponseDto>>> getChatMessages(@PathVariable Long roomId,
-                                                                        @RequestParam(defaultValue = "0") int page,
-                                                                        @RequestParam(defaultValue = "20") int size) throws JsonProcessingException {
-        Page<ChatMessageResponseDto> messages = chatService.getChatMessages(roomId, page, size);
+    public ResponseEntity<DataResponseDTO<ChatPageResponseDto>> getChatMessages(@PathVariable Long roomId,
+                                                                                @RequestParam(defaultValue = "0") int page,
+                                                                                @RequestParam(defaultValue = "20") int size) throws JsonProcessingException {
+        ChatPageResponseDto data = chatService.getChatMessages(roomId, page, size);
         return ResponseEntity
                 .ok()
-                .body(DataResponseDTO.of(messages, "채팅 내역 조회 완료"));
+                .body(DataResponseDTO.of(data, "채팅 내역 조회 완료"));
     }
 }
