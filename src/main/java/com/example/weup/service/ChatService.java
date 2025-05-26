@@ -112,7 +112,14 @@ public class ChatService{
                 .sentAt(LocalDateTime.now())
                 .build();
 
-        saveChatMessage(Long.parseLong(sendImageMessageRequestDTO.getRoomId()), dto);
+        SendMessageRequestDto saveDTO = SendMessageRequestDto.builder()
+                .senderId(Long.parseLong(sendImageMessageRequestDTO.getUserId()))
+                .message(storedFileName)
+                .isImage(true)
+                .sentAt(LocalDateTime.now())
+                .build();
+
+        saveChatMessage(Long.parseLong(sendImageMessageRequestDTO.getRoomId()), saveDTO);
 
         // 4. WebSocket 전송
         messagingTemplate.convertAndSend("/topic/chat/" + sendImageMessageRequestDTO.getRoomId(), dto);
@@ -182,12 +189,8 @@ public class ChatService{
 
     @Transactional(readOnly = true)
     public ChatPageResponseDto getChatMessages(Long roomId, int page, int size) throws JsonProcessingException {
-        log.debug("get chat messages service 진입 확인");
-        log.debug("roomId = {}, page = {}, size = {}", roomId, page, size);
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sentAt"));
-        log.debug("pageable 변수 생성 직후, 생성값 확인");
-        log.debug("page : {}, size : {}, sort : {}", pageable.getPageNumber(), pageable.getPageSize(), pageable.getSort());
 
         Page<ChatMessage> chatMessages = chatMessageRepository.findByChatRoom_ChatRoomId(roomId, pageable);
 
@@ -203,18 +206,14 @@ public class ChatService{
 
             for (String json : redisMessages) {
                 SendMessageRequestDto dto = objectMapper.readValue(json, SendMessageRequestDto.class);
-                log.debug("@@@@@@@@@@@@@@@@@@@@@ dto에서 sentAt 어떻게 설정되는지 확인하기");
-                log.debug("Send Message Request DTO의 Sent At = {}", dto.getSentAt());
 
                 User chatUser = userRepository.findById(dto.getSenderId())
                         .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-                String message = dto.getMessage();
-
                 ChatMessage chatMessage = ChatMessage.builder()
                         .chatRoom(chatRoom)
                         .user(chatUser)
-                        .message(s3Service.getPresignedUrl(message))
+                        .message(dto.getMessage())
                         .sentAt(dto.getSentAt())
                         .isImage(dto.getIsImage())
                         .build();
@@ -228,26 +227,17 @@ public class ChatService{
         combinedMessages.addAll(chatMessages.getContent());
         combinedMessages.sort(Comparator.comparing(ChatMessage::getSentAt).reversed());
 
-        log.debug("채팅 불러오기 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        log.debug("가장 첫번째 내역의 보낸 시간 불러오기 : " + combinedMessages.getFirst().getSentAt());
-        log.debug("가장 첫번째 내역 불러오기 : " + combinedMessages.getFirst().getMessage());
-
         int totalSize = combinedMessages.size();
         int start = page * size;
         int end = Math.min(start + size, totalSize);
         boolean isLastPage = end >= totalSize;
-
-        log.debug("계산 잘 했는지 확인@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        log.debug("total size : " + totalSize);
-        log.debug("start : " + start + ", end : " + end);
-        log.debug("isLastPage : " + isLastPage);
 
         List<ReceiveMessageResponseDto> messages = combinedMessages.subList(start, end).stream()
                 .map(msg -> ReceiveMessageResponseDto.builder()
                         .senderId(msg.getUser().getUserId())
                         .senderName(msg.getUser().getName())
                         .senderProfileImage(msg.getUser().getProfileImage())
-                        .message(msg.getMessage())
+                        .message(msg.getIsImage() ? s3Service.getPresignedUrl(msg.getMessage()) : msg.getMessage())
                         .isImage(msg.getIsImage())
                         .sentAt(msg.getSentAt())
                         .build())
@@ -255,11 +245,6 @@ public class ChatService{
 
         List<ReceiveMessageResponseDto> reverseMessages = new ArrayList<>(messages);
         Collections.reverse(reverseMessages);
-
-        log.debug("PresignedUrl 값 확인 @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        for (ReceiveMessageResponseDto dto : messages) {
-            log.debug("PresignedUrl 값 확인 {} \n", dto.getMessage());
-        }
 
         return ChatPageResponseDto.builder()
                 .messageList(reverseMessages)
