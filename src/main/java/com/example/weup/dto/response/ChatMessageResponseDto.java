@@ -19,6 +19,8 @@ public class ChatMessageResponseDto {
 
     private String message;
 
+    private Boolean isImage;
+
     private LocalDateTime sentAt;
 
     public static ChatMessageResponseDto fromEntity(ChatMessage chatMessage) {
@@ -28,6 +30,7 @@ public class ChatMessageResponseDto {
                 .senderName(chatMessage.getUser().getName())
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())
+                .isImage(chatMessage.getIsImage())
                 .build();
     }
 }

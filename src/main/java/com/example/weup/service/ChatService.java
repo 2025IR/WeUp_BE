@@ -2,14 +2,17 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.request.SendImageMessageRequestDTO;
 import com.example.weup.dto.request.SendMessageRequestDto;
 import com.example.weup.dto.response.ChatPageResponseDto;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.entity.ChatMessage;
 import com.example.weup.entity.ChatRoom;
+import com.example.weup.entity.Member;
 import com.example.weup.entity.User;
 import com.example.weup.repository.ChatMessageRepository;
 import com.example.weup.repository.ChatRoomRepository;
+import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.UserRepository;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -17,10 +20,14 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.*;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
+import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -35,9 +42,15 @@ public class ChatService{
 
     private final UserRepository userRepository;
 
+    private final MemberRepository memberRepository;
+
+    private final S3Service s3Service;
+
     private final StringRedisTemplate redisTemplate;
 
     private final ObjectMapper objectMapper;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public ReceiveMessageResponseDto saveChatMessage(Long roomId, SendMessageRequestDto dto) throws JsonProcessingException {
@@ -58,7 +71,58 @@ public class ChatService{
                 .senderProfileImage(sendUser.getProfileImage())
                 .message(dto.getMessage())
                 .sentAt(dto.getSentAt())
+                .isImage(dto.getIsImage())
                 .build();
+    }
+
+    @Transactional
+    public void handleImageMessage(SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
+
+        log.error(String.valueOf(sendImageMessageRequestDTO.getProjectId()));
+        log.error(String.valueOf(sendImageMessageRequestDTO.getRoomId()));
+        log.error(String.valueOf(sendImageMessageRequestDTO.getUserId()));
+
+        if (sendImageMessageRequestDTO.getFile() == null || sendImageMessageRequestDTO.getFile().isEmpty()) {
+            throw new GeneralException(ErrorInfo.FILE_UPLOAD_FAILED);
+        }
+
+        // 1. senderId(memberId) 조회
+        Optional<Member> memberOpt = memberRepository.findByUser_UserIdAndProject_ProjectId(Long.parseLong(sendImageMessageRequestDTO.getUserId()), Long.parseLong(sendImageMessageRequestDTO.getProjectId()));
+
+        if (memberOpt.isEmpty()) {
+            log.error("Member 조회 실패: userId={}, projectId={}",
+                    sendImageMessageRequestDTO.getUserId(),
+                    sendImageMessageRequestDTO.getProjectId()
+            );
+            throw new GeneralException(ErrorInfo.TODO_NOT_FOUND);
+        }
+
+//        Long memberId = memberOpt
+//                .map(Member::getMemberId)
+//                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+        // 2. S3 업로드
+        String storedFileName = s3Service.uploadSingleFile(sendImageMessageRequestDTO.getFile()).getStoredFileName();
+
+        // 3. DTO 구성
+        SendMessageRequestDto dto = SendMessageRequestDto.builder()
+                .senderId(Long.parseLong(sendImageMessageRequestDTO.getUserId()))
+                .message(s3Service.getPresignedUrl(storedFileName))
+                .isImage(true)
+                .sentAt(LocalDateTime.now())
+                .build();
+
+        SendMessageRequestDto saveDTO = SendMessageRequestDto.builder()
+                .senderId(Long.parseLong(sendImageMessageRequestDTO.getUserId()))
+                .message(storedFileName)
+                .isImage(true)
+                .sentAt(LocalDateTime.now())
+                .build();
+
+        saveChatMessage(Long.parseLong(sendImageMessageRequestDTO.getRoomId()), saveDTO);
+
+        // 4. WebSocket 전송
+        messagingTemplate.convertAndSend("/topic/chat/" + sendImageMessageRequestDTO.getRoomId(), dto);
     }
 
     @Transactional
@@ -111,6 +175,7 @@ public class ChatService{
                         .user(chatUser)
                         .message(dto.getMessage())
                         .sentAt(dto.getSentAt())
+                        .isImage(dto.getIsImage())
                         .build();
 
                 chatMessageList.add(chatMessage);
@@ -126,6 +191,7 @@ public class ChatService{
     public ChatPageResponseDto getChatMessages(Long roomId, int page, int size) throws JsonProcessingException {
 
         Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sentAt"));
+
         Page<ChatMessage> chatMessages = chatMessageRepository.findByChatRoom_ChatRoomId(roomId, pageable);
 
         String key = "chat:room:" + roomId;
@@ -149,6 +215,7 @@ public class ChatService{
                         .user(chatUser)
                         .message(dto.getMessage())
                         .sentAt(dto.getSentAt())
+                        .isImage(dto.getIsImage())
                         .build();
 
                 redisChatMessages.add(chatMessage);
@@ -158,7 +225,7 @@ public class ChatService{
         List<ChatMessage> combinedMessages = new ArrayList<>();
         combinedMessages.addAll(redisChatMessages);
         combinedMessages.addAll(chatMessages.getContent());
-        combinedMessages.sort(Comparator.comparing(ChatMessage::getSentAt));
+        combinedMessages.sort(Comparator.comparing(ChatMessage::getSentAt).reversed());
 
         int totalSize = combinedMessages.size();
         int start = page * size;
@@ -170,16 +237,19 @@ public class ChatService{
                         .senderId(msg.getUser().getUserId())
                         .senderName(msg.getUser().getName())
                         .senderProfileImage(msg.getUser().getProfileImage())
-                        .message(msg.getMessage())
+                        .message(msg.getIsImage() ? s3Service.getPresignedUrl(msg.getMessage()) : msg.getMessage())
+                        .isImage(msg.getIsImage())
                         .sentAt(msg.getSentAt())
                         .build())
                 .toList();
 
+        List<ReceiveMessageResponseDto> reverseMessages = new ArrayList<>(messages);
+        Collections.reverse(reverseMessages);
+
         return ChatPageResponseDto.builder()
-                .messageList(messages)
+                .messageList(reverseMessages)
                 .page(page)
                 .isLastPage(isLastPage)
                 .build();
     }
-
 }

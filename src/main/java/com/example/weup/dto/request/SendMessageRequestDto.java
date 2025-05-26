@@ -1,5 +1,6 @@
 package com.example.weup.dto.request;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -21,5 +22,6 @@ public class SendMessageRequestDto {
     private LocalDateTime sentAt = LocalDateTime.now();
 
     @Builder.Default
-    private boolean isImage = false;
+    @JsonProperty("isImage")
+    private Boolean isImage = false;
 }
