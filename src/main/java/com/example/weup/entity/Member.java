@@ -29,7 +29,7 @@ public class Member {
     @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
-    @Column(name = "available_time", length = 350)
+    @Column(name = "available_time", length = 252)
     @Builder.Default
     private String availableTime = "0";
 
