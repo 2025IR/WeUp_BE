@@ -18,6 +18,7 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.joda.time.LocalDate;
 import org.springframework.data.domain.*;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -59,8 +60,8 @@ public class ChatService{
         String jsonMessage = objectMapper.writeValueAsString(dto);
 
         redisTemplate.opsForList().rightPush(key, jsonMessage);
-        log.debug("send message service @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        log.debug("redis ????" + redisTemplate.opsForList().index(key, -1));
+        log.debug("send message service 진입");
+        log.debug("redis 저장 여부 확인" + redisTemplate.opsForList().index(key, -1));
 
         User sendUser = userRepository.findById(dto.getSenderId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
@@ -78,15 +79,15 @@ public class ChatService{
     @Transactional
     public void handleImageMessage(SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
 
-        log.error(String.valueOf(sendImageMessageRequestDTO.getProjectId()));
-        log.error(String.valueOf(sendImageMessageRequestDTO.getRoomId()));
-        log.error(String.valueOf(sendImageMessageRequestDTO.getUserId()));
+        log.debug("handle image message service 진입");
+        log.debug(String.valueOf(sendImageMessageRequestDTO.getProjectId()));
+        log.debug(String.valueOf(sendImageMessageRequestDTO.getRoomId()));
+        log.debug(String.valueOf(sendImageMessageRequestDTO.getUserId()));
 
         if (sendImageMessageRequestDTO.getFile() == null || sendImageMessageRequestDTO.getFile().isEmpty()) {
             throw new GeneralException(ErrorInfo.FILE_UPLOAD_FAILED);
         }
 
-        // 1. senderId(memberId) 조회
         Optional<Member> memberOpt = memberRepository.findByUser_UserIdAndProject_ProjectId(Long.parseLong(sendImageMessageRequestDTO.getUserId()), Long.parseLong(sendImageMessageRequestDTO.getProjectId()));
 
         if (memberOpt.isEmpty()) {
@@ -97,14 +98,8 @@ public class ChatService{
             throw new GeneralException(ErrorInfo.TODO_NOT_FOUND);
         }
 
-//        Long memberId = memberOpt
-//                .map(Member::getMemberId)
-//                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-
-        // 2. S3 업로드
         String storedFileName = s3Service.uploadSingleFile(sendImageMessageRequestDTO.getFile()).getStoredFileName();
 
-        // 3. DTO 구성
         SendMessageRequestDto dto = SendMessageRequestDto.builder()
                 .senderId(Long.parseLong(sendImageMessageRequestDTO.getUserId()))
                 .message(s3Service.getPresignedUrl(storedFileName))
@@ -121,13 +116,16 @@ public class ChatService{
 
         saveChatMessage(Long.parseLong(sendImageMessageRequestDTO.getRoomId()), saveDTO);
 
-        // 4. WebSocket 전송
         messagingTemplate.convertAndSend("/topic/chat/" + sendImageMessageRequestDTO.getRoomId(), dto);
     }
 
     @Transactional
     @Scheduled(fixedDelay = 300000)
     public void flushAllRooms() throws JsonProcessingException {
+
+        log.debug("flush all rooms 실행 시간");
+        LocalDateTime now = LocalDateTime.now();
+        log.debug(String.valueOf(now));
 
         List<Long> activeRoomIds = getAllActiveRoomIds();
 
@@ -190,9 +188,9 @@ public class ChatService{
     @Transactional(readOnly = true)
     public ChatPageResponseDto getChatMessages(Long roomId, int page, int size) throws JsonProcessingException {
 
-        Pageable pageable = PageRequest.of(page, size, Sort.by(Sort.Direction.DESC, "sentAt"));
-
-        Page<ChatMessage> chatMessages = chatMessageRepository.findByChatRoom_ChatRoomId(roomId, pageable);
+        List<ChatMessage> chatMessages = chatMessageRepository.findByChatRoom_ChatRoomId(roomId);
+        log.debug("get mysql chat messages 개수 확인");
+        log.debug(String.valueOf(chatMessages.size()));
 
         String key = "chat:room:" + roomId;
         List<String> redisMessages = redisTemplate.opsForList().range(key, 0, -1);
@@ -200,6 +198,8 @@ public class ChatService{
         List<ChatMessage> redisChatMessages = new ArrayList<>();
 
         if (redisMessages != null) {
+            log.debug("get redis chat messages 개수 확인");
+            log.debug(String.valueOf(redisMessages.size()));
 
             ChatRoom chatRoom = chatRoomRepository.findById(roomId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
@@ -224,13 +224,16 @@ public class ChatService{
 
         List<ChatMessage> combinedMessages = new ArrayList<>();
         combinedMessages.addAll(redisChatMessages);
-        combinedMessages.addAll(chatMessages.getContent());
+        combinedMessages.addAll(chatMessages);
         combinedMessages.sort(Comparator.comparing(ChatMessage::getSentAt).reversed());
 
         int totalSize = combinedMessages.size();
         int start = page * size;
         int end = Math.min(start + size, totalSize);
         boolean isLastPage = end >= totalSize;
+
+        log.debug("계산 값 확인하기");
+        log.debug("totalSize: " + totalSize + ", start: " + start + ", end: " + end + ", isLastPage: " + isLastPage);
 
         List<ReceiveMessageResponseDto> messages = combinedMessages.subList(start, end).stream()
                 .map(msg -> ReceiveMessageResponseDto.builder()
@@ -245,6 +248,18 @@ public class ChatService{
 
         List<ReceiveMessageResponseDto> reverseMessages = new ArrayList<>(messages);
         Collections.reverse(reverseMessages);
+
+        log.debug("첫 번째 값 확인");
+        log.debug(messages.getFirst().getMessage());
+        log.debug(messages.getFirst().getSenderName());
+        log.debug(String.valueOf(messages.getFirst().getSentAt()));
+        log.debug(String.valueOf(messages.getFirst().getSenderId()));
+
+        log.debug("마지막 값 확인");
+        log.debug(messages.getLast().getMessage());
+        log.debug(messages.getLast().getSenderName());
+        log.debug(String.valueOf(messages.getLast().getSentAt()));
+        log.debug(String.valueOf(messages.getLast().getSenderId()));
 
         return ChatPageResponseDto.builder()
                 .messageList(reverseMessages)

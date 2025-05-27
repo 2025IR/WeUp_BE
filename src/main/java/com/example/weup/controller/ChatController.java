@@ -36,11 +36,9 @@ public class ChatController {
     @MessageMapping("/send/{roomId}")
     public void sendMessage(@DestinationVariable Long roomId, SendMessageRequestDto messageDto) throws JsonProcessingException {
 
-        log.debug("send message controller : {}, {}, {}", messageDto.getSenderId(), messageDto.getMessage(), messageDto.getSentAt());
-
         ReceiveMessageResponseDto receiveMessage = chatService.saveChatMessage(roomId, messageDto);
 
-        log.debug("send message controller receiveMessage Object @@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
+        log.debug("send message controller receiveMessage Object");
         log.debug("{}, {}, {}, {}, {}", receiveMessage.getSenderId(), receiveMessage.getSenderName(), receiveMessage.getSenderProfileImage(), receiveMessage.getSentAt(), receiveMessage.getMessage());
 
         messagingTemplate.convertAndSend("/topic/chat/" + roomId, receiveMessage);
@@ -52,8 +50,7 @@ public class ChatController {
             HttpServletRequest request,
             @ModelAttribute SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
 
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
+        jwtUtil.resolveToken(request);
 
         chatService.handleImageMessage(sendImageMessageRequestDTO);
     }
@@ -63,12 +60,14 @@ public class ChatController {
     public ResponseEntity<DataResponseDTO<ChatPageResponseDto>> getChatMessages(HttpServletRequest request,
                                                                                 @PathVariable Long roomId,
                                                                                 @RequestBody GetPageable pageable) throws JsonProcessingException {
-        log.debug("\n\n@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@@");
-        log.debug("get chat messages controller 진입 여부 확인 : " + pageable.getPage() + ", " + pageable.getSize());
-
         jwtUtil.resolveToken(request);
 
         ChatPageResponseDto data = chatService.getChatMessages(roomId, pageable.getPage(), pageable.getSize());
+
+        log.debug("get chat messages controller에서 반환값 확인");
+        log.debug(String.valueOf(data.getPage()));
+        log.debug(String.valueOf(data.isLastPage()));
+
         return ResponseEntity
                 .ok()
                 .body(DataResponseDTO.of(data, "채팅 내역 조회 완료"));
