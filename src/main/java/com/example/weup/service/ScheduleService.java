@@ -20,13 +20,13 @@ public class ScheduleService {
     private final MemberRepository memberRepository;
 
     @Transactional
-    public Map<Long, String> getSchedule(Long projectId) {
+    public Map<String, String> getSchedule(Long projectId) {
 
         List<Member> getMember = memberRepository.findByProject_ProjectIdAndIsMemberDeletedFalse(projectId);
 
         return getMember.stream()
                 .collect(Collectors.toMap(
-                        Member::getMemberId,
+                        member -> member.getUser().getName(),
                         Member::getAvailableTime
                 ));
     }
