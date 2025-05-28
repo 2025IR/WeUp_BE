@@ -21,11 +21,11 @@ public class ScheduleController {
     private final JwtUtil jwtUtil;
 
     @PostMapping("/{projectId}")
-    public ResponseEntity<DataResponseDTO<Map<Long, String>>> getSchedule(HttpServletRequest request, @PathVariable Long projectId) {
+    public ResponseEntity<DataResponseDTO<Map<String, String>>> getSchedule(HttpServletRequest request, @PathVariable Long projectId) {
 
         jwtUtil.resolveToken(request);
 
-        Map<Long, String> availableSchedule = scheduleService.getSchedule(projectId);
+        Map<String, String> availableSchedule = scheduleService.getSchedule(projectId);
 
         return ResponseEntity
                 .ok()
