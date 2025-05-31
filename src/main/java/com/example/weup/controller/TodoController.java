@@ -23,14 +23,14 @@ public class TodoController {
     @PostMapping("/create")
     public ResponseEntity<DataResponseDTO<String>> createTodo(
             HttpServletRequest request,
-            @RequestBody CreateTodoRequestDTO createTodoRequestDTO) {
+            @RequestBody Long projectId) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
         todoService.createTodo(
                 userId,
-                createTodoRequestDTO
+                projectId
         );
 
         return ResponseEntity.ok(DataResponseDTO.of("투두 생성 완료"));
