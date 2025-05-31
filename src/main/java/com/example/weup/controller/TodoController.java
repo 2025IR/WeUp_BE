@@ -23,14 +23,14 @@ public class TodoController {
     @PostMapping("/create")
     public ResponseEntity<DataResponseDTO<String>> createTodo(
             HttpServletRequest request,
-            @RequestBody CreateTodoRequestDTO createTodoRequestDTO) {
+            @RequestBody Long projectId) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
         todoService.createTodo(
                 userId,
-                createTodoRequestDTO
+                projectId
         );
 
         return ResponseEntity.ok(DataResponseDTO.of("투두 생성 완료"));
@@ -70,11 +70,12 @@ public class TodoController {
 
     @PutMapping("/state")
     public ResponseEntity<DataResponseDTO<String>> editTodoStatus(
-            HttpServletRequest request,
-            @RequestBody EditTodoStatusRequestDTO editTodoStatusRequestDTO) {
+            HttpServletRequest request, @RequestBody EditTodoStatusRequestDTO editTodoStatusRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
+
+        System.out.println("투두 상태 변경 컨트롤러 : " + editTodoStatusRequestDTO.getTodoId() + editTodoStatusRequestDTO.getStatus());
 
         todoService.editTodoStatus(
                 userId,

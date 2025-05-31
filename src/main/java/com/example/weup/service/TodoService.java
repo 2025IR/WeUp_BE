@@ -2,7 +2,6 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.dto.request.CreateTodoRequestDTO;
 import com.example.weup.dto.request.EditTodoRequestDTO;
 import com.example.weup.dto.request.EditTodoStatusRequestDTO;
 import com.example.weup.dto.response.TodoAssigneeResponseDTO;
@@ -34,38 +33,23 @@ public class TodoService {
     private final TodoMemberRepository todoMemberRepository;
 
     @Transactional
-    public void createTodo(Long userId, CreateTodoRequestDTO createTodoRequestDTO) {
+    public void createTodo(Long userId, Long projectId) {
 
-        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, createTodoRequestDTO.getProjectId())
+        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
         if (memberService.isDeletedMember(requestMember.getMemberId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        Project project = projectRepository.findById(createTodoRequestDTO.getProjectId())
+        Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
         Todo todo = Todo.builder()
                 .project(project)
-                .todoName(createTodoRequestDTO.getTodoName())
-                .startDate(createTodoRequestDTO.getStartDate())
-                .endDate(createTodoRequestDTO.getEndDate())
                 .build();
 
         todoRepository.save(todo);
-
-        for (Long memberId : createTodoRequestDTO.getMemberIds()) {
-            Member member = memberRepository.findById(memberId)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-
-            TodoMember todoMember = TodoMember.builder()
-                    .todo(todo)
-                    .member(member)
-                    .build();
-
-            todoMemberRepository.save(todoMember);
-        }
     }
 
     public List<TodoListResponseDTO> getTodoList(Long userId, Long projectId) {
@@ -132,24 +116,40 @@ public class TodoService {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        todo.setTodoName(editTodoRequestDTO.getTodoName());
-        todo.setStartDate(editTodoRequestDTO.getStartDate());
-        todo.setEndDate(editTodoRequestDTO.getEndDate());
+        if (editTodoRequestDTO.getTodoName() != null) {
+            todo.setTodoName(editTodoRequestDTO.getTodoName());
+        }
 
-        todoMemberRepository.deleteByTodo_TodoId(editTodoRequestDTO.getTodoId());
+        if ((editTodoRequestDTO.getStartDate() != null) && (editTodoRequestDTO.getEndDate() != null)) {
+            todo.setStartDate(editTodoRequestDTO.getStartDate());
+            todo.setEndDate(editTodoRequestDTO.getEndDate());
+        }
 
-        editTodoRequestDTO.getMemberIds().stream()
-                .map(memberId -> memberRepository.findById(memberId)
-                        .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND)))
-                .map(member -> TodoMember.builder()
-                        .todo(todo)
-                        .member(member)
-                        .build())
-                .forEach(todoMemberRepository::save);
+        todoRepository.save(todo);
+
+        log.error(todo.getTodoName());
+
+        if (editTodoRequestDTO.getMemberIds() != null) {
+            todoMemberRepository.deleteByTodo_TodoId(editTodoRequestDTO.getTodoId());
+
+            editTodoRequestDTO.getMemberIds().stream()
+                    .map(memberId -> memberRepository.findById(memberId)
+                            .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND)))
+                    .map(member -> TodoMember.builder()
+                            .todo(todo)
+                            .member(member)
+                            .build())
+                    .forEach(todoMemberRepository::save);
+        }
     }
+
 
     @Transactional
     public void editTodoStatus(Long userId, EditTodoStatusRequestDTO editTodoStatusRequestDTO) {
+
+        log.debug("edit todo status service in");
+        log.debug("todo id : {}", editTodoStatusRequestDTO.getTodoId());
+        log.debug("status : {}", editTodoStatusRequestDTO.getStatus());
 
         Todo todo = todoRepository.findById(editTodoStatusRequestDTO.getTodoId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));

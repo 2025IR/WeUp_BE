@@ -25,11 +25,14 @@ public class Todo {
     private Project project;
 
     @Column(nullable = false)
-    private String todoName;
+    @Builder.Default
+    private String todoName = "";
 
     @Column(nullable = false)
-    private LocalDate startDate;
+    @Builder.Default
+    private LocalDate startDate = LocalDate.now();
 
+    @Column
     private LocalDate endDate;
 
     @Column(nullable = false)
