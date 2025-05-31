@@ -2,7 +2,6 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.dto.request.CreateTodoRequestDTO;
 import com.example.weup.dto.request.EditTodoRequestDTO;
 import com.example.weup.dto.request.EditTodoStatusRequestDTO;
 import com.example.weup.dto.response.TodoAssigneeResponseDTO;
