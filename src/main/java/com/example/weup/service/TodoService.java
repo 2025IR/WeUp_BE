@@ -34,38 +34,23 @@ public class TodoService {
     private final TodoMemberRepository todoMemberRepository;
 
     @Transactional
-    public void createTodo(Long userId, CreateTodoRequestDTO createTodoRequestDTO) {
+    public void createTodo(Long userId, Long projectId) {
 
-        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, createTodoRequestDTO.getProjectId())
+        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
         if (memberService.isDeletedMember(requestMember.getMemberId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        Project project = projectRepository.findById(createTodoRequestDTO.getProjectId())
+        Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
         Todo todo = Todo.builder()
                 .project(project)
-//                .todoName(createTodoRequestDTO.getTodoName())
-//                .startDate(createTodoRequestDTO.getStartDate())
-//                .endDate(createTodoRequestDTO.getEndDate())
                 .build();
 
         todoRepository.save(todo);
-
-//        for (Long memberId : createTodoRequestDTO.getMemberIds()) {
-//            Member member = memberRepository.findById(memberId)
-//                    .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-//
-//            TodoMember todoMember = TodoMember.builder()
-//                    .todo(todo)
-//                    .member(member)
-//                    .build();
-//
-//            todoMemberRepository.save(todoMember);
-//        }
     }
 
     public List<TodoListResponseDTO> getTodoList(Long userId, Long projectId) {

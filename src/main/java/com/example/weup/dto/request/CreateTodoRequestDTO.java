@@ -10,9 +10,5 @@ import java.util.List;
 @NoArgsConstructor
 public class CreateTodoRequestDTO {
     private Long projectId;
-//    private List<Long> memberIds;
-//    private String todoName;
-//    private LocalDate startDate;
-//    private LocalDate endDate;
 }
 
