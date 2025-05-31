@@ -10,10 +10,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-import retrofit2.http.Path;
 
 import java.util.List;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/schedule")

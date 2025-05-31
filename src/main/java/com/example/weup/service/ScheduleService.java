@@ -12,9 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.Objects;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -29,13 +27,11 @@ public class ScheduleService {
         List<GetScheduleResponseDTO> responseDTOList = new ArrayList<>();
 
         getMember.stream().map(
-                member -> {
-                    return GetScheduleResponseDTO.builder()
-                            .name(member.getUser().getName())
-                            .availableTime(member.getAvailableTime())
-                            .isMine(Objects.equals(member.getUser().getUserId(), userId))
-                            .build();
-                }).forEach(responseDTOList::add);
+                member -> GetScheduleResponseDTO.builder()
+                        .name(member.getUser().getName())
+                        .availableTime(member.getAvailableTime())
+                        .isMine(Objects.equals(member.getUser().getUserId(), userId))
+                        .build()).forEach(responseDTOList::add);
 
         return responseDTOList;
     }
