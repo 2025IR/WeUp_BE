@@ -7,7 +7,5 @@ import lombok.Setter;
 @Getter
 public class EditScheduleRequestDTO {
 
-    private Long memberId;
-
     private String availableTime;
 }
