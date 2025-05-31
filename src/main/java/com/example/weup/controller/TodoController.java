@@ -70,11 +70,12 @@ public class TodoController {
 
     @PutMapping("/state")
     public ResponseEntity<DataResponseDTO<String>> editTodoStatus(
-            HttpServletRequest request,
-            @RequestBody EditTodoStatusRequestDTO editTodoStatusRequestDTO) {
+            HttpServletRequest request, @RequestBody EditTodoStatusRequestDTO editTodoStatusRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
+
+        System.out.println("투두 상태 변경 컨트롤러 : " + editTodoStatusRequestDTO.getTodoId() + editTodoStatusRequestDTO.getStatus());
 
         todoService.editTodoStatus(
                 userId,
