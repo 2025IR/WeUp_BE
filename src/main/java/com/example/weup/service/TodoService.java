@@ -2,6 +2,7 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.request.CreateTodoRequestDTO;
 import com.example.weup.dto.request.EditTodoRequestDTO;
 import com.example.weup.dto.request.EditTodoStatusRequestDTO;
 import com.example.weup.dto.response.TodoAssigneeResponseDTO;
@@ -33,16 +34,16 @@ public class TodoService {
     private final TodoMemberRepository todoMemberRepository;
 
     @Transactional
-    public void createTodo(Long userId, Long projectId) {
+    public void createTodo(Long userId, CreateTodoRequestDTO createTodoRequestDTO) {
 
-        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
+        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, createTodoRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
         if (memberService.isDeletedMember(requestMember.getMemberId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        Project project = projectRepository.findById(projectId)
+        Project project = projectRepository.findById(createTodoRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
         Todo todo = Todo.builder()
