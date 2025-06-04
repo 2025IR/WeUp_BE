@@ -121,17 +121,16 @@ public class TodoService {
             todo.setTodoName(editTodoRequestDTO.getTodoName());
         }
 
-        if ((editTodoRequestDTO.getStartDate() != null) && (editTodoRequestDTO.getEndDate() != null)) {
+        if (editTodoRequestDTO.getStartDate() != null && editTodoRequestDTO.getEndDate() != null) {
             todo.setStartDate(editTodoRequestDTO.getStartDate());
             todo.setEndDate(editTodoRequestDTO.getEndDate());
         }
 
         todoRepository.save(todo);
 
-        log.error(todo.getTodoName());
-
         if (editTodoRequestDTO.getMemberIds() != null) {
             todoMemberRepository.deleteByTodo_TodoId(editTodoRequestDTO.getTodoId());
+            todoMemberRepository.findAllByTodo_TodoId(editTodoRequestDTO.getTodoId());
 
             editTodoRequestDTO.getMemberIds().stream()
                     .map(memberId -> memberRepository.findById(memberId)
@@ -143,6 +142,7 @@ public class TodoService {
                     .forEach(todoMemberRepository::save);
         }
     }
+
 
 
     @Transactional
