@@ -18,7 +18,6 @@ import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 
@@ -44,8 +43,8 @@ public class ChatController {
         messagingTemplate.convertAndSend("/topic/chat/" + roomId, receiveMessage);
     }
 
-    @PostMapping("/send/image")
     @ResponseBody
+    @PostMapping("/send/image")
     public void sendImageMessage(
             HttpServletRequest request,
             @ModelAttribute SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
