@@ -20,9 +20,10 @@ public class BoardController {
     private final BoardService boardService;
     private final JwtUtil jwtUtil;
 
-    @PostMapping("/create")
+    @PostMapping("/create/{projectId}")
     public ResponseEntity<DataResponseDTO<String>> createBoard(
             HttpServletRequest request,
+            @PathVariable Long projectId,
             @ModelAttribute BoardCreateRequestDTO boardCreateRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
@@ -30,6 +31,7 @@ public class BoardController {
 
         boardService.createBoard(
                 userId,
+                projectId,
                 boardCreateRequestDTO
         );
 
