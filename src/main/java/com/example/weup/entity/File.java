@@ -32,7 +32,4 @@ public class File {
 
     @Column(name = "file_size", nullable = false)
     private Long fileSize;
-
-    @Column(name = "file_path", nullable = false)
-    private String filePath;
 }

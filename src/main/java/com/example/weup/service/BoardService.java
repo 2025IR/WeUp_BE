@@ -39,16 +39,16 @@ public class BoardService {
     private final S3Service s3Service;
 
     @Transactional
-    public void createBoard(Long userId, BoardCreateRequestDTO boardCreateRequestDTO) {
+    public void createBoard(Long userId, Long projectId, BoardCreateRequestDTO boardCreateRequestDTO) {
 
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, boardCreateRequestDTO.getProjectId())
+        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
 
         if (memberService.isDeletedMember(member.getMemberId())) {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        Project project = projectRepository.findById(boardCreateRequestDTO.getProjectId())
+        Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
         Tag tag = tagRepository.findByTagName(boardCreateRequestDTO.getTag())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TAG_NOT_FOUND));

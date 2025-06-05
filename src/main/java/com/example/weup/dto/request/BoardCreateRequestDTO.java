@@ -9,7 +9,6 @@ import java.util.List;
 @Getter
 @Setter
 public class BoardCreateRequestDTO {
-    private Long projectId;
     private String title;
     private String contents;
     private String tag;
