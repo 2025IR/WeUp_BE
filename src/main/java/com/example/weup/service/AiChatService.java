@@ -67,15 +67,12 @@ public class AiChatService {
 
             log.debug("response: {}", realMessage);
 
-            ReceiveMessageResponseDto responseMessage = ReceiveMessageResponseDto.builder()
-                    .senderId(aiChatRequestDTO.getSenderId()) // 임시
-                    .senderName("AI 비서")
-                    .senderProfileImage("AI.jpg")
+            SendMessageRequestDto responseData = SendMessageRequestDto.builder()
+                    .senderId(1L)
                     .message(realMessage)
-                    .sentAt(LocalDateTime.now())
-                    .isImage(false)
                     .build();
 
+            ReceiveMessageResponseDto responseMessage = chatService.saveChatMessage(roomId, responseData);
             messagingTemplate.convertAndSend("/topic/chat/" + roomId, responseMessage);
 
         } catch (RestClientException e) {
