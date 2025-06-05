@@ -2,12 +2,12 @@ package com.example.weup.controller;
 
 import com.example.weup.dto.request.AiChatRequestDTO;
 import com.example.weup.service.AiChatService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequestMapping("/ai")
 @RequiredArgsConstructor
@@ -15,11 +15,11 @@ public class AiChatController {
 
     private final AiChatService aiChatService;
 
-    @PostMapping("/chat")
-    public ResponseEntity<String> sendMessageToAi(AiChatRequestDTO aiChatRequestDTO) {
+    @PostMapping("/chat/{roomId}")
+    public void sendMessageToAi(@PathVariable Long roomId, @RequestBody AiChatRequestDTO aiChatRequestDTO) throws JsonProcessingException {
 
-        String result = aiChatService.sendMessageToAi(aiChatRequestDTO);
+        log.debug("sendMessageToAi, {}, {}", aiChatRequestDTO.getUserInput(), aiChatRequestDTO.getProjectId());
 
-        return ResponseEntity.ok().body(result);
+        aiChatService.sendMessageToAi(roomId, aiChatRequestDTO);
     }
 }
