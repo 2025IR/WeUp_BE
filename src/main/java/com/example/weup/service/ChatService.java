@@ -236,7 +236,7 @@ public class ChatService{
                 .map(msg -> ReceiveMessageResponseDto.builder()
                         .senderId(msg.getUser().getUserId())
                         .senderName(msg.getUser().getName())
-                        .senderProfileImage(msg.getUser().getProfileImage())
+                        .senderProfileImage(s3Service.getPresignedUrl(msg.getUser().getProfileImage()))
                         .message(msg.getIsImage() ? s3Service.getPresignedUrl(msg.getMessage()) : msg.getMessage())
                         .isImage(msg.getIsImage())
                         .sentAt(msg.getSentAt())
