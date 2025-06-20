@@ -140,7 +140,7 @@ public class BoardService {
 
         return BoardDetailResponseDTO.builder()
                 .name(member.getUser().getName())
-                .profileImage(member.getUser().getProfileImage())
+                .profileImage(s3Service.getPresignedUrl(member.getUser().getProfileImage()))
                 .title(board.getTitle())
                 .contents(board.getContents())
                 .boardCreatedTime(board.getBoardCreateTime())
@@ -174,10 +174,10 @@ public class BoardService {
 
         if (title != null) {
             board.setTitle(title.trim());
-        } else if (contents != null) {
+        }
+
+        if (contents != null) {
             board.setContents(contents.trim());
-        } else {
-            throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
         }
 
         Tag tag = tagRepository.findByTagName(tagName)
