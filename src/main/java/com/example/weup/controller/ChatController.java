@@ -8,7 +8,9 @@ import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.service.ChatService;
+import com.example.weup.service.S3Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -31,6 +33,8 @@ public class ChatController {
     private final JwtUtil jwtUtil;
 
     private final SimpMessagingTemplate messagingTemplate;
+
+    private final S3Service s3Service;
 
     @MessageMapping("/send/{roomId}")
     public void sendMessage(@DestinationVariable Long roomId, SendMessageRequestDto messageDto) throws JsonProcessingException {
