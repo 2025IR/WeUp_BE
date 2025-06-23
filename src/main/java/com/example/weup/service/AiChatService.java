@@ -1,8 +1,14 @@
 package com.example.weup.service;
 
+import com.example.weup.GeneralException;
+import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.AiChatRequestDTO;
+import com.example.weup.dto.request.AiRoleAssignRequestDTO;
+import com.example.weup.dto.request.AiTodoCreateRequestDTO;
 import com.example.weup.dto.request.SendMessageRequestDto;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
+import com.example.weup.entity.*;
+import com.example.weup.repository.*;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -15,11 +21,13 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 
 @Slf4j
 @Service
@@ -33,6 +41,14 @@ public class AiChatService {
     private final SimpMessagingTemplate messagingTemplate;
 
     private final ObjectMapper objectMapper;
+
+    private final ProjectRepository projectRepository;
+
+    private final MemberRepository memberRepository;
+
+    private final MemberRoleRepository memberRoleRepository;
+    private final RoleRepository roleRepository;
+    private final TodoRepository todoRepository;
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
@@ -66,6 +82,10 @@ public class AiChatService {
 
             log.debug("response: {}", realMessage);
 
+            if (Objects.equals(realMessage, "")) {
+                throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
+            }
+
             SendMessageRequestDto responseData = SendMessageRequestDto.builder()
                     .senderId(1L)
                     .message(realMessage)
@@ -77,6 +97,47 @@ public class AiChatService {
         } catch (RestClientException e) {
             throw new RuntimeException("AI Chat 서버 요청 중 오류 발생 : " + e);
         }
+    }
+
+    @Transactional
+    public void aiAssignRole(AiRoleAssignRequestDTO aiRoleAssignDto) {
+
+        log.debug("ai assign role service in");
+
+        Project project = projectRepository.findById(aiRoleAssignDto.getProjectId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+
+        Member member = memberRepository.findByUser_NameAndProject_ProjectId(aiRoleAssignDto.getUserName(), project.getProjectId());
+
+        Role role = roleRepository.findByProjectAndRoleName(project, aiRoleAssignDto.getRoleName())
+                        .orElseThrow(() -> new GeneralException(ErrorInfo.ROLE_NOT_FOUND));
+
+        memberRoleRepository.deleteByMember(member);
+        log.debug("delete by member ?");
+
+        MemberRole memberRole = MemberRole.builder()
+                .member(member)
+                .role(role)
+                .build();
+
+        memberRoleRepository.save(memberRole);
+    }
+
+    @Transactional
+    public void aiTodoCreate(AiTodoCreateRequestDTO aiTodoCreateDto) {
+
+        log.debug("ai todo create service in");
+
+        Project project = projectRepository.findById(aiTodoCreateDto.getProjectId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+
+        Todo todo = Todo.builder()
+                .project(project)
+                .todoName(aiTodoCreateDto.getTodoName())
+                .startDate(aiTodoCreateDto.getStartDate())
+                .build();
+
+        todoRepository.save(todo);
     }
 
 }
