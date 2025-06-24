@@ -42,10 +42,10 @@ public class BoardService {
     public void createBoard(Long userId, Long projectId, BoardCreateRequestDTO boardCreateRequestDTO) {
 
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
         if (memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
+            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
         Project project = projectRepository.findById(projectId)
@@ -91,10 +91,10 @@ public class BoardService {
         );
 
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
         if (memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
+            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
         Page<Board> boards = boardRepository.findByProjectIdAndFilters(projectId, tag, search, pageable);
@@ -122,10 +122,10 @@ public class BoardService {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
 
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, board.getProject().getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
         if (memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
+            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
         List<File> files = fileRepository.findAllByBoard(board);
@@ -162,14 +162,14 @@ public class BoardService {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
 
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, board.getProject().getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
         if (memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
+            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
         if (!board.getMember().getMemberId().equals(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
+            throw new GeneralException(ErrorInfo.NOT_WRITER);
         }
 
         if (title != null) {
@@ -212,14 +212,14 @@ public class BoardService {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
 
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, board.getProject().getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
         if (memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
+            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
         if (!board.getMember().getMemberId().equals(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
+            throw new GeneralException(ErrorInfo.NOT_WRITER);
         }
 
         List<File> files = fileRepository.findAllByBoard(board);
