@@ -27,5 +27,7 @@ public class ExceptionHandlers extends ResponseEntityExceptionHandler {
         return ResponseEntity
                 .status(status)
                 .body(ErrorResponseDTO.of(errorInfo, errorInfo.getMessage()));
+        //TODO. Exception e를 가져오는거면 errorInfo.getMessage()가 아니라 e를 반환해도 되지 않을까?
+        //TODO. 아니면 Exception e를 반환하지 않는게?
     }
 }
