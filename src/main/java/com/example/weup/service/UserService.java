@@ -5,18 +5,26 @@ import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.SignUpRequestDto;
 import com.example.weup.dto.request.TokenRequestDTO;
 import com.example.weup.dto.request.PasswordRequestDTO;
+import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
 import com.example.weup.entity.AccountSocial;
+import com.example.weup.entity.Member;
 import com.example.weup.entity.User;
+import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.UserRepository;
+import com.example.weup.security.JwtDto;
 import com.example.weup.security.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
+import org.springframework.http.ResponseEntity;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @Service
@@ -24,6 +32,8 @@ import java.util.Map;
 public class UserService {
 
     private final UserRepository userRepository;
+
+    private final MemberRepository memberRepository;
 
     private final JwtUtil jwtUtil;
 
@@ -72,9 +82,14 @@ public class UserService {
                 .build();
     }
 
-    @Transactional
-    public Map<String, String> reissuetoken(TokenRequestDTO tokenRequestDTO){
-        String refreshToken = tokenRequestDTO.getRefreshToken();
+    public ResponseEntity<DataResponseDTO<JwtDto>> reissueToken(String refreshToken) {
+        if (refreshToken == null) {
+            throw new GeneralException(ErrorInfo.REFRESH_TOKEN_NOT_FOUND);
+        }
+
+        if (jwtUtil.isExpired(refreshToken)) {
+            throw new GeneralException(ErrorInfo.TOKEN_EXPIRED);
+        }
 
         Long userId = jwtUtil.getUserId(refreshToken);
         User user = userRepository.findById(userId)
@@ -83,17 +98,21 @@ public class UserService {
         String newAccessToken = jwtUtil.createAccessToken(userId, user.getRole());
         String newRefreshToken = jwtUtil.createRefreshToken(userId);
 
-        return Map.of("access_token", newAccessToken, "refresh_token", newRefreshToken);
-    }
+        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", newRefreshToken)
+                .httpOnly(true)
+                .secure(true)
+                .path("/")
+                .sameSite("Strict")
+                .maxAge(7 * 24 * 60 * 60)
+                .build();
 
-    @Transactional
-    public Map<String, String> reissue(Long userId){
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+        JwtDto jwtDto = JwtDto.builder()
+                .accessToken(newAccessToken)
+                .build();
 
-        String newAccessToken = jwtUtil.createAccessToken(userId, user.getRole());
-
-        return Map.of("access_token", newAccessToken);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료"));
     }
 
     @Transactional
@@ -142,5 +161,10 @@ public class UserService {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
         user.setUserWithdrawal(true);
+
+        List<Member> memberList = memberRepository.findAllByUser_UserId(userId);
+        for (Member member : memberList) {
+            member.setMemberDeleted(true);
+        }
     }
 }

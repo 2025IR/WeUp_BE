@@ -8,6 +8,8 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -25,21 +28,29 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final UserRepository userRepository;
 
+    private static final List<String> WHITE_LIST = List.of(
+            "/user/signIn", "/user/signup", "/user/reissuetoken", "/user/email", "/user/email/check",
+            "/error", "/ws/", "/ai/"
+    );
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
+
+        if (WHITE_LIST.stream().anyMatch(request.getRequestURI()::startsWith)) {
+            filterChain.doFilter(request, response);
+            return;
+        }
 
         String token = jwtUtil.resolveToken(request);
 
         if(token == null) {
             log.warn("JWT 토큰 없음 또는 형식 오류");
-            filterChain.doFilter(request,response);
-            return;
+            throw new AccessDeniedException("토큰이 없습니다.");
         }
 
         if(jwtUtil.isExpired(token)) {
             log.warn("JWT 토큰 만료");
-            filterChain.doFilter(request,response);
-            return;
+            throw new AuthenticationCredentialsNotFoundException("토큰이 만료되었습니다.");
         }
 
         Long userId = jwtUtil.getUserId(token);

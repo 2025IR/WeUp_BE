@@ -45,31 +45,10 @@ public class UserController {
     }
 
     @PostMapping("/reissuetoken")
-    public ResponseEntity<DataResponseDTO<JwtDto>> reissueToken(@RequestBody TokenRequestDTO tokenRequestDTO) {
-        Map<String, String> tokens = userService.reissuetoken(tokenRequestDTO);
-        String newAccessToken = tokens.get("access_token");
-        String newRefreshToken = tokens.get("refresh_token");
+    public ResponseEntity<DataResponseDTO<JwtDto>> reissueToken(
+            @CookieValue(name = "refresh_token", required = false) String refreshToken) {
 
-        JwtDto jwtDto = JwtDto.builder()
-                .accessToken(newAccessToken)
-                .refreshToken(newRefreshToken)
-                .build();
-        
-        return ResponseEntity.ok()
-                .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료"));
-    }
-
-    @PostMapping("/reissue")
-    public ResponseEntity<DataResponseDTO<JwtDto>> reissue(@RequestParam Long userId) {
-        Map<String, String> tokens = userService.reissue(userId);
-        String newAccessToken = tokens.get("access_token");
-
-        JwtDto jwtDto = JwtDto.builder()
-                .accessToken(newAccessToken)
-                .build();
-
-        return ResponseEntity.ok()
-                .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료 - 임시 API"));
+        return userService.reissueToken(refreshToken);
     }
 
     @PostMapping("/password")
