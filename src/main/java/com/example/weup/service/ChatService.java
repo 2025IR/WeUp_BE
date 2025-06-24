@@ -66,7 +66,7 @@ public class ChatService{
         return ReceiveMessageResponseDto.builder()
                 .senderId(dto.getSenderId())
                 .senderName(sendUser.getName())
-                .senderProfileImage(sendUser.getProfileImage())
+                .senderProfileImage(s3Service.getPresignedUrl(sendUser.getProfileImage()))
                 .message(dto.getMessage())
                 .sentAt(dto.getSentAt())
                 .isImage(dto.getIsImage())
