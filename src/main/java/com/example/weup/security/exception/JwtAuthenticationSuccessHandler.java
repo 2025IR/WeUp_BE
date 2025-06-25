@@ -52,7 +52,7 @@ public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHan
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType("application/json;charset=UTF-8");
         response.setCharacterEncoding("UTF-8");
-        response.setHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString()); // ✅ 쿠키 삽입
+        response.setHeader(HttpHeaders.SET_COOKIE, refreshCookie.toString());
         response.getWriter().write(objectMapper.writeValueAsString(dataResponse));
 
         log.info("로그인 성공 - USER_ID : {}", user.getUserId());
