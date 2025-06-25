@@ -39,16 +39,21 @@ public class BoardService {
     private final S3Service s3Service;
 
     @Transactional
-    public void createBoard(Long userId, Long projectId, BoardCreateRequestDTO boardCreateRequestDTO) {
+    public void createBoard(Long userId, BoardCreateRequestDTO boardCreateRequestDTO) {
 
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
+//        if (boardCreateRequestDTO.getTitle() == null || boardCreateRequestDTO.getTitle().isEmpty()
+//                || boardCreateRequestDTO.getTag() == null || boardCreateRequestDTO.getTag().isEmpty()) {
+//            throw new GeneralException(ErrorInfo.EMPTY_INPUT_VALUE);
+//        }
+
+        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, boardCreateRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
         if (memberService.isDeletedMember(member.getMemberId())) {
             throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
-        Project project = projectRepository.findById(projectId)
+        Project project = projectRepository.findById(boardCreateRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
         Tag tag = tagRepository.findByTagName(boardCreateRequestDTO.getTag())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TAG_NOT_FOUND));
@@ -56,8 +61,8 @@ public class BoardService {
         Board board = Board.builder()
                 .member(member)
                 .project(project)
-                .title(boardCreateRequestDTO.getTitle())
-                .contents(boardCreateRequestDTO.getContents())
+                .title(boardCreateRequestDTO.getTitle().trim())
+                .contents(boardCreateRequestDTO.getContents().trim())
                 .tag(tag)
                 .build();
         boardRepository.save(board);
@@ -105,7 +110,7 @@ public class BoardService {
 
             return BoardListResponseDTO.builder()
                     .boardId(board.getBoardId())
-                    .nickname(user.getName())
+                    .name(user.getName())
                     .profileImage(s3Service.getPresignedUrl(user.getProfileImage()))
                     .title(board.getTitle())
                     .boardCreatedTime(board.getBoardCreateTime())
@@ -135,6 +140,7 @@ public class BoardService {
                         .fileName(file.getFileName())
                         .fileSize(file.getFileSize())
                         .downloadUrl(s3Service.getPresignedUrl(file.getStoredName()))
+                        .fileId(file.getFileId())
                         .build())
                 .collect(Collectors.toList());
 
@@ -150,13 +156,12 @@ public class BoardService {
     }
 
     @Transactional
-    public void editBoard(Long userId, EditBoardRequestDTO editBoardRequestDTO) throws IOException {
+    public void editBoard(Long userId, Long boardId, EditBoardRequestDTO editBoardRequestDTO) throws IOException {
 
-        Long boardId = editBoardRequestDTO.getBoardId();
-        String title = editBoardRequestDTO.getTitle();
-        String contents = editBoardRequestDTO.getContents();
-        String tagName = editBoardRequestDTO.getTag();
-        MultipartFile file = editBoardRequestDTO.getFile();
+//        if (editBoardRequestDTO.getTitle() == null || editBoardRequestDTO.getTitle().isEmpty()
+//                || editBoardRequestDTO.getTag() == null || editBoardRequestDTO.getTag().isEmpty()) {
+//            throw new GeneralException(ErrorInfo.EMPTY_INPUT_VALUE);
+//        }
 
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
@@ -172,37 +177,43 @@ public class BoardService {
             throw new GeneralException(ErrorInfo.NOT_WRITER);
         }
 
-        if (title != null) {
-            board.setTitle(title.trim());
-        }
+        board.setTitle(editBoardRequestDTO.getTitle().trim());
+        board.setContents(editBoardRequestDTO.getContents().trim());
 
-        if (contents != null) {
-            board.setContents(contents.trim());
-        }
-
-        Tag tag = tagRepository.findByTagName(tagName)
+        Tag tag = tagRepository.findByTagName(editBoardRequestDTO.getTag())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TAG_NOT_FOUND));
         board.setTag(tag);
 
-        if (file != null && !file.isEmpty()) {
-            List<File> existingFiles = fileRepository.findAllByBoard(board);
-            for (File existing : existingFiles) {
-                s3Service.deleteFile(existing.getStoredName());
+        List<Long> removeFileIds = editBoardRequestDTO.getRemoveFileIds();
+        if (removeFileIds != null && !removeFileIds.isEmpty()) {
+            List<File> removeFiles = fileRepository.findAllById(removeFileIds);
+
+            for (File file : removeFiles) {
+                if (!file.getBoard().getBoardId().equals(board.getBoardId())) {
+                    throw new GeneralException(ErrorInfo.FORBIDDEN);
+                }
+                s3Service.deleteFile(file.getStoredName());
             }
-            fileRepository.deleteAll(existingFiles);
 
-            FileFullResponseDTO uploaded = s3Service.uploadSingleFile(file);
-
-            File newFile = File.builder()
-                    .board(board)
-                    .fileName(uploaded.getOriginalFileName())
-                    .storedName(uploaded.getStoredFileName())
-                    .fileType(uploaded.getFileType())
-                    .fileSize(uploaded.getFileSize())
-                    .build();
-
-            fileRepository.save(newFile);
+            fileRepository.deleteAll(removeFiles);
+            fileRepository.findAllByBoard(board);
         }
+
+        List<MultipartFile> newFiles = editBoardRequestDTO.getFile();
+
+        List<FileFullResponseDTO> uploadedFiles = s3Service.uploadFiles(newFiles);
+
+        List<File> newFileEntities = uploadedFiles.stream()
+                .map(dto -> File.builder()
+                        .board(board)
+                        .fileName(dto.getOriginalFileName())
+                        .storedName(dto.getStoredFileName())
+                        .fileSize(dto.getFileSize())
+                        .fileType(dto.getFileType())
+                        .build())
+                .collect(Collectors.toList());
+
+        fileRepository.saveAll(newFileEntities);
     }
 
     @Transactional

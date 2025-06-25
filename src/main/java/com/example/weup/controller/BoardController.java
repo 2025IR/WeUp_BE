@@ -5,6 +5,7 @@ import com.example.weup.dto.response.*;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.service.BoardService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -20,18 +21,16 @@ public class BoardController {
     private final BoardService boardService;
     private final JwtUtil jwtUtil;
 
-    @PostMapping("/create/{projectId}")
+    @PostMapping("/create")
     public ResponseEntity<DataResponseDTO<String>> createBoard(
             HttpServletRequest request,
-            @PathVariable Long projectId,
-            @ModelAttribute BoardCreateRequestDTO boardCreateRequestDTO) {
+            @Valid @ModelAttribute BoardCreateRequestDTO boardCreateRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
         boardService.createBoard(
                 userId,
-                projectId,
                 boardCreateRequestDTO
         );
 
@@ -70,7 +69,8 @@ public class BoardController {
     @PutMapping("/edit/{boardId}")
     public ResponseEntity<DataResponseDTO<String>> editBoard(
             HttpServletRequest request,
-            @ModelAttribute EditBoardRequestDTO editBoardRequestDTO
+            @PathVariable Long boardId,
+            @Valid @ModelAttribute EditBoardRequestDTO editBoardRequestDTO
     ) throws IOException {
 
         String token = jwtUtil.resolveToken(request);
@@ -78,6 +78,7 @@ public class BoardController {
 
         boardService.editBoard(
                 userId,
+                boardId,
                 editBoardRequestDTO);
 
         return ResponseEntity.ok(DataResponseDTO.of("게시글 수정이 완료되었습니다."));
