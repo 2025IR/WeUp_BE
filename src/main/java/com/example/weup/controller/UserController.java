@@ -17,6 +17,9 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.util.Map;
 
+//TODO. 여기 response entity의 message 부분이 다른 곳이랑 형태가 아예 다름... 수정하기 !
+//TODO. ResponseEntity.ok(DataResponseDTO.of()); 형태로 수정하기
+
 @RestController
 @RequestMapping("/user")
 @RequiredArgsConstructor
@@ -28,7 +31,9 @@ public class UserController {
 
     @PostMapping("/signup")
     public ResponseEntity<DataResponseDTO<String>> signUp(@RequestBody SignUpRequestDto signUpRequestDto) {
+
         userService.signUp(signUpRequestDto);
+
         String username = signUpRequestDto.getName();
         String message = "회원가입하신 걸 환영합니다, " + username + "님!";
         
@@ -37,6 +42,7 @@ public class UserController {
 
     @PostMapping("/profile")
     public ResponseEntity<DataResponseDTO<GetProfileResponseDTO>> profile(HttpServletRequest request) {
+
         String token = jwtUtil.resolveToken(request);
 
         GetProfileResponseDTO getProfileResponseDTO = userService.getProfile(token);
@@ -46,7 +52,9 @@ public class UserController {
 
     @PostMapping("/reissuetoken")
     public ResponseEntity<DataResponseDTO<JwtDto>> reissueToken(@RequestBody TokenRequestDTO tokenRequestDTO) {
+
         Map<String, String> tokens = userService.reissuetoken(tokenRequestDTO);
+
         String newAccessToken = tokens.get("access_token");
         String newRefreshToken = tokens.get("refresh_token");
 
@@ -55,12 +63,12 @@ public class UserController {
                 .refreshToken(newRefreshToken)
                 .build();
         
-        return ResponseEntity.ok()
-                .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료"));
+        return ResponseEntity.ok().body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료"));
     }
 
     @PostMapping("/reissue")
     public ResponseEntity<DataResponseDTO<JwtDto>> reissue(@RequestParam Long userId) {
+
         Map<String, String> tokens = userService.reissue(userId);
         String newAccessToken = tokens.get("access_token");
 
@@ -68,24 +76,27 @@ public class UserController {
                 .accessToken(newAccessToken)
                 .build();
 
-        return ResponseEntity.ok()
-                .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료 - 임시 API"));
+        return ResponseEntity.ok().body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료 - 임시 API"));
     }
 
     @PostMapping("/password")
-    public ResponseEntity<DataResponseDTO<String>> changePassword(HttpServletRequest request, @RequestBody PasswordRequestDTO passwordRequestDTO) {
+    public ResponseEntity<DataResponseDTO<String>> changePassword(HttpServletRequest request,
+                                                                  @RequestBody PasswordRequestDTO passwordRequestDTO) {
+
         String token = jwtUtil.resolveToken(request);
+
         userService.changePassword(token, passwordRequestDTO);
+
         String message = "비밀번호가 성공적으로 변경되었습니다.";
         return ResponseEntity.ok(DataResponseDTO.of(message));
     }
 
     @PutMapping("/profile/edit")
-    public ResponseEntity<DataResponseDTO<String>> editProfile(
-            HttpServletRequest request,
-            @ModelAttribute ProfileEditRequestDTO profileEditRequestDTO) throws IOException {
+    public ResponseEntity<DataResponseDTO<String>> editProfile(HttpServletRequest request,
+                                                               @ModelAttribute ProfileEditRequestDTO profileEditRequestDTO) throws IOException {
 
         String token = jwtUtil.resolveToken(request);
+
         userService.editProfile(
                 token,
                 profileEditRequestDTO.getName(),
@@ -98,8 +109,11 @@ public class UserController {
 
     @PutMapping("/withdraw")
     public ResponseEntity<DataResponseDTO<String>> withdrawUser(HttpServletRequest request) {
+
         String token = jwtUtil.resolveToken(request);
+
         userService.withdrawUser(token);
+
         String message = "회원 탈퇴가 완료되었습니다.";
         return ResponseEntity.ok(DataResponseDTO.of(message));
     }

@@ -18,86 +18,65 @@ import java.util.List;
 public class TodoController {
 
     private final TodoService todoService;
+
     private final JwtUtil jwtUtil;
 
     @PostMapping("/create")
-    public ResponseEntity<DataResponseDTO<String>> createTodo(
-            HttpServletRequest request,
-            @RequestBody CreateTodoRequestDTO createTodoRequestDTO) {
+    public ResponseEntity<DataResponseDTO<String>> createTodo(HttpServletRequest request,
+                                                              @RequestBody CreateTodoRequestDTO createTodoRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        todoService.createTodo(
-                userId,
-                createTodoRequestDTO
-        );
+        todoService.createTodo(userId, createTodoRequestDTO);
 
-        return ResponseEntity.ok(DataResponseDTO.of("투두 생성 완료"));
+        return ResponseEntity.ok(DataResponseDTO.of("투두 생성이 완료되었습니다."));
     }
 
     @PostMapping("/list/{projectId}")
-    public ResponseEntity<DataResponseDTO<List<TodoListResponseDTO>>> getTodoList(
-        HttpServletRequest request,
-        @PathVariable Long projectId) {
+    public ResponseEntity<DataResponseDTO<List<TodoListResponseDTO>>> getTodoList(HttpServletRequest request,
+                                                                                  @PathVariable Long projectId) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        List<TodoListResponseDTO> todos = todoService.getTodoList(
-                userId,
-                projectId
-        );
+        List<TodoListResponseDTO> todos = todoService.getTodoList(userId, projectId);
 
-        return ResponseEntity.ok(DataResponseDTO.of(todos, "투두 목록 조회 완료"));
+        return ResponseEntity.ok(DataResponseDTO.of(todos, "투두 목록 조회 완료가 완료되었습니다."));
     }
 
     @PutMapping("/edit")
-    public ResponseEntity<DataResponseDTO<String>> editTodo(
-            HttpServletRequest request,
-            @RequestBody EditTodoRequestDTO editTodoRequestDTO) {
+    public ResponseEntity<DataResponseDTO<String>> editTodo(HttpServletRequest request,
+                                                            @RequestBody EditTodoRequestDTO editTodoRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        todoService.editTodo(
-                userId,
-                editTodoRequestDTO
-        );
+        todoService.editTodo(userId, editTodoRequestDTO);
 
-        return ResponseEntity.ok(DataResponseDTO.of("투두 수정 완료"));
+        return ResponseEntity.ok(DataResponseDTO.of("투두 수정이 완료되었습니다."));
     }
 
     @PutMapping("/state")
-    public ResponseEntity<DataResponseDTO<String>> editTodoStatus(
-            HttpServletRequest request, @RequestBody EditTodoStatusRequestDTO editTodoStatusRequestDTO) {
+    public ResponseEntity<DataResponseDTO<String>> editTodoStatus(HttpServletRequest request,
+                                                                  @RequestBody EditTodoStatusRequestDTO editTodoStatusRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        System.out.println("투두 상태 변경 컨트롤러 : " + editTodoStatusRequestDTO.getTodoId() + editTodoStatusRequestDTO.getStatus());
+        todoService.editTodoStatus(userId, editTodoStatusRequestDTO);
 
-        todoService.editTodoStatus(
-                userId,
-                editTodoStatusRequestDTO
-        );
-
-        return ResponseEntity.ok(DataResponseDTO.of("투두 상태 수정 완료"));
+        return ResponseEntity.ok(DataResponseDTO.of("투두 상태 수정이 완료되었습니다."));
     }
 
     @DeleteMapping("/delete/{todoId}")
-    public ResponseEntity<DataResponseDTO<String>> deleteTodo(
-            HttpServletRequest request,
-            @PathVariable Long todoId) {
+    public ResponseEntity<DataResponseDTO<String>> deleteTodo(HttpServletRequest request, @PathVariable Long todoId) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        todoService.deleteTodo(
-                userId,
-                todoId
-                );
+        todoService.deleteTodo(userId, todoId);
 
-        return ResponseEntity.ok(DataResponseDTO.of("투두 삭제 완료"));
+        return ResponseEntity.ok(DataResponseDTO.of("투두 삭제가 완료되었습니다."));
     }
 }

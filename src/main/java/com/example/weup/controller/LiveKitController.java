@@ -1,7 +1,6 @@
 package com.example.weup.controller;
 
 import com.example.weup.dto.response.DataResponseDTO;
-import com.example.weup.dto.response.ResponseDTO;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.service.LiveKitService;
 import jakarta.servlet.http.HttpServletRequest;
@@ -28,22 +27,18 @@ public class LiveKitController {
 
         liveKitService.enterRoom(projectId, userId);
 
-        return ResponseEntity
-                .ok()
-                .body(DataResponseDTO.of(liveKitToken, "livekit token 발급"));
+        return ResponseEntity.ok(DataResponseDTO.of(liveKitToken, "LiveKit Token 발급이 완료되었습니다."));
     }
 
     @PostMapping("/leave/{projectId}")
-    public ResponseEntity<ResponseDTO> leaveRoom(@PathVariable Long projectId, HttpServletRequest request) {
+    public ResponseEntity<DataResponseDTO<String>> leaveRoom(@PathVariable Long projectId, HttpServletRequest request) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
         liveKitService.leaveRoom(projectId, userId);
 
-        return ResponseEntity
-                .ok()
-                .body(new ResponseDTO(true, "회의실 연결이 종료되었습니다."));
+        return ResponseEntity.ok(DataResponseDTO.of("회의실 연결이 종료되었습니다."));
     }
 
     @GetMapping("/count/{projectId}")
@@ -54,9 +49,7 @@ public class LiveKitController {
 
         Long count = liveKitService.getRoomUserCount(projectId, userId);
 
-        return ResponseEntity
-                .ok()
-                .body(DataResponseDTO.of(String.valueOf(count), "화상 회의실 현재 참여 인원 수 : " + projectId));
+        return ResponseEntity.ok(DataResponseDTO.of(String.valueOf(count), "화상 회의실 현재 참여 인원 수 조회가 완료되었습니다."));
     }
 
 }

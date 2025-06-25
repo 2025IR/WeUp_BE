@@ -31,11 +31,9 @@ public class ProjectController {
 
     private final MemberService memberService;
 
-    // 프로젝트 생성
     @PostMapping("/create")
-    public ResponseEntity<ResponseDTO> createProject(
-            HttpServletRequest request,
-            @ModelAttribute ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
+    public ResponseEntity<ResponseDTO> createProject(HttpServletRequest request,
+                                                     @ModelAttribute ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
@@ -46,7 +44,6 @@ public class ProjectController {
         return ResponseEntity.ok(DataResponseDTO.of("프로젝트가 성공적으로 생성되었습니다."));
     }
 
-     // 프로젝트 리스트 불러오기
     @PostMapping("/list")
     public ResponseEntity<DataResponseDTO<List<ListUpProjectResponseDTO>>> listUpProject(HttpServletRequest request) {
 
@@ -55,12 +52,9 @@ public class ProjectController {
 
         List<ListUpProjectResponseDTO> data = projectService.listUpProject(userId);
 
-        return ResponseEntity
-                .ok()
-                .body(DataResponseDTO.of(data, "프로젝트 리스트 출력 : " + userId));
+        return ResponseEntity.ok(DataResponseDTO.of(data, "프로젝트 목룍 조회가 완료되었습니다."));
     }
 
-    // 프로젝트 상세 불러오기
     @PostMapping("/detail/{projectId}")
     public ResponseEntity<DataResponseDTO<DetailProjectResponseDTO>> detailProject(HttpServletRequest request, @PathVariable Long projectId) {
 
@@ -69,27 +63,11 @@ public class ProjectController {
 
         DetailProjectResponseDTO data = projectService.detailProject(projectId, userId);
 
-        return ResponseEntity
-                .ok()
-                .body(DataResponseDTO.of(data, "프로젝트 상세 정보 : " + projectId));
+        return ResponseEntity.ok(DataResponseDTO.of(data, "프로젝트 상세 정보 조회가 완료되었습니다."));
     }
 
-    // 프로젝트 상태 변경
-//    @PutMapping("/change/status/{projectId}")
-//    public ResponseEntity<ResponseDTO> changeProjectStatus(HttpServletRequest request, @PathVariable Long projectId, @RequestParam Boolean status) {
-//
-//        String token = jwtUtil.resolveToken(request);
-//        Long userId = jwtUtil.getUserId(token);
-//
-//        projectService.changeProjectStatus(userId, projectId, status);
-//
-//        return ResponseEntity.ok()
-//                .body(new ResponseDTO(true, "프로젝트 상태 변경 : " + projectId));
-//    }
-
-    // 프로젝트 수정
     @PutMapping("/edit/{projectId}")
-    public ResponseEntity<ResponseDTO> editProject(HttpServletRequest request, @PathVariable Long projectId,
+    public ResponseEntity<DataResponseDTO<String>> editProject(HttpServletRequest request, @PathVariable Long projectId,
                                                    @ModelAttribute ProjectEditRequestDTO dto) throws IOException {
 
         String token = jwtUtil.resolveToken(request);
@@ -97,20 +75,18 @@ public class ProjectController {
 
         projectService.editProject(userId, projectId, dto);
 
-        return ResponseEntity.ok()
-                .body(new ResponseDTO(true, "프로젝트 정보 수정 : " + projectId));
+        return ResponseEntity.ok(DataResponseDTO.of("프로젝트 정보 수정이 완료되었습니다."));
     }
 
-    // 프로젝트 설명 수정
     @PutMapping("/edit/description/{projectId}")
-    public ResponseEntity<ResponseDTO> editProjectDescription(HttpServletRequest request, @PathVariable Long projectId, @RequestParam String description) {
+    public ResponseEntity<ResponseDTO> editProjectDescription(HttpServletRequest request, @PathVariable Long projectId,
+                                                              @RequestParam String description) {
 
         jwtUtil.resolveToken(request);
 
         projectService.editProjectDescription(projectId, description);
 
-        return ResponseEntity.ok()
-                .body(new ResponseDTO(true, "프로젝트 설명 수정 : " + projectId));
+        return ResponseEntity.ok(DataResponseDTO.of("프로젝트 설명 수정이 완료되었습니다."));
     }
 
 }
