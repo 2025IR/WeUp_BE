@@ -21,7 +21,6 @@
         <encoder>
             <pattern>${FILE_LOG_PATTERN}</pattern>
         </encoder>
-        <!-- RollingPocliy: 로그가 길어지면 가독성이 떨어지므로 로그를 나눠서 기록하기위한 규칙 -->
         <!-- 로그파일을 크기, 시간 기반으로 관리하기 위한 SizeAndTimeBasedRollingPolicy -->
         <rollingPolicy class="ch.qos.logback.core.rolling.SizeAndTimeBasedRollingPolicy">
             <!-- 로그파일명 패턴 -->
