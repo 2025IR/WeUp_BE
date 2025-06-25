@@ -27,8 +27,7 @@ public class User implements UserDetails {
     private String name;
 
     @Column(name = "profile_image", nullable = false)
-    @Builder.Default
-    private String profileImage = "baseImage.jpg";
+    private String profileImage;
 
     @Column(name = "phone_number")
     @Builder.Default
