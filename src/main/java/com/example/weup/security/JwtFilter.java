@@ -2,6 +2,7 @@ package com.example.weup.security;
 
 import com.example.weup.entity.User;
 import com.example.weup.repository.UserRepository;
+import com.example.weup.security.exception.JwtAuthenticationEntryPoint;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -10,9 +11,11 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -27,6 +30,8 @@ public class JwtFilter extends OncePerRequestFilter {
     private final JwtUtil jwtUtil;
 
     private final UserRepository userRepository;
+
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     private static final List<String> WHITE_LIST = List.of(
             "/user/signIn", "/user/signup", "/user/reissuetoken", "/user/email", "/user/email/check",
@@ -43,14 +48,16 @@ public class JwtFilter extends OncePerRequestFilter {
 
         String token = jwtUtil.resolveToken(request);
 
-        if(token == null) {
-            log.warn("JWT 토큰 없음 또는 형식 오류");
-            throw new AccessDeniedException("토큰이 없습니다.");
+        if (token == null) {
+            log.warn("Authorization 헤더 없음");
+            jwtAuthenticationEntryPoint.commence(request, response, new BadCredentialsException("토큰 없음"));
+            return;
         }
 
-        if(jwtUtil.isExpired(token)) {
-            log.warn("JWT 토큰 만료");
-            throw new AuthenticationCredentialsNotFoundException("토큰이 만료되었습니다.");
+        if (jwtUtil.isExpired(token)) {
+            log.warn("JWT 만료");
+            jwtAuthenticationEntryPoint.commence(request, response, new BadCredentialsException("토큰 만료"));
+            return;
         }
 
         Long userId = jwtUtil.getUserId(token);
