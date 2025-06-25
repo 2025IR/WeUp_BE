@@ -160,7 +160,7 @@ public class MemberService {
     public void delegateLeader(Long formerLeaderUserId, LeaderDelegateRequestDTO leaderDelegateRequestDTO) {
         try {
             if (!hasAccess(formerLeaderUserId, leaderDelegateRequestDTO.getProjectId())) {
-                throw new GeneralException(ErrorInfo.EMPTY_INPUT_VALUE);
+                throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
             }
 
             Project project = projectRepository.findById(leaderDelegateRequestDTO.getProjectId())
