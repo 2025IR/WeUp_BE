@@ -5,6 +5,7 @@ import com.example.weup.dto.response.*;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.service.BoardService;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
@@ -23,7 +24,7 @@ public class BoardController {
     @PostMapping("/create")
     public ResponseEntity<DataResponseDTO<String>> createBoard(
             HttpServletRequest request,
-            @ModelAttribute BoardCreateRequestDTO boardCreateRequestDTO) {
+            @Valid @ModelAttribute BoardCreateRequestDTO boardCreateRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
@@ -69,7 +70,7 @@ public class BoardController {
     public ResponseEntity<DataResponseDTO<String>> editBoard(
             HttpServletRequest request,
             @PathVariable Long boardId,
-            @ModelAttribute EditBoardRequestDTO editBoardRequestDTO
+            @Valid @ModelAttribute EditBoardRequestDTO editBoardRequestDTO
     ) throws IOException {
 
         String token = jwtUtil.resolveToken(request);
