@@ -61,12 +61,12 @@ public class MemberService {
                     .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
             if (!hasAccess(userId, projectInviteRequestDTO.getProjectId())) {
-                throw new GeneralException(ErrorInfo.FORBIDDEN);
+                throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
             }
 
             String email = projectInviteRequestDTO.getEmail().trim();
             if (email.isEmpty()) {
-                throw new GeneralException(ErrorInfo.BAD_REQUEST);
+                throw new GeneralException(ErrorInfo.EMPTY_INPUT_VALUE);
             }
 
             Optional<User> userOpt = userRepository.findByAccountSocialEmail(email);
@@ -114,7 +114,7 @@ public class MemberService {
     public List<MemberInfoResponseDTO> getProjectMembers(Long userId, Long projectId) {
         try {
             if (!hasAccess(userId, projectId)) {
-                throw new GeneralException(ErrorInfo.FORBIDDEN);
+                throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
             }
 
             List<Member> members = memberRepository.findByProject_ProjectIdAndIsMemberDeletedFalse(projectId);
@@ -160,7 +160,7 @@ public class MemberService {
     public void delegateLeader(Long formerLeaderUserId, LeaderDelegateRequestDTO leaderDelegateRequestDTO) {
         try {
             if (!hasAccess(formerLeaderUserId, leaderDelegateRequestDTO.getProjectId())) {
-                throw new GeneralException(ErrorInfo.FORBIDDEN);
+                throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
             }
 
             Project project = projectRepository.findById(leaderDelegateRequestDTO.getProjectId())
@@ -170,13 +170,13 @@ public class MemberService {
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
             Member newLeaderMember = memberRepository.findById(leaderDelegateRequestDTO.getNewLeaderId())
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
             Member formerLeaderMember = memberRepository.findByUserAndProject(formerLeaderUser, project)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
             if (!formerLeaderMember.isLeader()) {
-                throw new GeneralException(ErrorInfo.FORBIDDEN);
+                throw new GeneralException(ErrorInfo.NOT_LEADER);
             }
 
             if (!formerLeaderMember.getProject().getProjectId().equals(newLeaderMember.getProject().getProjectId())) {
@@ -184,7 +184,7 @@ public class MemberService {
             }
 
             if (isDeletedMember(newLeaderMember.getMemberId())){
-                throw new GeneralException(ErrorInfo.FORBIDDEN);
+                throw new GeneralException(ErrorInfo.DELETED_MEMBER);
             }
 
             formerLeaderMember.setLeader(false);
@@ -205,7 +205,7 @@ public class MemberService {
     public List<RoleListResponseDTO> listRoles(Long userId, Long projectId) {
         try {
             if (!hasAccess(userId, projectId)) {
-                throw new GeneralException(ErrorInfo.FORBIDDEN);
+                throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
             }
 
             Project project = projectRepository.findById(projectId)
@@ -229,7 +229,7 @@ public class MemberService {
     public void deleteMember(Long userId, Long projectId, Long memberId) {
         try {
             if (!hasAccess(userId, projectId)) {
-                throw new GeneralException(ErrorInfo.FORBIDDEN);
+                throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
             }
             User requestUser = userRepository.findById(userId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
@@ -238,13 +238,13 @@ public class MemberService {
                     .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
             Member requestMember = memberRepository.findByUserAndProject(requestUser, project)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
             Member targetMember = memberRepository.findById(memberId)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
             if (targetMember.isLeader()) {
-                throw new GeneralException(ErrorInfo.FORBIDDEN);
+                throw new GeneralException(ErrorInfo.NOT_LEADER);
             }
 
             if (!requestMember.isLeader() && !requestMember.getMemberId().equals(memberId)) {
@@ -265,15 +265,19 @@ public class MemberService {
     @Transactional
     public void assignRoleToMember(Long userId, AssignRoleRequestDTO assignRoleRequestDTO) {
         try {
-            if (!hasAccess(userId, assignRoleRequestDTO.getProjectId()) || isDeletedMember(assignRoleRequestDTO.getMemberId())) {
-                throw new GeneralException(ErrorInfo.FORBIDDEN);
+            if (!hasAccess(userId, assignRoleRequestDTO.getProjectId())) {
+                throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
+            }
+
+            if (isDeletedMember(assignRoleRequestDTO.getMemberId())){
+                throw new GeneralException(ErrorInfo.DELETED_MEMBER);
             }
 
             Project project = projectRepository.findById(assignRoleRequestDTO.getProjectId())
                     .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
             Member member = memberRepository.findById(assignRoleRequestDTO.getMemberId())
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
             memberRoleRepository.deleteByMember(member);
             List<MemberRole> deleteRoles = memberRoleRepository.findByMember(member);
@@ -308,7 +312,7 @@ public class MemberService {
     public void createRole(Long userId, CreateRoleRequestDTO createRoleRequestDTO) {
         try {
             if (!hasAccess(userId, createRoleRequestDTO.getProjectId())) {
-                throw new GeneralException(ErrorInfo.FORBIDDEN);
+                throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
             }
 
             Project project = projectRepository.findById(createRoleRequestDTO.getProjectId())
@@ -340,15 +344,15 @@ public class MemberService {
             String roleColor = editRoleRequestDTO.getRoleColor();
 
             if (!hasAccess(userId, editRoleRequestDTO.getProjectId())) {
-                throw new GeneralException(ErrorInfo.FORBIDDEN);
+                throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
             }
 
             if ((roleName == null || roleName.isEmpty()) && (roleColor == null || roleColor.isEmpty())) {
-                throw new GeneralException(ErrorInfo.BAD_REQUEST);
+                throw new GeneralException(ErrorInfo.EMPTY_INPUT_VALUE);
             }
 
             Role role = roleRepository.findById(editRoleRequestDTO.getRoleId())
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.BAD_REQUEST));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.ROLE_NOT_FOUND));
 
             if (roleName.equals(role.getRoleName()) && roleColor.equals(role.getRoleColor())) {
                 return;
@@ -372,11 +376,11 @@ public class MemberService {
     public void removeRole(Long userId, DeleteRoleRequestDTO deleteRoleRequestDTO) {
         try {
             if (!hasAccess(userId, deleteRoleRequestDTO.getProjectId())) {
-                throw new GeneralException(ErrorInfo.FORBIDDEN);
+                throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
             }
 
             Role role = roleRepository.findById(deleteRoleRequestDTO.getRoleId())
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                    .orElseThrow(() -> new GeneralException(ErrorInfo.ROLE_NOT_FOUND));
 
             memberRoleRepository.deleteByRole(role);
 

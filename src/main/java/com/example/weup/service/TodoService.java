@@ -37,10 +37,10 @@ public class TodoService {
     public void createTodo(Long userId, CreateTodoRequestDTO createTodoRequestDTO) {
 
         Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, createTodoRequestDTO.getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
         if (memberService.isDeletedMember(requestMember.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
+            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
         Project project = projectRepository.findById(createTodoRequestDTO.getProjectId())
@@ -56,10 +56,10 @@ public class TodoService {
     public List<TodoListResponseDTO> getTodoList(Long userId, Long projectId) {
 
         Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
         if (memberService.isDeletedMember(requestMember.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
+            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
         List<Todo> todos = todoRepository.findByProject_ProjectId(projectId);
@@ -111,10 +111,10 @@ public class TodoService {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));
 
         Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, todo.getProject().getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
         if (memberService.isDeletedMember(requestMember.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
+            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
         if (editTodoRequestDTO.getTodoName() != null) {
@@ -134,7 +134,7 @@ public class TodoService {
 
             editTodoRequestDTO.getMemberIds().stream()
                     .map(memberId -> memberRepository.findById(memberId)
-                            .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND)))
+                            .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND)))
                     .map(member -> TodoMember.builder()
                             .todo(todo)
                             .member(member)
@@ -156,10 +156,10 @@ public class TodoService {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));
 
         Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, todo.getProject().getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
         if (memberService.isDeletedMember(requestMember.getMemberId())) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
+            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
         todo.setTodoStatus(editTodoStatusRequestDTO.getStatus());
@@ -173,11 +173,10 @@ public class TodoService {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));
 
         Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, todo.getProject().getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
-        if (!memberService.hasAccess(userId, todo.getProject().getProjectId()) || memberService.isDeletedMember(requestMember.getMemberId())) {
-            log.error("프로젝트 소속이 아니거나, 삭제된 멤버입니다.");
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
+        if (memberService.isDeletedMember(requestMember.getMemberId())) {
+            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
         todoMemberRepository.deleteAllByTodo_TodoId(todoId);

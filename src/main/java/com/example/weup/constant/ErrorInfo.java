@@ -46,7 +46,21 @@ public enum ErrorInfo {
 
     CHAT_ROOM_NOT_FOUND(HttpStatus.NOT_FOUND, "채팅방을 찾을 수 없습니다."),
   
-    ROLE_NOT_FOUND(HttpStatus.NOT_FOUND, "역할을 찾을 수 없습니다.");
+    ROLE_NOT_FOUND(HttpStatus.NOT_FOUND, "역할을 찾을 수 없습니다."),
+
+    REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 없습니다."),
+
+    TOKEN_EXPIRED(HttpStatus.FORBIDDEN, "토큰이 만료되었습니다."),
+
+    NOT_IN_PROJECT(HttpStatus.FORBIDDEN, "해당 프로젝트에 접근 권한이 없습니다."),
+
+    DELETED_MEMBER(HttpStatus.FORBIDDEN, "해당 프로젝트에서 탈퇴된 멤버입니다."),
+
+    NOT_WRITER(HttpStatus.FORBIDDEN, "해당 게시글의 작성자가 아닙니다."),
+
+    EMPTY_INPUT_VALUE(HttpStatus.BAD_REQUEST, "입력란이 입력되지 않았습니다."),
+
+    NOT_LEADER(HttpStatus.FORBIDDEN, "프로젝트 리더 권한이 필요합니다.");
 
     private final HttpStatus httpStatus;
     private final String message;
