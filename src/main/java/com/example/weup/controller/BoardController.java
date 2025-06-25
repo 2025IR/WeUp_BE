@@ -20,10 +20,9 @@ public class BoardController {
     private final BoardService boardService;
     private final JwtUtil jwtUtil;
 
-    @PostMapping("/create/{projectId}")
+    @PostMapping("/create")
     public ResponseEntity<DataResponseDTO<String>> createBoard(
             HttpServletRequest request,
-            @PathVariable Long projectId,
             @ModelAttribute BoardCreateRequestDTO boardCreateRequestDTO) {
 
         String token = jwtUtil.resolveToken(request);
@@ -31,7 +30,6 @@ public class BoardController {
 
         boardService.createBoard(
                 userId,
-                projectId,
                 boardCreateRequestDTO
         );
 
@@ -70,6 +68,7 @@ public class BoardController {
     @PutMapping("/edit/{boardId}")
     public ResponseEntity<DataResponseDTO<String>> editBoard(
             HttpServletRequest request,
+            @PathVariable Long boardId,
             @ModelAttribute EditBoardRequestDTO editBoardRequestDTO
     ) throws IOException {
 
@@ -78,6 +77,7 @@ public class BoardController {
 
         boardService.editBoard(
                 userId,
+                boardId,
                 editBoardRequestDTO);
 
         return ResponseEntity.ok(DataResponseDTO.of("게시글 수정이 완료되었습니다."));
