@@ -16,6 +16,7 @@ import com.example.weup.security.JwtDto;
 import com.example.weup.security.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -43,6 +44,9 @@ public class UserService {
 
     private final S3Service s3Service;
 
+    @Value("${user.default-profile-image}")
+    private String defaultProfileImage;
+
     @Transactional
     public void signUp(SignUpRequestDto signUpRequestDto) {
 
@@ -54,6 +58,7 @@ public class UserService {
         User signUpUser = User.builder()
                 .name(signUpRequestDto.getName())
                 .role("ROLE_USER")
+                .profileImage(defaultProfileImage)
                 .build();
 
         AccountSocial accountSocial = AccountSocial.builder()
