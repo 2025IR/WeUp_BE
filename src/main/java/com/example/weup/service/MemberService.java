@@ -140,7 +140,7 @@ public class MemberService {
                                 .email(user.getAccountSocial().getEmail())
                                 .profileImage(s3Service.getPresignedUrl(user.getProfileImage()))
                                 .phoneNumber(user.getPhoneNumber())
-                                .isLeader(false)
+                                .isLeader(member.isLeader())
                                 .roleIds(roleIds)
                                 .build();
                     })
