@@ -7,7 +7,7 @@ import com.example.weup.dto.request.BoardListRequestDTO;
 import com.example.weup.dto.request.EditBoardRequestDTO;
 import com.example.weup.dto.response.BoardDetailResponseDTO;
 import com.example.weup.dto.response.FileResponseDTO;
-import com.example.weup.dto.response.FileFullResponseDTO;
+import com.example.weup.validate.MemberValidator;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 import com.example.weup.dto.response.BoardListResponseDTO;
@@ -19,7 +19,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.*;
@@ -30,31 +29,22 @@ import java.util.stream.Collectors;
 @Slf4j
 public class BoardService {
 
-    private final MemberService memberService;
+    private final FileService fileService;
     private final ProjectRepository projectRepository;
-    private final MemberRepository memberRepository;
     private final BoardRepository boardRepository;
     private final TagRepository tagRepository;
     private final FileRepository fileRepository;
     private final S3Service s3Service;
+    private final MemberValidator memberValidator;
 
     @Transactional
     public void createBoard(Long userId, BoardCreateRequestDTO boardCreateRequestDTO) {
 
-//        if (boardCreateRequestDTO.getTitle() == null || boardCreateRequestDTO.getTitle().isEmpty()
-//                || boardCreateRequestDTO.getTag() == null || boardCreateRequestDTO.getTag().isEmpty()) {
-//            throw new GeneralException(ErrorInfo.EMPTY_INPUT_VALUE);
-//        }
-
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, boardCreateRequestDTO.getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
-
-        if (memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
-        }
+        Member member = memberValidator.validateActiveMemberInProject(userId, boardCreateRequestDTO.getProjectId());
 
         Project project = projectRepository.findById(boardCreateRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+
         Tag tag = tagRepository.findByTagName(boardCreateRequestDTO.getTag())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TAG_NOT_FOUND));
 
@@ -67,27 +57,10 @@ public class BoardService {
                 .build();
         boardRepository.save(board);
 
-        List<FileFullResponseDTO> fileFullResponseDTOS = s3Service.uploadFiles(boardCreateRequestDTO.getFile());
-
-        if (!fileFullResponseDTOS.isEmpty()) {
-            List<File> fileEntities = fileFullResponseDTOS.stream()
-                    .map(dto -> File.builder()
-                            .board(board)
-                            .fileName(dto.getOriginalFileName())
-                            .storedName(dto.getStoredFileName())
-                            .fileSize(dto.getFileSize())
-                            .fileType(dto.getFileType())
-                            .build())
-                    .collect(Collectors.toList());
-
-            fileRepository.saveAll(fileEntities);
-        }
+        fileService.saveFilesForBoard(board, boardCreateRequestDTO.getFile());
     }
 
     public Page<BoardListResponseDTO> getBoardList(Long userId, Long projectId, BoardListRequestDTO boardListRequestDTO) {
-
-        String tag = boardListRequestDTO.getTag();
-        String search = boardListRequestDTO.getSearch();
 
         Pageable pageable = PageRequest.of(
                 boardListRequestDTO.getPage(),
@@ -95,14 +68,9 @@ public class BoardService {
                 Sort.by(Sort.Direction.DESC, "boardCreateTime")
         );
 
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
+        memberValidator.validateActiveMemberInProject(userId, projectId);
 
-        if (memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
-        }
-
-        Page<Board> boards = boardRepository.findByProjectIdAndFilters(projectId, tag, search, pageable);
+        Page<Board> boards = boardRepository.findByProjectIdAndFilters(projectId, boardListRequestDTO.getTag(), boardListRequestDTO.getSearch(), pageable);
 
         return boards.map(board -> {
             User user = board.getMember().getUser();
@@ -126,23 +94,9 @@ public class BoardService {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
 
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, board.getProject().getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
+        Member member = memberValidator.validateActiveMemberInProject(userId, board.getProject().getProjectId());
 
-        if (memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
-        }
-
-        List<File> files = fileRepository.findAllByBoard(board);
-
-        List<FileResponseDTO> fileDTOs = files.stream()
-                .map(file -> FileResponseDTO.builder()
-                        .fileName(file.getFileName())
-                        .fileSize(file.getFileSize())
-                        .downloadUrl(s3Service.getPresignedUrl(file.getStoredName()))
-                        .fileId(file.getFileId())
-                        .build())
-                .collect(Collectors.toList());
+        List<FileResponseDTO> fileDTOs = fileService.getFileResponses(board);
 
         return BoardDetailResponseDTO.builder()
                 .name(member.getUser().getName())
@@ -155,65 +109,25 @@ public class BoardService {
                 .build();
     }
 
+
     @Transactional
     public void editBoard(Long userId, Long boardId, EditBoardRequestDTO editBoardRequestDTO) throws IOException {
-
-//        if (editBoardRequestDTO.getTitle() == null || editBoardRequestDTO.getTitle().isEmpty()
-//                || editBoardRequestDTO.getTag() == null || editBoardRequestDTO.getTag().isEmpty()) {
-//            throw new GeneralException(ErrorInfo.EMPTY_INPUT_VALUE);
-//        }
 
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
 
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, board.getProject().getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
-
-        if (memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
-        }
-
-        if (!board.getMember().getMemberId().equals(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.NOT_WRITER);
-        }
-
-        board.setTitle(editBoardRequestDTO.getTitle().trim());
-        board.setContents(editBoardRequestDTO.getContents().trim());
+        Member member = memberValidator.validateActiveMemberInProject(userId, board.getProject().getProjectId());
+        memberValidator.validateBoardWriter(board, member);
 
         Tag tag = tagRepository.findByTagName(editBoardRequestDTO.getTag())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TAG_NOT_FOUND));
+
+        board.setTitle(editBoardRequestDTO.getTitle().trim());
+        board.setContents(editBoardRequestDTO.getContents().trim());
         board.setTag(tag);
 
-        List<Long> removeFileIds = editBoardRequestDTO.getRemoveFileIds();
-        if (removeFileIds != null && !removeFileIds.isEmpty()) {
-            List<File> removeFiles = fileRepository.findAllById(removeFileIds);
-
-            for (File file : removeFiles) {
-                if (!file.getBoard().getBoardId().equals(board.getBoardId())) {
-                    throw new GeneralException(ErrorInfo.FORBIDDEN);
-                }
-                s3Service.deleteFile(file.getStoredName());
-            }
-
-            fileRepository.deleteAll(removeFiles);
-            fileRepository.findAllByBoard(board);
-        }
-
-        List<MultipartFile> newFiles = editBoardRequestDTO.getFile();
-
-        List<FileFullResponseDTO> uploadedFiles = s3Service.uploadFiles(newFiles);
-
-        List<File> newFileEntities = uploadedFiles.stream()
-                .map(dto -> File.builder()
-                        .board(board)
-                        .fileName(dto.getOriginalFileName())
-                        .storedName(dto.getStoredFileName())
-                        .fileSize(dto.getFileSize())
-                        .fileType(dto.getFileType())
-                        .build())
-                .collect(Collectors.toList());
-
-        fileRepository.saveAll(newFileEntities);
+        fileService.removeFiles(board, editBoardRequestDTO.getRemoveFileIds());
+        fileService.addFiles(board, editBoardRequestDTO.getFile());
     }
 
     @Transactional
@@ -222,16 +136,8 @@ public class BoardService {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
 
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, board.getProject().getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
-
-        if (memberService.isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
-        }
-
-        if (!board.getMember().getMemberId().equals(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.NOT_WRITER);
-        }
+        Member member = memberValidator.validateActiveMemberInProject(userId, board.getProject().getProjectId());
+        memberValidator.validateBoardWriter(board, member);
 
         List<File> files = fileRepository.findAllByBoard(board);
         for (File file : files) {
