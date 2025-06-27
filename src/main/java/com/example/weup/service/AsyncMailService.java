@@ -4,6 +4,7 @@ import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -21,7 +22,9 @@ public class AsyncMailService {
     private final JavaMailSender javaMailSender;
     private final TemplateEngine templateEngine;
 
-    private static final String senderEmail = "badul312836@gmail.com";
+    @Value("${mail.sender}")
+    private String senderEmail;
+
 
     @Async
     public CompletableFuture<Void> sendVerificationEmail(String mail, int number) {
