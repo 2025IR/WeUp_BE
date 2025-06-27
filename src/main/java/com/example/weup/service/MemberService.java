@@ -28,7 +28,7 @@ public class MemberService {
     private final UserRepository userRepository;
     private final ProjectRepository projectRepository;
     private final MemberRepository memberRepository;
-    private final MailService mailService;
+    private final AsyncMailService asyncMailService;
     private final S3Service s3Service;
     private final RoleRepository roleRepository;
     private final MemberRoleRepository memberRoleRepository;
@@ -81,7 +81,7 @@ public class MemberService {
                     return "이미 초대된 계정입니다.";
                 }
 
-                mailService.sendProjectInviteEmail(
+                asyncMailService.sendProjectInviteEmail(
                         email,
                         user.getName(),
                         inviter.getName(),
