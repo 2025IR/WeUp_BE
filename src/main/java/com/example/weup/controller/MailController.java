@@ -24,7 +24,6 @@ public class MailController {
     public ResponseEntity<DataResponseDTO<HashMap<String, Object>>> sendMail(@RequestBody MailRequestDTO mailRequestDTO) {
         try {
             String mail = mailRequestDTO.getEmail();
-            System.out.println(mail);
 
             mailService.validateEmailNotRegistered(mail);
             
@@ -55,5 +54,4 @@ public class MailController {
             throw new GeneralException(ErrorInfo.EMAIL_VERIFICATION_FAILED);
         }
     }
-
 }
