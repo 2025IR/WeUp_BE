@@ -27,7 +27,7 @@ public class JwtAuthenticationEntryPoint implements AuthenticationEntryPoint {
         
         log.warn("인증 실패 : {}", authException.getMessage());
 
-        ErrorResponseDTO errorResponse = ErrorResponseDTO.of(ErrorInfo.UNAUTHORIZED, "인증에 실패했습니다.");
+        ErrorResponseDTO errorResponse = ErrorResponseDTO.of(ErrorInfo.UNAUTHORIZED, "토큰이 없거나 만료되었습니다.");
 
         response.setStatus(errorResponse.getStatus());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
