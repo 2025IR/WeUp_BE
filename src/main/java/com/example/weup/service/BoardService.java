@@ -57,7 +57,9 @@ public class BoardService {
                 .build();
         boardRepository.save(board);
 
-        fileService.saveFilesForBoard(board, boardCreateRequestDTO.getFile());
+        if (boardCreateRequestDTO.getFile() != null) {
+            fileService.saveFilesForBoard(board, boardCreateRequestDTO.getFile());
+        }
     }
 
     public Page<BoardListResponseDTO> getBoardList(Long userId, Long projectId, BoardListRequestDTO boardListRequestDTO) {
@@ -126,8 +128,13 @@ public class BoardService {
         board.setContents(editBoardRequestDTO.getContents().trim());
         board.setTag(tag);
 
-        fileService.removeFiles(board, editBoardRequestDTO.getRemoveFileIds());
-        fileService.addFiles(board, editBoardRequestDTO.getFile());
+        if(editBoardRequestDTO.getFile() != null) {
+            fileService.addFiles(board, editBoardRequestDTO.getFile());
+        }
+        if(editBoardRequestDTO.getFile() != null) {
+            fileService.removeFiles(board, editBoardRequestDTO.getRemoveFileIds());
+        }
+
     }
 
     @Transactional

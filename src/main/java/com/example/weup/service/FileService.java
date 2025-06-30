@@ -23,8 +23,6 @@ public class FileService {
     public void saveFilesForBoard(Board board, List<MultipartFile> files) {
         List<FileFullResponseDTO> fileFullResponseDTOS = s3Service.uploadFiles(files);
 
-        if (fileFullResponseDTOS.isEmpty()) return;
-
         List<File> fileEntities = fileFullResponseDTOS.stream()
                 .map(dto -> File.builder()
                         .board(board)
@@ -50,8 +48,6 @@ public class FileService {
     }
 
     public void removeFiles(Board board, List<Long> removeFileIds) {
-        if (removeFileIds == null || removeFileIds.isEmpty()) return;
-
         List<File> removeFiles = fileRepository.findAllById(removeFileIds);
 
         for (File file : removeFiles) {
