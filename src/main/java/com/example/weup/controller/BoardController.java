@@ -1,10 +1,9 @@
 package com.example.weup.controller;
 
+import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
 import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.*;
-import com.example.weup.security.JwtUtil;
 import com.example.weup.service.BoardService;
-import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.data.domain.Page;
@@ -19,32 +18,22 @@ import java.io.IOException;
 public class BoardController {
 
     private final BoardService boardService;
-    private final JwtUtil jwtUtil;
 
     @PostMapping("/create")
     public ResponseEntity<DataResponseDTO<String>> createBoard(
-            HttpServletRequest request,
+            @LoginUser Long userId,
             @Valid @ModelAttribute BoardCreateRequestDTO boardCreateRequestDTO) {
 
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
-
-        boardService.createBoard(
-                userId,
-                boardCreateRequestDTO
-        );
+        boardService.createBoard(userId, boardCreateRequestDTO);
 
         return ResponseEntity.ok(DataResponseDTO.of("게시글 작성이 완료되었습니다."));
     }
 
     @PostMapping("/list/{projectId}")
     public ResponseEntity<DataResponseDTO<Page<BoardListResponseDTO>>> getBoardList(
-            HttpServletRequest request,
+            @LoginUser Long userId,
             @PathVariable Long projectId,
             @RequestBody BoardListRequestDTO boardListRequestDTO) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
 
         Page<BoardListResponseDTO> boards = boardService.getBoardList(userId, projectId, boardListRequestDTO);
 
@@ -53,49 +42,32 @@ public class BoardController {
 
     @PostMapping("/detail/{boardId}")
     public ResponseEntity<DataResponseDTO<BoardDetailResponseDTO>> getBoardDetail(
-            HttpServletRequest request,
+            @LoginUser Long userId,
             @PathVariable Long boardId) {
 
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
+        BoardDetailResponseDTO result = boardService.getBoardDetail(userId, boardId);
 
-        BoardDetailResponseDTO result = boardService.getBoardDetail(
-                userId,
-                boardId
-                );
         return ResponseEntity.ok(DataResponseDTO.of(result, "게시글 열람이 완료되었습니다."));
     }
 
     @PutMapping("/edit/{boardId}")
     public ResponseEntity<DataResponseDTO<String>> editBoard(
-            HttpServletRequest request,
+            @LoginUser Long userId,
             @PathVariable Long boardId,
             @Valid @ModelAttribute EditBoardRequestDTO editBoardRequestDTO
     ) throws IOException {
 
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
-
-        boardService.editBoard(
-                userId,
-                boardId,
-                editBoardRequestDTO);
+        boardService.editBoard(userId, boardId, editBoardRequestDTO);
 
         return ResponseEntity.ok(DataResponseDTO.of("게시글 수정이 완료되었습니다."));
     }
 
     @DeleteMapping("/delete/{boardId}")
     public ResponseEntity<DataResponseDTO<String>> deleteBoard(
-            HttpServletRequest request,
+            @LoginUser Long userId,
             @PathVariable Long boardId) {
 
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
-
-        boardService.deleteBoard(
-                userId,
-                boardId
-                );
+        boardService.deleteBoard(userId, boardId);
 
         return ResponseEntity.ok(DataResponseDTO.of("게시글이 삭제되었습니다."));
     }
