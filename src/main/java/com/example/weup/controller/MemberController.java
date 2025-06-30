@@ -79,8 +79,7 @@ public class MemberController {
 
         memberService.deleteMember(
                 userId,
-                deleteMemberRequestDTO.getProjectId(),
-                deleteMemberRequestDTO.getMemberId()
+                deleteMemberRequestDTO
         );
 
         return ResponseEntity.ok(DataResponseDTO.of("프로젝트 탈퇴 처리가 정상적으로 완료되었습니다."));

@@ -226,28 +226,28 @@ public class MemberService {
     }
 
     @Transactional
-    public void deleteMember(Long userId, Long projectId, Long memberId) {
+    public void deleteMember(Long userId, DeleteMemberRequestDTO deleteMemberRequestDTO) {
         try {
-            if (!hasAccess(userId, projectId)) {
+            if (!hasAccess(userId, deleteMemberRequestDTO.getProjectId())) {
                 throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
             }
             User requestUser = userRepository.findById(userId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-            Project project = projectRepository.findById(projectId)
+            Project project = projectRepository.findById(deleteMemberRequestDTO.getProjectId())
                     .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
             Member requestMember = memberRepository.findByUserAndProject(requestUser, project)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
-            Member targetMember = memberRepository.findById(memberId)
+            Member targetMember = memberRepository.findById(deleteMemberRequestDTO.getMemberId())
                     .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
             if (targetMember.isLeader()) {
                 throw new GeneralException(ErrorInfo.NOT_LEADER);
             }
 
-            if (!requestMember.isLeader() && !requestMember.getMemberId().equals(memberId)) {
+            if (!requestMember.isLeader() && !requestMember.getMemberId().equals(deleteMemberRequestDTO.getMemberId())) {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
