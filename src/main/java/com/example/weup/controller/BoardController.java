@@ -54,8 +54,7 @@ public class BoardController {
     public ResponseEntity<DataResponseDTO<String>> editBoard(
             @LoginUser Long userId,
             @PathVariable Long boardId,
-            @Valid @ModelAttribute EditBoardRequestDTO editBoardRequestDTO
-    ) throws IOException {
+            @Valid @ModelAttribute EditBoardRequestDTO editBoardRequestDTO) {
 
         boardService.editBoard(userId, boardId, editBoardRequestDTO);
 
