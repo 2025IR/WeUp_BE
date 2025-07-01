@@ -90,7 +90,6 @@ public class BoardService {
         });
     }
 
-
     public BoardDetailResponseDTO getBoardDetail(Long userId, Long boardId) {
 
         Board board = boardRepository.findById(boardId)
@@ -110,7 +109,6 @@ public class BoardService {
                 .files(fileDTOs)
                 .build();
     }
-
 
     @Transactional
     public void editBoard(Long userId, Long boardId, EditBoardRequestDTO editBoardRequestDTO) throws IOException {
