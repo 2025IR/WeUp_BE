@@ -65,7 +65,7 @@ public class MemberController {
         String token = jwtUtil.resolveToken(request);
         Long userId = jwtUtil.getUserId(token);
 
-        memberService.deleteMember(userId, deleteMemberRequestDTO.getProjectId(), deleteMemberRequestDTO.getMemberId());
+        memberService.deleteMember(userId, deleteMemberRequestDTO);
 
         return ResponseEntity.ok(DataResponseDTO.of("프로젝트 탈퇴 처리가 정상적으로 완료되었습니다."));
     }

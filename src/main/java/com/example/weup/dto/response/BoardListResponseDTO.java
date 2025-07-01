@@ -9,7 +9,7 @@ import java.time.LocalDateTime;
 @Getter
 public class BoardListResponseDTO {
     private Long boardId;
-    private String nickname;
+    private String name;
     private String profileImage;
     private String title;
     private LocalDateTime boardCreatedTime;

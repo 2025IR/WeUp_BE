@@ -2,12 +2,14 @@ package com.example.weup.security;
 
 import com.example.weup.entity.User;
 import com.example.weup.repository.UserRepository;
+import com.example.weup.security.exception.JwtAuthenticationEntryPoint;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.List;
 
 @Slf4j
 @Component
@@ -25,20 +28,32 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private final UserRepository userRepository;
 
+    private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
+
+    private static final List<String> WHITE_LIST = List.of(
+            "/user/signIn", "/user/signup", "/user/reissuetoken", "/user/email", "/user/email/check",
+            "/error", "/ws/", "/ai/"
+    );
+
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
 
-        String token = jwtUtil.resolveToken(request);
-
-        if(token == null) {
-            log.warn("JWT 토큰 없음 또는 형식 오류");
-            filterChain.doFilter(request,response);
+        if (WHITE_LIST.stream().anyMatch(request.getRequestURI()::startsWith)) {
+            filterChain.doFilter(request, response);
             return;
         }
 
-        if(jwtUtil.isExpired(token)) {
-            log.warn("JWT 토큰 만료");
-            filterChain.doFilter(request,response);
+        String token = jwtUtil.resolveToken(request);
+
+        if (token == null) {
+            log.warn("Authorization 헤더 없음");
+            jwtAuthenticationEntryPoint.commence(request, response, new BadCredentialsException("토큰 없음"));
+            return;
+        }
+
+        if (jwtUtil.isExpired(token)) {
+            log.warn("JWT 만료");
+            jwtAuthenticationEntryPoint.commence(request, response, new BadCredentialsException("토큰 만료"));
             return;
         }
 

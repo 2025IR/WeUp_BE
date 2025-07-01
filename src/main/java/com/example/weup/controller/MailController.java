@@ -57,5 +57,4 @@ public class MailController {
             throw new GeneralException(ErrorInfo.EMAIL_VERIFICATION_FAILED);
         }
     }
-
 }

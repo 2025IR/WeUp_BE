@@ -13,5 +13,6 @@ public class FileResponseDTO {
     private String fileName;
     private Long fileSize;
     private String downloadUrl;
+    private Long fileId;
 
 }
