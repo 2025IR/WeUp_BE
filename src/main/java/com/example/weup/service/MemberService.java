@@ -26,11 +26,17 @@ import java.util.stream.Collectors;
 public class MemberService {
 
     private final UserRepository userRepository;
+
     private final ProjectRepository projectRepository;
+
     private final MemberRepository memberRepository;
+
     private final AsyncMailService asyncMailService;
+
     private final S3Service s3Service;
+
     private final RoleRepository roleRepository;
+
     private final MemberRoleRepository memberRoleRepository;
 
     @Transactional
@@ -48,6 +54,7 @@ public class MemberService {
 
         project.getMembers().add(newMember);
         memberRepository.save(newMember);
+        log.info("create project leader -> db save success : member {}", newMember.getMemberId());
     }
 
     @Transactional

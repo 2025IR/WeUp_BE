@@ -9,23 +9,22 @@ import com.example.weup.dto.response.ListUpProjectResponseDTO;
 import com.example.weup.entity.ChatRoom;
 import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
-import com.example.weup.entity.User;
 import com.example.weup.repository.ChatRoomRepository;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
 import com.example.weup.repository.UserRepository;
+import com.example.weup.validate.MemberValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,22 +36,25 @@ public class ProjectService {
 
     private final MemberRepository memberRepository;
 
-    private final UserRepository userRepository;
-
     private final S3Service s3Service;
 
     private final ChatRoomRepository chatRoomRepository;
 
-    @Transactional
-    public Project createProject(@ModelAttribute ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
-        String storedFileName = null;
-        MultipartFile image = projectCreateRequestDTO.getFile();
+    private final MemberValidator memberValidator;
 
+    @Value("${project.default-image}")
+    private String defaultProjectImage;
+
+    @Transactional
+    public Project createProject(ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
+
+        String storedFileName;
+        MultipartFile image = projectCreateRequestDTO.getProjectImage();
 
         if (image != null && !image.isEmpty()) {
             storedFileName = s3Service.uploadSingleFile(image).getStoredFileName();
         } else {
-            storedFileName = "086d1ece-d1dd-424b-97ae-892075355026-smiley1.png";
+            storedFileName = defaultProjectImage;
         }
 
         Project newProject = Project.builder()
@@ -66,15 +68,18 @@ public class ProjectService {
                 .build();
 
         projectRepository.save(newProject);
+        log.info("create project -> db save success : {}", newProject.getProjectId());
+
         chatRoomRepository.save(chatRoom);
+        log.info("create chat room -> db save success : {}", chatRoom.getChatRoomId());
 
         return newProject;
     }
 
-    @Transactional
-    public List<ListUpProjectResponseDTO> listUpProject(Long userId) {
+    public List<ListUpProjectResponseDTO> getProjectList(Long userId) {
 
         List<Member> activeMember = memberRepository.findActiveMemberByUserId(userId);
+        log.info("get project list -> db read success : {}", activeMember.size());
 
         return activeMember.stream().map(member -> {
 
@@ -98,18 +103,17 @@ public class ProjectService {
                             .memberCount(memberCount)
                             .build();
                 })
-                .sorted(Comparator.comparing(ListUpProjectResponseDTO::getProjectCreatedTime).reversed())
+                .sorted(Comparator.comparing(ListUpProjectResponseDTO::getProjectId).reversed())
                 .collect(Collectors.toList());
     }
 
-    @Transactional
     public DetailProjectResponseDTO detailProject(Long projectId, Long userId) {
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+        Member member = memberValidator.validateActiveMemberInProject(userId, projectId);
+        log.info("get detail project -> member validate : {}", member.getMemberId());
 
         return DetailProjectResponseDTO.builder()
                 .projectName(project.getProjectName())
@@ -127,9 +131,7 @@ public class ProjectService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-        if (!isLeader(userId, project)) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
+        memberValidator.isLeader(userId, project);
 
         MultipartFile image = dto.getProjectImage();
         if (image != null && !image.isEmpty()) {
@@ -146,6 +148,9 @@ public class ProjectService {
         project.setProjectName(dto.getProjectName());
         project.setStatus(dto.isStatus());
         project.setRevealedNumber(dto.isRevealedNumber());
+
+        projectRepository.save(project);
+        log.info("edit project information -> db save success : {}", project.getProjectId());
     }
 
     @Transactional
@@ -157,15 +162,7 @@ public class ProjectService {
         project.setDescription(description);
 
         projectRepository.save(project);
+        log.info("edit project description -> db save success : {}", project.getProjectId());
     }
 
-    private boolean isLeader(Long userId, Project project) {
-
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-
-        Optional<Member> member = memberRepository.findByUserAndProject(user, project);
-
-        return member.isPresent() && member.get().isLeader();
-    }
 }

@@ -3,7 +3,6 @@ package com.example.weup.service;
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.SignUpRequestDto;
-import com.example.weup.dto.request.TokenRequestDTO;
 import com.example.weup.dto.request.PasswordRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
@@ -26,7 +25,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
