@@ -20,9 +20,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 
-import java.io.IOException;
 import java.util.*;
-import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -90,7 +88,6 @@ public class BoardService {
         });
     }
 
-
     public BoardDetailResponseDTO getBoardDetail(Long userId, Long boardId) {
 
         Board board = boardRepository.findById(boardId)
@@ -111,9 +108,8 @@ public class BoardService {
                 .build();
     }
 
-
     @Transactional
-    public void editBoard(Long userId, Long boardId, EditBoardRequestDTO editBoardRequestDTO) throws IOException {
+    public void editBoard(Long userId, Long boardId, EditBoardRequestDTO editBoardRequestDTO) {
 
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
