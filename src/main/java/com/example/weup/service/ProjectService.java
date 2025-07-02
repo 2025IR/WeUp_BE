@@ -12,7 +12,6 @@ import com.example.weup.entity.Project;
 import com.example.weup.repository.ChatRoomRepository;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
-import com.example.weup.repository.UserRepository;
 import com.example.weup.validate.MemberValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
