@@ -10,8 +10,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.IOException;
-
 @RestController
 @RequestMapping("/board")
 @RequiredArgsConstructor
@@ -54,8 +52,7 @@ public class BoardController {
     public ResponseEntity<DataResponseDTO<String>> editBoard(
             @LoginUser Long userId,
             @PathVariable Long boardId,
-            @Valid @ModelAttribute EditBoardRequestDTO editBoardRequestDTO
-    ) throws IOException {
+            @Valid @ModelAttribute EditBoardRequestDTO editBoardRequestDTO) {
 
         boardService.editBoard(userId, boardId, editBoardRequestDTO);
 

@@ -8,9 +8,7 @@ import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.service.ChatService;
-import com.example.weup.service.S3Service;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,24 +32,17 @@ public class ChatController {
 
     private final SimpMessagingTemplate messagingTemplate;
 
-    private final S3Service s3Service;
-
     @MessageMapping("/send/{roomId}")
     public void sendMessage(@DestinationVariable Long roomId, SendMessageRequestDto messageDto) throws JsonProcessingException {
 
         ReceiveMessageResponseDto receiveMessage = chatService.saveChatMessage(roomId, messageDto);
-
-        log.debug("send message controller receiveMessage Object");
-        log.debug("{}, {}, {}, {}, {}", receiveMessage.getSenderId(), receiveMessage.getSenderName(), receiveMessage.getSenderProfileImage(), receiveMessage.getSentAt(), receiveMessage.getMessage());
-
         messagingTemplate.convertAndSend("/topic/chat/" + roomId, receiveMessage);
     }
 
     @ResponseBody
     @PostMapping("/send/image")
-    public void sendImageMessage(
-            HttpServletRequest request,
-            @ModelAttribute SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
+    public void sendImageMessage(HttpServletRequest request,
+                                 @ModelAttribute SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
 
         jwtUtil.resolveToken(request);
 
@@ -63,16 +54,11 @@ public class ChatController {
     public ResponseEntity<DataResponseDTO<ChatPageResponseDto>> getChatMessages(HttpServletRequest request,
                                                                                 @PathVariable Long roomId,
                                                                                 @RequestBody GetPageable pageable) throws JsonProcessingException {
+
         jwtUtil.resolveToken(request);
 
         ChatPageResponseDto data = chatService.getChatMessages(roomId, pageable.getPage(), pageable.getSize());
 
-        log.debug("get chat messages controller에서 반환값 확인");
-        log.debug(String.valueOf(data.getPage()));
-        log.debug(String.valueOf(data.isLastPage()));
-
-        return ResponseEntity
-                .ok()
-                .body(DataResponseDTO.of(data, "채팅 내역 조회 완료"));
+        return ResponseEntity.ok(DataResponseDTO.of(data, "채팅 내역 조회가 완료되었습니다."));
     }
 }
