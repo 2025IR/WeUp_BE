@@ -69,4 +69,8 @@ public class Project {
         this.description = description;
     }
 
+    public void editProjectRoomName(String roomName) {
+        this.roomName = roomName;
+    }
+
 }

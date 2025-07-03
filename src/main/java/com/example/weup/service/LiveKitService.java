@@ -2,11 +2,14 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
 import com.example.weup.entity.User;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
 import com.example.weup.repository.UserRepository;
+import com.example.weup.validate.MemberValidator;
+import com.example.weup.validate.ProjectValidator;
 import io.livekit.server.RoomJoin;
 import io.livekit.server.RoomName;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +34,9 @@ public class LiveKitService {
 
     private final MemberRepository memberRepository;
 
+    private final MemberValidator memberValidator;
+    private final ProjectValidator projectValidator;
+
     @Value("${livekit.api-key}")
     private String apiKey;
 
@@ -40,15 +46,12 @@ public class LiveKitService {
     @Transactional
     public String generateLiveKitToken(Long projectId, Long userId) {
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+        Project project = projectValidator.validateActiveProject(projectId);
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-        if (!memberRepository.existsByUser_UserIdAndProject_ProjectId(userId, projectId)) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
+        memberValidator.validateActiveMemberInProject(userId, projectId);
 
         if (project.getRoomName() == null) {
             String roomName = String.valueOf(project.getProjectId());
@@ -70,9 +73,7 @@ public class LiveKitService {
     @Transactional
     public void enterRoom(Long projectId, Long userId) {
 
-        if (!memberRepository.existsByUser_UserIdAndProject_ProjectId(userId, projectId)) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
+        memberValidator.validateActiveMemberInProject(userId, projectId);
 
         String key = "meeting:" + projectId + ":users";
         redisTemplate.opsForSet().add(key, userId.toString());
@@ -81,9 +82,7 @@ public class LiveKitService {
     @Transactional
     public void leaveRoom(Long projectId, Long userId) {
 
-        if (!memberRepository.existsByUser_UserIdAndProject_ProjectId(userId, projectId)) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
+        memberValidator.validateActiveMemberInProject(userId, projectId);
 
         String key = "meeting:" + projectId + ":users";
         redisTemplate.opsForSet().remove(key, userId.toString());
@@ -92,9 +91,7 @@ public class LiveKitService {
     @Transactional
     public Long getRoomUserCount(Long projectId, Long userId) {
 
-        if (!memberRepository.existsByUser_UserIdAndProject_ProjectId(userId, projectId)) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
+        memberValidator.validateActiveMemberInProject(userId, projectId);
 
         String key = "meeting:" + projectId + ":users";
         return redisTemplate.opsForSet().size(key);
