@@ -1,5 +1,7 @@
 package com.example.weup.service;
 
+import com.example.weup.GeneralException;
+import com.example.weup.constant.ErrorInfo;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
 import lombok.RequiredArgsConstructor;
@@ -46,6 +48,7 @@ public class AsyncMailService {
             javaMailSender.send(message);
         } catch (MessagingException e) {
             log.error("이메일 인증 메일 전송 실패: {}", e.getMessage(), e);
+            throw new GeneralException(ErrorInfo.EMAIL_SEND_FAILED);
         }
 
         return CompletableFuture.completedFuture(null);
@@ -79,6 +82,7 @@ public class AsyncMailService {
             log.info("초대 이메일 전송 완료: {}", recipientEmail);
         } catch (MessagingException e) {
             log.error("초대 이메일 전송 실패: {}", e.getMessage(), e);
+            throw new GeneralException(ErrorInfo.EMAIL_SEND_FAILED);
         }
 
         return CompletableFuture.completedFuture(null);
