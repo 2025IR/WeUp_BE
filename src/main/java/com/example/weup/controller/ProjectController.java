@@ -52,12 +52,12 @@ public class ProjectController {
     }
 
     @PostMapping("/detail/{projectId}")
-    public ResponseEntity<DataResponseDTO<DetailProjectResponseDTO>> detailProject(@LoginUser Long userId, @PathVariable Long projectId) {
+    public ResponseEntity<DataResponseDTO<DetailProjectResponseDTO>> getProjectDetail(@LoginUser Long userId, @PathVariable Long projectId) {
 
-        log.info("요청자 : {}, get detail project -> start", userId);
-        DetailProjectResponseDTO data = projectService.detailProject(projectId, userId);
+        log.info("요청자 : {}, get project detail -> start", userId);
+        DetailProjectResponseDTO data = projectService.getProjectDetail(projectId, userId);
 
-        log.info("요청자 : {}, get detail project -> success", userId);
+        log.info("요청자 : {}, get project detail -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of(data, "프로젝트 상세 정보 조회가 완료되었습니다."));
     }
 

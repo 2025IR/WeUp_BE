@@ -1,5 +1,6 @@
 package com.example.weup.entity;
 
+import com.example.weup.dto.request.ProjectEditRequestDTO;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -52,5 +53,20 @@ public class Project {
     @OneToMany(mappedBy = "project", cascade = CascadeType.REMOVE)
     @Builder.Default
     private List<Member> members = new ArrayList<>();
+
+
+    public void editProjectInfo(ProjectEditRequestDTO dto) {
+        this.projectName = dto.getProjectName();
+        this.status = dto.isStatus();
+        this.isRevealedNumber = dto.isRevealedNumber();
+    }
+
+    public void editProjectImage(String image) {
+        this.projectImage = image;
+    }
+
+    public void editProjectDescription(String description) {
+        this.description = description;
+    }
 
 }

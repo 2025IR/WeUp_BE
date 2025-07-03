@@ -67,10 +67,10 @@ public class ProjectService {
                 .build();
 
         projectRepository.save(newProject);
-        log.info("create project -> db save success : {}", newProject.getProjectId());
+        log.info("create project -> db save success : project id - {}", newProject.getProjectId());
 
         chatRoomRepository.save(chatRoom);
-        log.info("create chat room -> db save success : {}", chatRoom.getChatRoomId());
+        log.info("create chat room -> db save success : chat room id - {}", chatRoom.getChatRoomId());
 
         return newProject;
     }
@@ -78,7 +78,7 @@ public class ProjectService {
     public List<ListUpProjectResponseDTO> getProjectList(Long userId) {
 
         List<Member> activeMember = memberRepository.findActiveMemberByUserId(userId);
-        log.info("get project list -> db read success : {}", activeMember.size());
+        log.info("get project list -> db read success : data size - {}", activeMember.size());
 
         return activeMember.stream().map(member -> {
 
@@ -106,13 +106,13 @@ public class ProjectService {
                 .collect(Collectors.toList());
     }
 
-    public DetailProjectResponseDTO detailProject(Long projectId, Long userId) {
+    public DetailProjectResponseDTO getProjectDetail(Long projectId, Long userId) {
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
         Member member = memberValidator.validateActiveMemberInProject(userId, projectId);
-        log.info("get detail project -> member validate : {}", member.getMemberId());
+        log.info("get project detail -> member validate : member id - {}", member.getMemberId());
 
         return DetailProjectResponseDTO.builder()
                 .projectName(project.getProjectName())
@@ -135,21 +135,16 @@ public class ProjectService {
         MultipartFile image = dto.getProjectImage();
         if (image != null && !image.isEmpty()) {
             String existingImage = project.getProjectImage();
-
-            if (existingImage != null && !existingImage.isEmpty()) {
-                s3Service.deleteFile(existingImage);
-            }
+            s3Service.deleteFile(existingImage);
 
             String storedFileName = s3Service.uploadSingleFile(image).getStoredFileName();
-            project.setProjectImage(storedFileName);
+            project.editProjectImage(storedFileName);
         }
 
-        project.setProjectName(dto.getProjectName());
-        project.setStatus(dto.isStatus());
-        project.setRevealedNumber(dto.isRevealedNumber());
+        project.editProjectInfo(dto);
 
         projectRepository.save(project);
-        log.info("edit project information -> db save success : {}", project.getProjectId());
+        log.info("edit project information -> db save success : project id - {}", project.getProjectId());
     }
 
     @Transactional
@@ -158,10 +153,10 @@ public class ProjectService {
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-        project.setDescription(description);
+        project.editProjectDescription(description);
 
         projectRepository.save(project);
-        log.info("edit project description -> db save success : {}", project.getProjectId());
+        log.info("edit project description -> db save success : project id - {}", project.getProjectId());
     }
 
 }
