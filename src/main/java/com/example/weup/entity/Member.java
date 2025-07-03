@@ -43,4 +43,8 @@ public class Member {
     @Column(name = "is_leader", nullable = false)
     @Builder.Default
     private boolean isLeader = false;
+
+    public void editSchedule(String availableTime) {
+        this.availableTime = availableTime;
+    }
 } 
