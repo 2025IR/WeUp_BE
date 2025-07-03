@@ -1,5 +1,6 @@
 package com.example.weup.controller;
 
+import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
 import com.example.weup.dto.request.PasswordRequestDTO;
 import com.example.weup.dto.request.ProfileEditRequestDTO;
 import com.example.weup.dto.request.SignUpRequestDto;
@@ -33,23 +34,19 @@ public class UserController {
     public ResponseEntity<DataResponseDTO<String>> signUp(@RequestBody SignUpRequestDto signUpRequestDto) {
 
         userService.signUp(signUpRequestDto);
-
-        String username = signUpRequestDto.getName();
-        String message = "회원가입하신 걸 환영합니다, " + username + "님!";
         
-        return ResponseEntity.ok(DataResponseDTO.of(message));
+        return ResponseEntity.ok(DataResponseDTO.of("회원가입이 완료되었습니다."));
     }
 
     @PostMapping("/profile")
-    public ResponseEntity<DataResponseDTO<GetProfileResponseDTO>> profile(HttpServletRequest request) {
+    public ResponseEntity<DataResponseDTO<GetProfileResponseDTO>> profile(@LoginUser Long userId) {
 
-        String token = jwtUtil.resolveToken(request);
-
-        GetProfileResponseDTO getProfileResponseDTO = userService.getProfile(token);
+        GetProfileResponseDTO getProfileResponseDTO = userService.getProfile(userId);
 
         return ResponseEntity.ok(DataResponseDTO.of(getProfileResponseDTO, "프로필 조회 완료"));
     }
 
+    //todo. 쿠키 생성 로직 jwtutil로 옮기기
     @PostMapping("/reissuetoken")
     public ResponseEntity<DataResponseDTO<JwtDto>> reissueToken(
             @CookieValue(name = "refresh_token", required = false) String refreshToken) {
@@ -58,40 +55,28 @@ public class UserController {
     }
 
     @PostMapping("/password")
-    public ResponseEntity<DataResponseDTO<String>> changePassword(HttpServletRequest request, @RequestBody PasswordRequestDTO passwordRequestDTO) {
+    public ResponseEntity<DataResponseDTO<String>> changePassword(@LoginUser Long userId, @RequestBody PasswordRequestDTO passwordRequestDTO) {
 
-        String token = jwtUtil.resolveToken(request);
+        userService.changePassword(userId, passwordRequestDTO);
 
-        userService.changePassword(token, passwordRequestDTO);
-
-        String message = "비밀번호가 성공적으로 변경되었습니다.";
-        return ResponseEntity.ok(DataResponseDTO.of(message));
+        return ResponseEntity.ok(DataResponseDTO.of("비밀번호가 성공적으로 변경되었습니다."));
     }
 
     @PutMapping("/profile/edit")
-    public ResponseEntity<DataResponseDTO<String>> editProfile(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<String>> editProfile(@LoginUser Long userId,
                                                                @ModelAttribute ProfileEditRequestDTO profileEditRequestDTO) throws IOException {
 
-        String token = jwtUtil.resolveToken(request);
-
-        userService.editProfile(
-                token,
-                profileEditRequestDTO.getName(),
-                profileEditRequestDTO.getPhoneNumber(),
-                profileEditRequestDTO.getProfileImage());
+        userService.editProfile(userId, profileEditRequestDTO);
 
         return ResponseEntity.ok(DataResponseDTO.of("회원 정보가 성공적으로 수정되었습니다."));
     }
 
 
     @PutMapping("/withdraw")
-    public ResponseEntity<DataResponseDTO<String>> withdrawUser(HttpServletRequest request) {
+    public ResponseEntity<DataResponseDTO<String>> withdrawUser(@LoginUser Long userId) {
 
-        String token = jwtUtil.resolveToken(request);
+        userService.withdrawUser(userId);
 
-        userService.withdrawUser(token);
-
-        String message = "회원 탈퇴가 완료되었습니다.";
-        return ResponseEntity.ok(DataResponseDTO.of(message));
+        return ResponseEntity.ok(DataResponseDTO.of("회원 탈퇴가 완료되었습니다."));
     }
 }

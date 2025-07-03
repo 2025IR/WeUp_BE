@@ -1,5 +1,6 @@
 package com.example.weup.controller;
 
+import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
 import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.MemberInfoResponseDTO;
@@ -20,14 +21,9 @@ public class MemberController {
 
     private final MemberService memberService;
 
-    private final JwtUtil jwtUtil;
-
     @PostMapping("/invite")
-    public ResponseEntity<DataResponseDTO<String>> inviteUser(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<String>> inviteUser(@LoginUser Long userId,
                                                               @RequestBody ProjectInviteRequestDTO projectInviteRequestDTO) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
 
         String result = memberService.inviteUser(userId, projectInviteRequestDTO);
 
@@ -35,35 +31,26 @@ public class MemberController {
     }
 
     @PostMapping("/list/{projectId}")
-    public ResponseEntity<DataResponseDTO<List<MemberInfoResponseDTO>>> getProjectMembers(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<List<MemberInfoResponseDTO>>> getProjectMembers(@LoginUser Long userId,
                                                                                           @PathVariable Long projectId) {
 
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
-
         List<MemberInfoResponseDTO> members = memberService.getProjectMembers(userId, projectId);
-        
+
         return ResponseEntity.ok(DataResponseDTO.of(members, "프로젝트 멤버 목록 조회 완료"));
     }
 
     @PutMapping("/delegate/leader")
-    public ResponseEntity<DataResponseDTO<String>> delegateLeader(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<String>> delegateLeader(@LoginUser Long userId,
                                                                   @RequestBody LeaderDelegateRequestDTO leaderDelegateRequestDTO) {
-        
-        String token = jwtUtil.resolveToken(request);
-        Long formerLeaderUserId = jwtUtil.getUserId(token);
-        
-        memberService.delegateLeader(formerLeaderUserId, leaderDelegateRequestDTO);
-        
+
+        memberService.delegateLeader(userId, leaderDelegateRequestDTO);
+
         return ResponseEntity.ok(DataResponseDTO.of("팀장 위임이 완료되었습니다."));
     }
 
     @PutMapping("/delete")
-    public ResponseEntity<DataResponseDTO<String>> deleteMember(HttpServletRequest request,
-                                                                @RequestBody DeleteMemberRequestDTO deleteMemberRequestDTO){
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
+    public ResponseEntity<DataResponseDTO<String>> deleteMember(@LoginUser Long userId,
+                                                                @RequestBody DeleteMemberRequestDTO deleteMemberRequestDTO) {
 
         memberService.deleteMember(userId, deleteMemberRequestDTO);
 
@@ -71,11 +58,8 @@ public class MemberController {
     }
 
     @PostMapping("/role/list/{projectId}")
-    public ResponseEntity<DataResponseDTO<List<RoleListResponseDTO>>> listRoles(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<List<RoleListResponseDTO>>> listRoles(@LoginUser Long userId,
                                                                                 @PathVariable Long projectId) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
 
         List<RoleListResponseDTO> roleList = memberService.listRoles(userId, projectId);
 
@@ -83,11 +67,8 @@ public class MemberController {
     }
 
     @PutMapping("/role/assign")
-    public ResponseEntity<DataResponseDTO<String>> assignRoleToMember(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<String>> assignRoleToMember(@LoginUser Long userId,
                                                                       @RequestBody AssignRoleRequestDTO assignRoleRequestDTO) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
 
         memberService.assignRoleToMember(userId, assignRoleRequestDTO);
 
@@ -95,11 +76,8 @@ public class MemberController {
     }
 
     @PostMapping("/role/create")
-    public ResponseEntity<DataResponseDTO<String>> createRole(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<String>> createRole(@LoginUser Long userId,
                                                               @RequestBody CreateRoleRequestDTO createRoleRequestDTO) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
 
         memberService.createRole(userId, createRoleRequestDTO);
 
@@ -107,11 +85,8 @@ public class MemberController {
     }
 
     @PutMapping("/role/edit")
-    public ResponseEntity<DataResponseDTO<String>> editRole(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<String>> editRole(@LoginUser Long userId,
                                                             @RequestBody EditRoleRequestDTO editRoleRequestDTO) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
 
         memberService.editRole(userId, editRoleRequestDTO);
 
@@ -119,11 +94,8 @@ public class MemberController {
     }
 
     @DeleteMapping("/role/remove")
-    public ResponseEntity<DataResponseDTO<String>> removeRole(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<String>> removeRole(@LoginUser Long userId,
                                                               @RequestBody DeleteRoleRequestDTO deleteRoleRequestDTO) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
 
         memberService.removeRole(userId, deleteRoleRequestDTO);
 

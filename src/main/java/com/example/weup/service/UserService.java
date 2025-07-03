@@ -2,6 +2,7 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.request.ProfileEditRequestDTO;
 import com.example.weup.dto.request.SignUpRequestDto;
 import com.example.weup.dto.request.TokenRequestDTO;
 import com.example.weup.dto.request.PasswordRequestDTO;
@@ -73,8 +74,7 @@ public class UserService {
     }
 
     @Transactional
-    public GetProfileResponseDTO getProfile(String token) {
-        Long userId = jwtUtil.getUserId(token);
+    public GetProfileResponseDTO getProfile(Long userId) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
@@ -121,9 +121,8 @@ public class UserService {
     }
 
     @Transactional
-    public void changePassword(String token, PasswordRequestDTO passwordRequestDTO) {
+    public void changePassword(Long userId, PasswordRequestDTO passwordRequestDTO) {
 
-        Long userId = jwtUtil.getUserId(token);
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
@@ -135,33 +134,31 @@ public class UserService {
     }
 
     @Transactional
-    public void editProfile(String token, String name, String phoneNumber, MultipartFile file) throws IOException {
-        Long userId = jwtUtil.getUserId(token);
+    public void editProfile(Long userId, ProfileEditRequestDTO profileEditRequestDTO) throws IOException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-        if (name != null) {
-            user.setName(name.trim());
+        if (profileEditRequestDTO.getName() != null) {
+            user.setName(profileEditRequestDTO.getName());
         }
 
-        if (phoneNumber != null) {
-            user.setPhoneNumber(phoneNumber.trim());
+        if (profileEditRequestDTO.getPhoneNumber() != null) {
+            user.setPhoneNumber(profileEditRequestDTO.getPhoneNumber());
         }
 
-        if (file != null && !file.isEmpty()) {
+        if (profileEditRequestDTO.getProfileImage() != null && !profileEditRequestDTO.getProfileImage().isEmpty()) {
             String existingImage = user.getProfileImage();
             if (existingImage != null && !existingImage.isEmpty()) {
                 s3Service.deleteFile(existingImage);
             }
 
-            String storedFileName = s3Service.uploadSingleFile(file).getStoredFileName();
+            String storedFileName = s3Service.uploadSingleFile(profileEditRequestDTO.getProfileImage()).getStoredFileName();
             user.setProfileImage(storedFileName);
         }
     }
 
     @Transactional
-    public void withdrawUser(String token) {
-        Long userId = jwtUtil.getUserId(token);
+    public void withdrawUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
