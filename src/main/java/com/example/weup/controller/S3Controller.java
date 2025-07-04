@@ -23,7 +23,7 @@ public class S3Controller {
 
         List<FileFullResponseDTO> uploadedFiles = s3Service.uploadFiles(files);
 
-        return ResponseEntity.ok(DataResponseDTO.of(uploadedFiles, "파일 업로드 성공"));
+        return ResponseEntity.ok(DataResponseDTO.of(uploadedFiles, "파일이 성공적으로 업로드되었습니다."));
     }
 
     @PostMapping("/download")
@@ -31,7 +31,7 @@ public class S3Controller {
 
         String url = s3Service.getPresignedUrl(fileDownloadRequestDTO.getFileName());
 
-        return ResponseEntity.ok(DataResponseDTO.of(url, "Presigned URL 발급 완료"));
+        return ResponseEntity.ok(DataResponseDTO.of(url, "Presigned URL이 성공적으로 발급되었습니다."));
     }
 
     @DeleteMapping("/delete")
@@ -39,6 +39,6 @@ public class S3Controller {
 
         s3Service.deleteFile(fileDownloadRequestDTO.getFileName());
 
-        return ResponseEntity.ok(DataResponseDTO.of("파일 삭제 완료"));
+        return ResponseEntity.ok(DataResponseDTO.of("파일이 성공적으로 삭제되었습니다."));
     }
 }
