@@ -11,6 +11,7 @@ public interface TodoMemberRepository extends JpaRepository<TodoMember, Long> {
 
     void deleteAllByTodo_TodoId(Long todoId);
 
+    // return type을 안씀
     List<TodoMember> findAllByTodo_TodoId(Long todoId);
 
     void deleteByMember(Member member);
