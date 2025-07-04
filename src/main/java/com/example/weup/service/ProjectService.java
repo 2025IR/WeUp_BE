@@ -7,15 +7,15 @@ import com.example.weup.dto.response.ListUpProjectResponseDTO;
 import com.example.weup.entity.ChatRoom;
 import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
-import com.example.weup.repository.ChatRoomRepository;
-import com.example.weup.repository.MemberRepository;
-import com.example.weup.repository.ProjectRepository;
+import com.example.weup.repository.*;
 import com.example.weup.validate.MemberValidator;
 import com.example.weup.validate.ProjectValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -39,7 +39,18 @@ public class ProjectService {
     private final ChatRoomRepository chatRoomRepository;
 
     private final MemberValidator memberValidator;
+
     private final ProjectValidator projectValidator;
+
+    private final BoardRepository boardRepository;
+
+    private final ChatMessageRepository chatMessageRepository;
+
+    private final MemberRoleRepository memberRoleRepository;
+
+    private final TodoMemberRepository todoMemberRepository;
+
+    private final StringRedisTemplate redisTemplate;
 
     @Value("${project.default-image}")
     private String defaultProjectImage;
@@ -49,6 +60,7 @@ public class ProjectService {
 
         String storedFileName;
         MultipartFile image = projectCreateRequestDTO.getProjectImage();
+
 
         if (image != null && !image.isEmpty()) {
             storedFileName = s3Service.uploadSingleFile(image).getStoredFileName();
@@ -158,4 +170,59 @@ public class ProjectService {
         log.info("edit project description -> db save success : project id - {}", project.getProjectId());
     }
 
+    @Transactional
+    public void deleteProject(Long userId, Long projectId) {
+
+        Project project = projectValidator.validateAccessToGetProjectDetail(projectId);
+        memberValidator.validateActiveMemberInProject(userId, projectId);
+        memberValidator.isLeader(userId, project);
+
+        project.editProjectDeletedTime(LocalDateTime.now());
+
+        projectRepository.save(project);
+        log.info("delete project -> db save success : project id - {}", project.getProjectId());
+    }
+
+    @Transactional
+    public void restoreProject(Long userId, Long projectId) {
+
+        Project project = projectValidator.validateRestoreProject(projectId);
+        memberValidator.validateActiveMemberInProject(userId, projectId);
+
+        project.editProjectDeletedTime(null);
+
+        projectRepository.save(project);
+        log.info("restore project -> db save success : project id - {}", project.getProjectId());
+    }
+
+    @Scheduled(cron = "0 0 0 * * *")
+    @Transactional
+    public void deleteExpiredProjects() {
+
+        LocalDateTime limitTime = LocalDateTime.now().minusDays(90);
+        List<Project> projectToDelete = projectRepository.findByProjectDeletedTimeBefore(limitTime);
+        log.info("delete project test -> db read data size - {}", projectToDelete.size());
+
+        for (Project project : projectToDelete) {
+            log.info("delete project -> db delete success : project id - {}", project.getProjectId());
+
+            boardRepository.deleteByProject(project);
+
+            List<ChatRoom> chatRoomsToDelete = chatRoomRepository.findByProject(project);
+            for (ChatRoom chatRoom : chatRoomsToDelete) {
+                redisTemplate.delete("chat:room:"+chatRoom.getChatRoomId());
+                chatMessageRepository.deleteByChatRoom(chatRoom);
+            }
+            chatRoomRepository.deleteAll(chatRoomsToDelete);
+
+            List<Member> membersToDelete = memberRepository.findByProject(project);
+            for (Member member : membersToDelete) {
+                memberRoleRepository.deleteByMember(member);
+                todoMemberRepository.deleteByMember(member);
+            }
+            memberRepository.deleteAll(membersToDelete);
+        }
+
+        projectRepository.deleteAll(projectToDelete);
+    }
 }

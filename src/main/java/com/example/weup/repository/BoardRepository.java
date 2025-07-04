@@ -1,11 +1,14 @@
 package com.example.weup.repository;
 
 import com.example.weup.entity.Board;
+import com.example.weup.entity.Project;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
+
+import java.util.List;
 
 @Repository
 public interface BoardRepository extends JpaRepository<Board, Long> {
@@ -20,4 +23,5 @@ public interface BoardRepository extends JpaRepository<Board, Long> {
     """)
     Page<Board> findByProjectIdAndFilters(Long projectId, String tag, String search, Pageable pageable);
 
+    void deleteByProject(Project project);
 }

@@ -73,7 +73,7 @@ public class ProjectController {
     }
 
     @PutMapping("/edit/description/{projectId}")
-    public ResponseEntity<ResponseDTO> editProjectDescription(@LoginUser Long userId, @PathVariable Long projectId,
+    public ResponseEntity<DataResponseDTO<String>> editProjectDescription(@LoginUser Long userId, @PathVariable Long projectId,
                                                               @RequestParam String description) {
 
         log.info("요청자 : {}, edit project description -> start", userId);
@@ -83,4 +83,33 @@ public class ProjectController {
         return ResponseEntity.ok(DataResponseDTO.of("프로젝트 설명 수정이 완료되었습니다."));
     }
 
+    @PutMapping("/delete/{projectId}")
+    public ResponseEntity<DataResponseDTO<String>> deleteProject(@LoginUser Long userId, @PathVariable Long projectId) {
+
+        log.info("요청자 : {}, delete project -> start", userId);
+        projectService.deleteProject(userId, projectId);
+
+        log.info("요청자 : {}, delete project -> success", userId);
+        return ResponseEntity.ok(DataResponseDTO.of("프로젝트가 삭제되었습니다."));
+    }
+
+    @PutMapping("/restore/{projectId}")
+    public ResponseEntity<DataResponseDTO<String>> restoreProject(@LoginUser Long userId, @PathVariable Long projectId) {
+
+        log.info("요청자 : {}, restore project -> start", userId);
+        projectService.restoreProject(userId, projectId);
+
+        log.info("요청자 : {}, restore project -> success", userId);
+        return ResponseEntity.ok(DataResponseDTO.of("프로젝트가 복구되었습니다."));
+    }
+
+    @PostMapping("/delete/test")
+    public ResponseEntity<DataResponseDTO<String>> deleteTest(@LoginUser Long userId) {
+
+        log.info("요청자 : {}, delete project test -> start", userId);
+        projectService.deleteExpiredProjects();
+
+        log.info("요청자 : {}, delete project test -> success", userId);
+        return ResponseEntity.ok(DataResponseDTO.of("프로젝트가 영구적으로 삭제되었습니다."));
+    }
 }

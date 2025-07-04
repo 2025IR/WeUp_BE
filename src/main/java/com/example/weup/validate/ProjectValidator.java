@@ -40,4 +40,16 @@ public class ProjectValidator {
 
         return project;
     }
+
+    public Project validateRestoreProject(Long projectId) {
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+
+        if(project.getProjectDeletedTime() == null) {
+            throw new GeneralException(ErrorInfo.BAD_REQUEST);
+        }
+
+        return project;
+    }
 }

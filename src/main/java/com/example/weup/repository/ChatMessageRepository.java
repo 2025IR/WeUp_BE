@@ -1,6 +1,7 @@
 package com.example.weup.repository;
 
 import com.example.weup.entity.ChatMessage;
+import com.example.weup.entity.ChatRoom;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -13,4 +14,5 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     List<ChatMessage> findByChatRoom_ChatRoomId(Long chatRoomId);
 
+    void deleteByChatRoom(ChatRoom chatRoom);
 }

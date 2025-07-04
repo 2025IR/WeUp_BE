@@ -77,4 +77,8 @@ public class Project {
         this.roomName = roomName;
     }
 
+    public void editProjectDeletedTime(LocalDateTime deletedTime) {
+        this.projectDeletedTime = deletedTime;
+    }
+
 }
