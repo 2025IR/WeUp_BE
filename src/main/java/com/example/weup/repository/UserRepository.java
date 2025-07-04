@@ -10,8 +10,6 @@ import java.util.Optional;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    Boolean existsByAccountSocialEmail(String email);
-
     Optional<User> findByAccountSocialEmail(String email);
 
     List<User> findAllByDeletedAtBefore(LocalDateTime threshold);

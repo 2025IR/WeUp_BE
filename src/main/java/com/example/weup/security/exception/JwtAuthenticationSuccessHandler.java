@@ -1,8 +1,6 @@
 package com.example.weup.security.exception;
 
-import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.response.DataResponseDTO;
-import com.example.weup.dto.response.ErrorResponseDTO;
 import com.example.weup.entity.User;
 import com.example.weup.security.JwtCookieFactory;
 import com.example.weup.security.JwtDto;

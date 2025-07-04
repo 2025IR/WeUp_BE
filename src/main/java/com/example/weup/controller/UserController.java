@@ -9,7 +9,6 @@ import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
 import com.example.weup.security.JwtCookieFactory;
 import com.example.weup.security.JwtDto;
-import com.example.weup.security.JwtUtil;
 import com.example.weup.service.UserService;
 import org.springframework.http.HttpHeaders;
 import lombok.RequiredArgsConstructor;
