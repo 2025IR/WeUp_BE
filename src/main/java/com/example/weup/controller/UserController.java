@@ -4,22 +4,19 @@ import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
 import com.example.weup.dto.request.PasswordRequestDTO;
 import com.example.weup.dto.request.ProfileEditRequestDTO;
 import com.example.weup.dto.request.SignUpRequestDto;
-import com.example.weup.dto.request.TokenRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
+import com.example.weup.security.JwtCookieFactory;
 import com.example.weup.security.JwtDto;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
+import org.springframework.http.HttpHeaders;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.Map;
-
-//TODO. 여기 response entity의 message 부분이 다른 곳이랑 형태가 아예 다름... 수정하기 !
-//TODO. ResponseEntity.ok(DataResponseDTO.of()); 형태로 수정하기
 
 @RestController
 @RequestMapping("/user")
@@ -43,15 +40,19 @@ public class UserController {
 
         GetProfileResponseDTO getProfileResponseDTO = userService.getProfile(userId);
 
-        return ResponseEntity.ok(DataResponseDTO.of(getProfileResponseDTO, "프로필 조회 완료"));
+        return ResponseEntity.ok(DataResponseDTO.of(getProfileResponseDTO, "프로필 조회가 완료되었습니다."));
     }
 
-    //todo. 쿠키 생성 로직 jwtutil로 옮기기
     @PostMapping("/reissuetoken")
     public ResponseEntity<DataResponseDTO<JwtDto>> reissueToken(
             @CookieValue(name = "refresh_token", required = false) String refreshToken) {
 
-        return userService.reissueToken(refreshToken);
+        JwtDto jwtDto = userService.reissueToken(refreshToken);
+        ResponseCookie cookie = JwtCookieFactory.createRefreshCookie(jwtDto.getRefreshToken());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(DataResponseDTO.of(jwtDto.withoutRefreshToken(), "토큰 재발급이 완료되었습니다."));
     }
 
     @PostMapping("/password")

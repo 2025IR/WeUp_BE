@@ -87,7 +87,7 @@ public class UserService {
                 .build();
     }
 
-    public ResponseEntity<DataResponseDTO<JwtDto>> reissueToken(String refreshToken) {
+    public JwtDto reissueToken(String refreshToken) {
         if (refreshToken == null) {
             throw new GeneralException(ErrorInfo.REFRESH_TOKEN_NOT_FOUND);
         }
@@ -97,28 +97,20 @@ public class UserService {
         }
 
         Long userId = jwtUtil.getUserId(refreshToken);
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
         String newAccessToken = jwtUtil.createAccessToken(userId, user.getRole());
         String newRefreshToken = jwtUtil.createRefreshToken(userId);
 
-        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", newRefreshToken)
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .sameSite("Strict")
-                .maxAge(7 * 24 * 60 * 60)
-                .build();
-
-        JwtDto jwtDto = JwtDto.builder()
+        return JwtDto.builder()
                 .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .userId(userId)
                 .build();
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
-                .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료"));
     }
+
 
     @Transactional
     public void changePassword(Long userId, PasswordRequestDTO passwordRequestDTO) {
