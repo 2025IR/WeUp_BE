@@ -2,14 +2,12 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.dto.request.ProfileEditRequestDTO;
-import com.example.weup.dto.request.SignUpRequestDto;
-import com.example.weup.dto.request.TokenRequestDTO;
-import com.example.weup.dto.request.PasswordRequestDTO;
+import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
 import com.example.weup.entity.AccountSocial;
 import com.example.weup.entity.Member;
+import com.example.weup.entity.Project;
 import com.example.weup.entity.User;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.UserRepository;
@@ -21,13 +19,16 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -104,6 +105,8 @@ public class UserService {
         String newAccessToken = jwtUtil.createAccessToken(userId, user.getRole());
         String newRefreshToken = jwtUtil.createRefreshToken(userId);
 
+        user.renewalToken(newRefreshToken);
+
         return JwtDto.builder()
                 .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
@@ -154,11 +157,69 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-        user.setUserWithdrawal(true);
+        user.withdraw();
+
+        List<Member> leaders = memberRepository.findByUser_UserIdAndIsLeaderTrue(userId);
+
+        for (Member leader : leaders) {
+            Project project = leader.getProject();
+
+            Optional<Member> nextLeaderOpt = memberRepository
+                    .findFirstByProjectAndUser_UserIdNotOrderByCreatedAtAsc(project, userId);
+
+            if (nextLeaderOpt.isPresent()) {
+                Member nextLeader = nextLeaderOpt.get();
+                nextLeader.setLeader(true);
+            } else {
+                // todo. 프로젝트 삭제 로직 추가
+            }
+
+            leader.setLeader(false);
+        }
 
         List<Member> memberList = memberRepository.findAllByUser_UserId(userId);
         for (Member member : memberList) {
             member.setMemberDeleted(true);
         }
+    }
+
+
+    @Scheduled(cron = "0 0 0 * * *")
+    @Transactional
+    public void deleteExpiredUsers() {
+        LocalDateTime threshold = LocalDateTime.now().minusDays(90);
+        List<User> expiredUsers = userRepository.findAllByDeletedAtBefore(threshold);
+
+        for (User user : expiredUsers) {
+            userRepository.delete(user);
+        }
+    }
+
+    @Transactional
+    public void restoreWithdrawnUser(RestoreUserRequestDTO restoreUserRequestDTO) {
+        User user = userRepository.findById(restoreUserRequestDTO.getUserId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+        if (user.getDeletedAt() == null) {
+            throw new GeneralException(ErrorInfo.USER_IS_NOT_WITHDRAWN);
+        }
+
+        user.restore();
+
+        List<Member> memberList = memberRepository.findAllByUser_UserId(restoreUserRequestDTO.getUserId());
+        for (Member member : memberList) {
+            member.setMemberDeleted(false);
+        }
+    }
+
+    public void logout(Long userId, String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new GeneralException(ErrorInfo.REFRESH_TOKEN_NOT_FOUND);
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+        user.setRefreshToken(null);
     }
 }

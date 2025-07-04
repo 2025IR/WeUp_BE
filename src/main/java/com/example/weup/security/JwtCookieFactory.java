@@ -16,5 +16,16 @@ public class JwtCookieFactory {
                 .maxAge(MAX_AGE)
                 .build();
     }
+
+    public static ResponseCookie deleteRefreshCookie() {
+        return ResponseCookie.from(COOKIE_NAME, "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .sameSite("Strict")
+                .maxAge(0)
+                .build();
+    }
+
 }
 

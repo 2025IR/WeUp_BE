@@ -3,6 +3,7 @@ package com.example.weup.controller;
 import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
 import com.example.weup.dto.request.PasswordRequestDTO;
 import com.example.weup.dto.request.ProfileEditRequestDTO;
+import com.example.weup.dto.request.RestoreUserRequestDTO;
 import com.example.weup.dto.request.SignUpRequestDto;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
@@ -14,6 +15,7 @@ import org.springframework.http.HttpHeaders;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -24,8 +26,6 @@ import java.io.IOException;
 public class UserController {
 
     private final UserService userService;
-
-    private final JwtUtil jwtUtil;
 
     @PostMapping("/signup")
     public ResponseEntity<DataResponseDTO<String>> signUp(@RequestBody SignUpRequestDto signUpRequestDto) {
@@ -79,5 +79,26 @@ public class UserController {
         userService.withdrawUser(userId);
 
         return ResponseEntity.ok(DataResponseDTO.of("회원 탈퇴가 완료되었습니다."));
+    }
+
+    @PostMapping("/restore")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<DataResponseDTO<String>> restoreWithdrawnUser(@RequestBody RestoreUserRequestDTO restoreUserRequestDTO) {
+        userService.restoreWithdrawnUser(restoreUserRequestDTO);
+        return ResponseEntity.ok(DataResponseDTO.of("유저 복구가 완료되었습니다."));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<DataResponseDTO<String>> logout(
+            @LoginUser Long userId,
+            @CookieValue(name = "refresh_token", required = false) String refreshToken) {
+
+        userService.logout(userId, refreshToken);
+
+        ResponseCookie deleteCookie = JwtCookieFactory.deleteRefreshCookie();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                .body(DataResponseDTO.of("로그아웃이 완료되었습니다."));
     }
 }
