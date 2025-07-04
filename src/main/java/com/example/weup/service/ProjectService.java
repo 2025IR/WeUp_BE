@@ -199,8 +199,10 @@ public class ProjectService {
     @Transactional
     public void deleteExpiredProjects() {
 
-        LocalDateTime limitTime = LocalDateTime.now().minusDays(90);
-        List<Project> projectToDelete = projectRepository.findByProjectDeletedTimeBefore(limitTime);
+        //LocalDateTime limitTime = LocalDateTime.now().minusDays(90);
+        //List<Project> projectToDelete = projectRepository.findByProjectDeletedTimeBefore(limitTime);
+
+        List<Project> projectToDelete = projectRepository.findByProjectDeletedTimeIsNotNull();
         log.info("delete project test -> db read data size - {}", projectToDelete.size());
 
         for (Project project : projectToDelete) {
@@ -211,15 +213,23 @@ public class ProjectService {
             List<ChatRoom> chatRoomsToDelete = chatRoomRepository.findByProject(project);
             for (ChatRoom chatRoom : chatRoomsToDelete) {
                 redisTemplate.delete("chat:room:"+chatRoom.getChatRoomId());
+                log.info("\n\n\n\n\n\n\n 000000000000000");
                 chatMessageRepository.deleteByChatRoom(chatRoom);
             }
+            log.info("\n\n\n\n\n\n\n 111111111111111111");
             chatRoomRepository.deleteAll(chatRoomsToDelete);
 
             List<Member> membersToDelete = memberRepository.findByProject(project);
             for (Member member : membersToDelete) {
+                log.info("\n\n\n\n\n\n\n 2222222222222222");
+                log.info("member id: {}, project class: {}", member.getMemberId(), member.getProject().getClass().getName());
+                log.info("project id: {}", member.getProject().getProjectId());
                 memberRoleRepository.deleteByMember(member);
+
+                log.info("\n\n\n\n\n\n\n 3333333333333333");
                 todoMemberRepository.deleteByMember(member);
             }
+            log.info("\n\n\n\n\n\n\n 4444444444444");
             memberRepository.deleteAll(membersToDelete);
         }
 

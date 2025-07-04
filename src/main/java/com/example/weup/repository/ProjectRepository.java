@@ -11,4 +11,6 @@ import java.util.List;
 public interface ProjectRepository extends JpaRepository<Project, Long> {
 
     List<Project> findByProjectDeletedTimeBefore(LocalDateTime localDateTime);
+
+    List<Project> findByProjectDeletedTimeIsNotNull();
 } 
