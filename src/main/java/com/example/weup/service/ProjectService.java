@@ -13,6 +13,7 @@ import com.example.weup.repository.ChatRoomRepository;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
 import com.example.weup.validate.MemberValidator;
+import com.example.weup.validate.ProjectValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -40,6 +41,7 @@ public class ProjectService {
     private final ChatRoomRepository chatRoomRepository;
 
     private final MemberValidator memberValidator;
+    private final ProjectValidator projectValidator;
 
     @Value("${project.default-image}")
     private String defaultProjectImage;
@@ -67,6 +69,7 @@ public class ProjectService {
                 .build();
 
         projectRepository.save(newProject);
+        newProject.editProjectRoomName(String.valueOf(newProject.getProjectId()));
         log.info("create project -> db save success : project id - {}", newProject.getProjectId());
 
         chatRoomRepository.save(chatRoom);
@@ -108,9 +111,7 @@ public class ProjectService {
 
     public DetailProjectResponseDTO getProjectDetail(Long projectId, Long userId) {
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
-
+        Project project = projectValidator.validateAccessToGetProjectDetail(projectId);
         Member member = memberValidator.validateActiveMemberInProject(userId, projectId);
         log.info("get project detail -> member validate : member id - {}", member.getMemberId());
 
@@ -118,6 +119,7 @@ public class ProjectService {
                 .projectName(project.getProjectName())
                 .projectImage(s3Service.getPresignedUrl(project.getProjectImage()))
                 .description(project.getDescription())
+                .projectCreatedTime(project.getProjectCreatedTime())
                 .status(project.isStatus())
                 .isRevealedNumber(project.isRevealedNumber())
                 .isLeader(member.isLeader())
@@ -127,9 +129,8 @@ public class ProjectService {
     @Transactional
     public void editProject(Long userId, Long projectId, ProjectEditRequestDTO dto) throws IOException {
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
-
+        Project project = projectValidator.validateActiveProject(projectId);
+        memberValidator.validateActiveMemberInProject(userId, projectId);
         memberValidator.isLeader(userId, project);
 
         MultipartFile image = dto.getProjectImage();
@@ -148,10 +149,10 @@ public class ProjectService {
     }
 
     @Transactional
-    public void editProjectDescription(Long projectId, String description) {
+    public void editProjectDescription(Long userId, Long projectId, String description) {
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+        Project project = projectValidator.validateActiveProject(projectId);
+        memberValidator.validateActiveMemberInProject(userId, projectId);
 
         project.editProjectDescription(description);
 

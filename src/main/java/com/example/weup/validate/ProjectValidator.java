@@ -22,6 +22,22 @@ public class ProjectValidator {
             throw new GeneralException(ErrorInfo.ENDED_PROJECT);
         }
 
+        if(project.getProjectDeletedTime() != null) {
+            throw new GeneralException(ErrorInfo.DELETED_PROJECT);
+        }
+
+        return project;
+    }
+
+    public Project validateAccessToGetProjectDetail(Long projectId) {
+
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+
+        if(project.getProjectDeletedTime() != null) {
+            throw new GeneralException(ErrorInfo.DELETED_PROJECT);
+        }
+
         return project;
     }
 }

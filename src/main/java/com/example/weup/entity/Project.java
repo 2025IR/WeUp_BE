@@ -5,6 +5,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,6 +43,9 @@ public class Project {
 
     @Column(name = "project_ended_time")
     private LocalDate projectEndedTime;
+
+    @Column(name = "project_deleted_time")
+    private LocalDateTime projectDeletedTime;
 
     @Column(name = "is_revealed_number", nullable = false)
     @Builder.Default

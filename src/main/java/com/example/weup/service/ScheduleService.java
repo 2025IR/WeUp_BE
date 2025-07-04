@@ -1,10 +1,10 @@
 package com.example.weup.service;
 
-import com.example.weup.dto.request.EditScheduleRequestDTO;
 import com.example.weup.dto.response.GetScheduleResponseDTO;
 import com.example.weup.entity.Member;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.validate.MemberValidator;
+import com.example.weup.validate.ProjectValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -23,7 +23,12 @@ public class ScheduleService {
 
     private final MemberValidator memberValidator;
 
+    private final ProjectValidator projectValidator;
+
     public List<GetScheduleResponseDTO> getSchedule(Long userId, Long projectId) {
+
+        projectValidator.validateActiveProject(projectId);
+        memberValidator.validateActiveMemberInProject(userId, projectId);
 
         List<Member> getMember = memberRepository.findByProject_ProjectIdAndIsMemberDeletedFalse(projectId);
         List<GetScheduleResponseDTO> responseDTOList = new ArrayList<>();
@@ -41,11 +46,11 @@ public class ScheduleService {
     }
 
     @Transactional
-    public void editSchedule(Long userId, Long projectId, EditScheduleRequestDTO editScheduleRequestDTO) {
+    public void editSchedule(Long userId, Long projectId, String availableTime) {
 
+        projectValidator.validateActiveProject(projectId);
         Member member = memberValidator.validateActiveMemberInProject(userId, projectId);
-
-        member.editSchedule(editScheduleRequestDTO.getAvailableTime());
+        member.editSchedule(availableTime);
 
         memberRepository.save(member);
         log.info("edit schedule -> db save success : member id - {}", member.getMemberId());

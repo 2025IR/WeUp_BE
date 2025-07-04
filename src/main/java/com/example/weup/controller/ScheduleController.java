@@ -1,7 +1,6 @@
 package com.example.weup.controller;
 
 import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
-import com.example.weup.dto.request.EditScheduleRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetScheduleResponseDTO;
 import com.example.weup.service.ScheduleService;
@@ -33,10 +32,10 @@ public class ScheduleController {
 
     @PutMapping("/edit/{projectId}")
     public ResponseEntity<DataResponseDTO<String>> editSchedule(@LoginUser Long userId, @PathVariable Long projectId,
-                                                                @RequestBody EditScheduleRequestDTO editScheduleRequestDTO) {
+                                                                @RequestBody String availableTime) {
 
         log.info("요청자 : {}, edit schedule -> start", userId);
-        scheduleService.editSchedule(userId, projectId, editScheduleRequestDTO);
+        scheduleService.editSchedule(userId, projectId, availableTime);
 
         log.info("요청자 : {}, edit schedule -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of("이용 가능 시간 수정이 완료되었습니다."));

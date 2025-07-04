@@ -41,7 +41,7 @@ public class LiveKitController {
     public ResponseEntity<DataResponseDTO<String>> getRoomUserCount(@LoginUser Long userId, @PathVariable Long projectId) {
 
         log.info("요청자 : {}, get participant count -> start", userId);
-        Long count = liveKitService.getRoomUserCount(projectId, userId);
+        Long count = liveKitService.getParticipantCount(projectId, userId);
 
         log.info("요청자 : {}, get participant count -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of(String.valueOf(count), "화상 회의실 현재 참여 인원 수 조회가 완료되었습니다."));

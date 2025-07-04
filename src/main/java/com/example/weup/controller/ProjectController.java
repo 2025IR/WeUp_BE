@@ -77,7 +77,7 @@ public class ProjectController {
                                                               @RequestParam String description) {
 
         log.info("요청자 : {}, edit project description -> start", userId);
-        projectService.editProjectDescription(projectId, description);
+        projectService.editProjectDescription(userId, projectId, description);
 
         log.info("요청자 : {}, edit project description -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of("프로젝트 설명 수정이 완료되었습니다."));
