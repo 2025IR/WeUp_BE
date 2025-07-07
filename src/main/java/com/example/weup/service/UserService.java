@@ -127,13 +127,8 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-        if (profileEditRequestDTO.getName() != null) {
-            user.setName(profileEditRequestDTO.getName());
-        }
-
-        if (profileEditRequestDTO.getPhoneNumber() != null) {
-            user.setPhoneNumber(profileEditRequestDTO.getPhoneNumber());
-        }
+        user.setName(profileEditRequestDTO.getName());
+        user.setPhoneNumber(profileEditRequestDTO.getPhoneNumber());
 
         if (profileEditRequestDTO.getProfileImage() != null && !profileEditRequestDTO.getProfileImage().isEmpty()) {
             String existingImage = user.getProfileImage();
