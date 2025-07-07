@@ -10,6 +10,7 @@ import com.example.weup.dto.response.GetProfileResponseDTO;
 import com.example.weup.security.JwtCookieFactory;
 import com.example.weup.security.JwtDto;
 import com.example.weup.service.UserService;
+import jakarta.validation.Valid;
 import org.springframework.http.HttpHeaders;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseCookie;
@@ -64,7 +65,7 @@ public class UserController {
 
     @PutMapping("/profile/edit")
     public ResponseEntity<DataResponseDTO<String>> editProfile(@LoginUser Long userId,
-                                                               @ModelAttribute ProfileEditRequestDTO profileEditRequestDTO) throws IOException {
+                                                               @Valid @ModelAttribute ProfileEditRequestDTO profileEditRequestDTO) throws IOException {
 
         userService.editProfile(userId, profileEditRequestDTO);
 
