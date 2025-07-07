@@ -29,15 +29,10 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
-
     private final MemberRepository memberRepository;
-
     private final JwtUtil jwtUtil;
-
     private final PasswordEncoder passwordEncoder;
-
     private final MailService mailService;
-
     private final S3Service s3Service;
 
     @Value("${user.default-profile-image}")
@@ -45,7 +40,6 @@ public class UserService {
 
     @Transactional
     public void signUp(SignUpRequestDto signUpRequestDto) {
-
         String email = signUpRequestDto.getEmail();
         if (!mailService.isEmailVerified(email)) {
             throw new GeneralException(ErrorInfo.EMAIL_NOT_VERIFIED);
@@ -63,14 +57,13 @@ public class UserService {
                 .user(signUpUser)
                 .build();
 
-        signUpUser.setAccountSocial(accountSocial);
+        signUpUser.linkAccount(accountSocial);
 
         userRepository.save(signUpUser);
     }
 
     @Transactional
     public GetProfileResponseDTO getProfile(Long userId) {
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
@@ -108,10 +101,8 @@ public class UserService {
                 .build();
     }
 
-
     @Transactional
     public void changePassword(Long userId, PasswordRequestDTO passwordRequestDTO) {
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
@@ -119,7 +110,7 @@ public class UserService {
             throw new GeneralException(ErrorInfo.UNAUTHORIZED);
         }
 
-        user.getAccountSocial().setPassword(passwordEncoder.encode(passwordRequestDTO.getNewPassword()));
+        user.getAccountSocial().changePassword(passwordEncoder.encode(passwordRequestDTO.getNewPassword()));
     }
 
     @Transactional
@@ -127,8 +118,8 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-        user.setName(profileEditRequestDTO.getName());
-        user.setPhoneNumber(profileEditRequestDTO.getPhoneNumber());
+        user.editName(profileEditRequestDTO.getName());
+        user.editPhoneNumber(profileEditRequestDTO.getPhoneNumber());
 
         if (profileEditRequestDTO.getProfileImage() != null && !profileEditRequestDTO.getProfileImage().isEmpty()) {
             String existingImage = user.getProfileImage();
@@ -137,7 +128,7 @@ public class UserService {
             }
 
             String storedFileName = s3Service.uploadSingleFile(profileEditRequestDTO.getProfileImage()).getStoredFileName();
-            user.setProfileImage(storedFileName);
+            user.updateProfileImage(storedFileName);
         }
     }
 
@@ -158,20 +149,19 @@ public class UserService {
 
             if (nextLeaderOpt.isPresent()) {
                 Member nextLeader = nextLeaderOpt.get();
-                nextLeader.setLeader(true);
+                nextLeader.promoteToLeader();
             } else {
                 // todo. 프로젝트 삭제 로직 추가
             }
 
-            leader.setLeader(false);
+            leader.demoteFromLeader();
         }
 
         List<Member> memberList = memberRepository.findAllByUser_UserId(userId);
         for (Member member : memberList) {
-            member.setMemberDeleted(true);
+            member.markAsDeleted();
         }
     }
-
 
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
@@ -197,7 +187,7 @@ public class UserService {
 
         List<Member> memberList = memberRepository.findAllByUser_UserId(restoreUserRequestDTO.getUserId());
         for (Member member : memberList) {
-            member.setMemberDeleted(false);
+            member.restoreMember();
         }
     }
 
@@ -209,6 +199,6 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-        user.setRefreshToken(null);
+        user.clearRefreshToken();
     }
 }

@@ -102,4 +102,25 @@ public class User implements UserDetails {
     public void renewalToken(String refreshToken) {
         this.refreshToken = refreshToken;
     }
+
+    public void linkAccount(AccountSocial accountSocial) {
+        this.accountSocial = accountSocial;
+        accountSocial.assignUser(this);
+    }
+
+    public void editName(String name) {
+        this.name = name;
+    }
+
+    public void editPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+    }
+
+    public void updateProfileImage(String profileImage) {
+        this.profileImage = profileImage;
+    }
+
+    public void clearRefreshToken() {
+        this.refreshToken = null;
+    }
 }
