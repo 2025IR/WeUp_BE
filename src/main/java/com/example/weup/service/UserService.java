@@ -118,8 +118,8 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-        user.editName(profileEditRequestDTO.getName());
-        user.editPhoneNumber(profileEditRequestDTO.getPhoneNumber());
+        user.editName(profileEditRequestDTO.getName())
+            .editPhoneNumber(profileEditRequestDTO.getPhoneNumber());
 
         if (profileEditRequestDTO.getProfileImage() != null && !profileEditRequestDTO.getProfileImage().isEmpty()) {
             String existingImage = user.getProfileImage();
@@ -170,6 +170,11 @@ public class UserService {
         List<User> expiredUsers = userRepository.findAllByDeletedAtBefore(threshold);
 
         for (User user : expiredUsers) {
+            List<Member> members = memberRepository.findByUser(user);
+            for (Member member : members) {
+                member.setUser(null);
+            }
+            memberRepository.saveAll(members);
             userRepository.delete(user);
         }
     }

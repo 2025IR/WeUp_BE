@@ -13,4 +13,6 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findByAccountSocialEmail(String email);
 
     List<User> findAllByDeletedAtBefore(LocalDateTime threshold);
+
+    List<User> findAllByIsUserWithdrawalTrue();
 }

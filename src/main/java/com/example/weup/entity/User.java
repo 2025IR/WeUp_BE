@@ -108,12 +108,14 @@ public class User implements UserDetails {
         accountSocial.assignUser(this);
     }
 
-    public void editName(String name) {
+    public User editName(String name) {
         this.name = name;
+        return this;
     }
 
-    public void editPhoneNumber(String phoneNumber) {
+    public User editPhoneNumber(String phoneNumber) {
         this.phoneNumber = phoneNumber;
+        return this;
     }
 
     public void updateProfileImage(String profileImage) {
