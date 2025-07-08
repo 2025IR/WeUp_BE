@@ -125,10 +125,10 @@ public class BoardService {
         if(editBoardRequestDTO.getFile() != null) {
             fileService.addFiles(board, editBoardRequestDTO.getFile());
         }
-        if(editBoardRequestDTO.getFile() != null) {
+
+        if(editBoardRequestDTO.getRemoveFileIds() != null && !editBoardRequestDTO.getRemoveFileIds().isEmpty()) {
             fileService.removeFiles(board, editBoardRequestDTO.getRemoveFileIds());
         }
-
     }
 
     @Transactional
