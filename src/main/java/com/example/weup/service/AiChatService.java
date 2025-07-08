@@ -43,8 +43,6 @@ public class AiChatService {
 
     private final ObjectMapper objectMapper;
 
-    private final ProjectRepository projectRepository;
-
     private final MemberRepository memberRepository;
 
     private final MemberRoleRepository memberRoleRepository;
@@ -52,6 +50,7 @@ public class AiChatService {
     private final RoleRepository roleRepository;
 
     private final TodoRepository todoRepository;
+
     private final ProjectValidator projectValidator;
 
     @Value("${ai.server.url}")

@@ -8,10 +8,8 @@ import com.example.weup.dto.response.ChatPageResponseDto;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.entity.ChatMessage;
 import com.example.weup.entity.ChatRoom;
-import com.example.weup.entity.Member;
 import com.example.weup.entity.User;
 import com.example.weup.repository.ChatMessageRepository;
-import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.validate.ChatValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -37,8 +35,6 @@ public class ChatService{
     private final ChatMessageRepository chatMessageRepository;
 
     private final UserRepository userRepository;
-
-    private final MemberRepository memberRepository;
 
     private final S3Service s3Service;
 
