@@ -4,6 +4,7 @@ import com.example.weup.dto.request.ProjectCreateRequestDTO;
 import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
+import com.example.weup.entity.Board;
 import com.example.weup.entity.ChatRoom;
 import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
@@ -51,6 +52,9 @@ public class ProjectService {
     private final TodoMemberRepository todoMemberRepository;
 
     private final StringRedisTemplate redisTemplate;
+    private final FileRepository fileRepository;
+    private final RoleRepository roleRepository;
+    private final TodoRepository todoRepository;
 
     @Value("${project.default-image}")
     private String defaultProjectImage;
@@ -195,7 +199,7 @@ public class ProjectService {
         log.info("restore project -> db save success : project id - {}", project.getProjectId());
     }
 
-    @Scheduled(cron = "0 0 0 * * *")
+    //@Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void deleteExpiredProjects() {
 
@@ -208,31 +212,50 @@ public class ProjectService {
         for (Project project : projectToDelete) {
             log.info("delete project -> db delete success : project id - {}", project.getProjectId());
 
+            List<Board> boardsToDelete = boardRepository.findByProject(project);
+            for (Board board : boardsToDelete) {
+                log.info("\n\n\n\n\n\n\n 파일 내역 먼저 지울게요 ~");
+                fileRepository.deleteByBoard(board);
+            }
+            log.info("\n\n\n\n\n\n\n 이제 보드 지웁니다 ~ ~");
             boardRepository.deleteByProject(project);
 
+            // 채팅방, 채팅 메시지
             List<ChatRoom> chatRoomsToDelete = chatRoomRepository.findByProject(project);
             for (ChatRoom chatRoom : chatRoomsToDelete) {
                 redisTemplate.delete("chat:room:"+chatRoom.getChatRoomId());
-                log.info("\n\n\n\n\n\n\n 000000000000000");
+                log.info("\n\n\n\n\n\n\n REDIS 채팅 내역 전체 삭제함 ~");
                 chatMessageRepository.deleteByChatRoom(chatRoom);
             }
-            log.info("\n\n\n\n\n\n\n 111111111111111111");
+            log.info("\n\n\n\n\n\n\n MYSQL 채팅 내역 싹 다 삭제함 ~");
             chatRoomRepository.deleteAll(chatRoomsToDelete);
+            log.info("\n\n\n\n\n\n\n 채팅방도 전체 다 삭제함 ~ ~");
 
             List<Member> membersToDelete = memberRepository.findByProject(project);
             for (Member member : membersToDelete) {
-                log.info("\n\n\n\n\n\n\n 2222222222222222");
+                log.info("\n\n\n\n\n\n\n member 시작할게욥 ㅋㅋ;;");
                 log.info("member id: {}, project class: {}", member.getMemberId(), member.getProject().getClass().getName());
                 log.info("project id: {}", member.getProject().getProjectId());
-                memberRoleRepository.deleteByMember(member);
 
-                log.info("\n\n\n\n\n\n\n 3333333333333333");
+                memberRoleRepository.deleteByMember(member);
+                log.info("\n\n\n\n\n\n\n 멤버 역할 (member role) 삭제함 ;;;;;");
+
                 todoMemberRepository.deleteByMember(member);
+                log.info("\n\n\n\n\n\n\n 투두 담당 멤버 역할 (todo member) 삭제함 @@@@@");
             }
-            log.info("\n\n\n\n\n\n\n 4444444444444");
+
+            roleRepository.deleteByProject(project);
+            log.info("\n\n\n\n\n\n\n 프로젝트에 있는 역할 (role) 전~부 삭제함. !!! ");
+
+            todoRepository.deleteByProject(project);
+            log.info("\n\n\n\n\n\n\n 프로젝트에 있는 투두 (todo) 전~부 삭제함. @@@ ");
+
             memberRepository.deleteAll(membersToDelete);
+            log.info("\n\n\n\n\n\n\n member 지움 ;;;");
         }
 
+        log.info("\n\n\n\n\n\n\n 프로젝트 지운다 ? ?");
         projectRepository.deleteAll(projectToDelete);
+        log.info("\n\n\n\n\n\n\n 프로젝트 지웠다 ~ ~ ~");
     }
 }
