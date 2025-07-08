@@ -145,7 +145,7 @@ public class UserService {
             Project project = leader.getProject();
 
             Optional<Member> nextLeaderOpt = memberRepository
-                    .findFirstByProjectAndUser_UserIdNotOrderByCreatedAtAsc(project, userId);
+                    .findFirstByProjectAndUser_UserIdNotOrderByMemberIdAsc(project, userId);
 
             if (nextLeaderOpt.isPresent()) {
                 Member nextLeader = nextLeaderOpt.get();

@@ -33,6 +33,5 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     List<Member> findByUser_UserIdAndIsLeaderTrue(Long userId);
 
-
-    Optional<Member> findFirstByProjectAndUser_UserIdNotOrderByCreatedAtAsc(Project project, Long userId);
+    Optional<Member> findFirstByProjectAndUser_UserIdNotOrderByMemberIdAsc(Project project, Long userId);
 }
