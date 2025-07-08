@@ -26,4 +26,12 @@ public class AccountSocial {
 
     @Column(nullable = false)
     private String password;
+
+    public void changePassword(String newPassword) {
+        this.password = newPassword;
+    }
+
+    public void assignUser(User user) {
+        this.user = user;
+    }
 }

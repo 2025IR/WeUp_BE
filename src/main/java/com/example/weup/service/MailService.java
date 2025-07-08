@@ -2,6 +2,7 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.request.MailCheckRequestDTO;
 import com.example.weup.repository.AccountSocialRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -28,15 +29,30 @@ public class MailService {
         asyncMailService.sendVerificationEmail(mail, number);
     }
 
-    public boolean checkVerificationNumber(String mail, int userNumber) {
-        int storedNumber = emailVerificationMap.getOrDefault(mail, -1);
-        boolean isMatch = storedNumber == userNumber;
+    public void verifyEmailCode(MailCheckRequestDTO dto) {
+        String email = dto.getEmail();
+        int code;
 
-        if (isMatch) {
-            emailVerifiedMap.put(mail, true);
+        try {
+            code = Integer.parseInt(dto.getCheckCode());
+        } catch (NumberFormatException e) {
+            throw new GeneralException(ErrorInfo.BAD_REQUEST);
         }
 
-        return isMatch;
+        if (!isCodeMatch(email, code)) {
+            throw new GeneralException(ErrorInfo.EMAIL_VERIFICATION_FAILED);
+        }
+
+        markEmailVerified(email);
+    }
+
+    private boolean isCodeMatch(String email, int code) {
+        int stored = emailVerificationMap.getOrDefault(email, -1);
+        return stored == code;
+    }
+
+    private void markEmailVerified(String email) {
+        emailVerifiedMap.put(email, true);
     }
 
     public boolean isEmailVerified(String mail) {

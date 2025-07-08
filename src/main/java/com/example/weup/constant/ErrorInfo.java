@@ -59,7 +59,9 @@ public enum ErrorInfo {
 
     EMPTY_INPUT_VALUE(HttpStatus.BAD_REQUEST, "입력란이 입력되지 않았습니다."),
 
-    NOT_LEADER(HttpStatus.FORBIDDEN, "프로젝트 리더 권한이 필요합니다.");
+    NOT_LEADER(HttpStatus.FORBIDDEN, "프로젝트 리더 권한이 필요합니다."),
+
+    USER_IS_NOT_WITHDRAWN(HttpStatus.BAD_REQUEST, "탈퇴한 유저가 아닙니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

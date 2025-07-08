@@ -120,17 +120,15 @@ public class BoardService {
         Tag tag = tagRepository.findByTagName(editBoardRequestDTO.getTag())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TAG_NOT_FOUND));
 
-        board.setTitle(editBoardRequestDTO.getTitle().trim());
-        board.setContents(editBoardRequestDTO.getContents().trim());
-        board.setTag(tag);
+        board.editBoard(editBoardRequestDTO.getTitle().trim(), editBoardRequestDTO.getContents().trim(), tag);
 
         if(editBoardRequestDTO.getFile() != null) {
             fileService.addFiles(board, editBoardRequestDTO.getFile());
         }
-        if(editBoardRequestDTO.getFile() != null) {
+
+        if(editBoardRequestDTO.getRemoveFileIds() != null && !editBoardRequestDTO.getRemoveFileIds().isEmpty()) {
             fileService.removeFiles(board, editBoardRequestDTO.getRemoveFileIds());
         }
-
     }
 
     @Transactional
