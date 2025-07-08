@@ -63,7 +63,9 @@ public enum ErrorInfo {
 
     ENDED_PROJECT(HttpStatus.FORBIDDEN, "종료된 프로젝트입니다."),
 
-    DELETED_PROJECT(HttpStatus.FORBIDDEN, "삭제된 프로젝트입니다.");
+    DELETED_PROJECT(HttpStatus.FORBIDDEN, "삭제된 프로젝트입니다."),
+
+    PROJECT_IS_NOT_DELETED(HttpStatus.BAD_REQUEST, "삭제되지 않은 프로젝트입니다.");
 
     private final HttpStatus httpStatus;
     private final String message;

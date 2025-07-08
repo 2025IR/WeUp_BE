@@ -9,6 +9,7 @@ import com.example.weup.dto.request.SendMessageRequestDto;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
+import com.example.weup.validate.ProjectValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -47,8 +48,11 @@ public class AiChatService {
     private final MemberRepository memberRepository;
 
     private final MemberRoleRepository memberRoleRepository;
+
     private final RoleRepository roleRepository;
+
     private final TodoRepository todoRepository;
+    private final ProjectValidator projectValidator;
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
@@ -71,20 +75,18 @@ public class AiChatService {
             jsonBody.put("user_input", aiChatRequestDTO.getUserInput());
             jsonBody.put("project_id", aiChatRequestDTO.getProjectId());
 
-            log.debug("jsonBody: {}", jsonBody);
-
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(jsonBody, headers);
 
+            log.info("send message to ai -> POST Request To AI Flask Server start");
             ResponseEntity<String> response = restTemplate.postForEntity(aiServerUrl, requestEntity, String.class);
 
             JsonNode root = objectMapper.readTree(response.getBody());
             String realMessage = root.get("response").asText();
 
-            log.debug("response: {}", realMessage);
-
             if (Objects.equals(realMessage, "")) {
                 throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
             }
+            log.info("send message to ai -> POST Request To AI Flask Server success");
 
             SendMessageRequestDto responseData = SendMessageRequestDto.builder()
                     .senderId(1L)
@@ -102,10 +104,7 @@ public class AiChatService {
     @Transactional
     public void aiAssignRole(AiRoleAssignRequestDTO aiRoleAssignDto) {
 
-        log.debug("ai assign role service in");
-
-        Project project = projectRepository.findById(aiRoleAssignDto.getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+        Project project = projectValidator.validateActiveProject(aiRoleAssignDto.getProjectId());
 
         Member member = memberRepository.findByUser_NameAndProject_ProjectId(aiRoleAssignDto.getUserName(), project.getProjectId());
 
@@ -113,7 +112,6 @@ public class AiChatService {
                         .orElseThrow(() -> new GeneralException(ErrorInfo.ROLE_NOT_FOUND));
 
         memberRoleRepository.deleteByMember(member);
-        log.debug("delete by member ?");
 
         MemberRole memberRole = MemberRole.builder()
                 .member(member)
@@ -121,15 +119,13 @@ public class AiChatService {
                 .build();
 
         memberRoleRepository.save(memberRole);
+        log.info("AI Request Assign Role -> success : member id - {}, role id - {}", member.getMemberId(), role.getRoleId());
     }
 
     @Transactional
     public void aiTodoCreate(AiTodoCreateRequestDTO aiTodoCreateDto) {
 
-        log.debug("ai todo create service in");
-
-        Project project = projectRepository.findById(aiTodoCreateDto.getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+        Project project = projectValidator.validateActiveProject(aiTodoCreateDto.getProjectId());
 
         Todo todo = Todo.builder()
                 .project(project)
@@ -138,6 +134,7 @@ public class AiChatService {
                 .build();
 
         todoRepository.save(todo);
+        log.info("AI Request Todo Create -> success : project id - {}, todo id - {}", project.getProjectId(), todo.getTodoId());
     }
 
 }

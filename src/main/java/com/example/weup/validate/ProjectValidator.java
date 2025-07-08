@@ -47,7 +47,7 @@ public class ProjectValidator {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
         if(project.getProjectDeletedTime() == null) {
-            throw new GeneralException(ErrorInfo.BAD_REQUEST);
+            throw new GeneralException(ErrorInfo.PROJECT_IS_NOT_DELETED);
         }
 
         return project;

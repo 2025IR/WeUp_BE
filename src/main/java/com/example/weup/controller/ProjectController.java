@@ -103,13 +103,4 @@ public class ProjectController {
         return ResponseEntity.ok(DataResponseDTO.of("프로젝트가 복구되었습니다."));
     }
 
-    @PostMapping("/delete/test")
-    public ResponseEntity<DataResponseDTO<String>> deleteTest(@LoginUser Long userId) {
-
-        log.info("요청자 : {}, delete project test -> start", userId);
-        projectService.deleteExpiredProjects();
-
-        log.info("요청자 : {}, delete project test -> success", userId);
-        return ResponseEntity.ok(DataResponseDTO.of("프로젝트가 영구적으로 삭제되었습니다."));
-    }
 }

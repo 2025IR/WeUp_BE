@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -51,8 +52,11 @@ public class ProjectService {
     private final TodoMemberRepository todoMemberRepository;
 
     private final StringRedisTemplate redisTemplate;
+
     private final FileRepository fileRepository;
+
     private final RoleRepository roleRepository;
+
     private final TodoRepository todoRepository;
 
     @Value("${project.default-image}")
@@ -198,14 +202,14 @@ public class ProjectService {
         log.info("restore project -> db save success : project id - {}", project.getProjectId());
     }
 
-    //@Scheduled(cron = "0 0 0 * * *")
+    @Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void deleteExpiredProjects() {
 
-        //LocalDateTime limitTime = LocalDateTime.now().minusDays(90);
-        //List<Project> projectToDelete = projectRepository.findByProjectDeletedTimeBefore(limitTime);
+        LocalDateTime limitTime = LocalDateTime.now().minusDays(90);
+        List<Project> projectToDelete = projectRepository.findByProjectDeletedTimeBefore(limitTime);
 
-        List<Project> projectToDelete = projectRepository.findByProjectDeletedTimeIsNotNull();
+        //List<Project> projectToDelete = projectRepository.findByProjectDeletedTimeIsNotNull();
         log.info("delete project test -> db read data size - {}", projectToDelete.size());
 
         for (Project project : projectToDelete) {
@@ -223,38 +227,35 @@ public class ProjectService {
             List<ChatRoom> chatRoomsToDelete = chatRoomRepository.findByProject(project);
             for (ChatRoom chatRoom : chatRoomsToDelete) {
                 redisTemplate.delete("chat:room:"+chatRoom.getChatRoomId());
-                log.info("\n\n\n\n\n\n\n REDIS 채팅 내역 전체 삭제함 ~");
+                log.info("delete project -> redis db chatting data deleted");
                 chatMessageRepository.deleteByChatRoom(chatRoom);
             }
-            log.info("\n\n\n\n\n\n\n MYSQL 채팅 내역 싹 다 삭제함 ~");
+            log.info("delete project -> Chat Message db data deleted");
             chatRoomRepository.deleteAll(chatRoomsToDelete);
-            log.info("\n\n\n\n\n\n\n 채팅방도 전체 다 삭제함 ~ ~");
+            log.info("delete project -> Chat Room db data deleted");
 
             List<Member> membersToDelete = memberRepository.findByProject(project);
             for (Member member : membersToDelete) {
-                log.info("\n\n\n\n\n\n\n member 시작할게욥 ㅋㅋ;;");
-                log.info("member id: {}, project class: {}", member.getMemberId(), member.getProject().getClass().getName());
-                log.info("project id: {}", member.getProject().getProjectId());
+                log.info("delete project -> db read success : project id: {}, member id : {}", member.getProject().getProjectId(), member.getMemberId());
 
                 memberRoleRepository.deleteByMember(member);
-                log.info("\n\n\n\n\n\n\n 멤버 역할 (member role) 삭제함 ;;;;;");
+                log.info("delete project -> Member Role db data deleted");
 
                 todoMemberRepository.deleteByMember(member);
-                log.info("\n\n\n\n\n\n\n 투두 담당 멤버 역할 (todo member) 삭제함 @@@@@");
+                log.info("delete project -> Todo Member db data deleted");
             }
 
             roleRepository.deleteByProject(project);
-            log.info("\n\n\n\n\n\n\n 프로젝트에 있는 역할 (role) 전~부 삭제함. !!! ");
+            log.info("delete project -> Role db data deleted");
 
             todoRepository.deleteByProject(project);
-            log.info("\n\n\n\n\n\n\n 프로젝트에 있는 투두 (todo) 전~부 삭제함. @@@ ");
+            log.info("delete project -> Todo db data deleted");
 
             memberRepository.deleteAll(membersToDelete);
-            log.info("\n\n\n\n\n\n\n member 지움 ;;;");
+            log.info("delete project -> Member db data deleted");
         }
 
-        log.info("\n\n\n\n\n\n\n 프로젝트 지운다 ? ?");
         projectRepository.deleteAll(projectToDelete);
-        log.info("\n\n\n\n\n\n\n 프로젝트 지웠다 ~ ~ ~");
+        log.info("delete project -> Project db data deleted");
     }
 }

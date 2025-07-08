@@ -11,9 +11,9 @@ import com.example.weup.entity.ChatRoom;
 import com.example.weup.entity.Member;
 import com.example.weup.entity.User;
 import com.example.weup.repository.ChatMessageRepository;
-import com.example.weup.repository.ChatRoomRepository;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.UserRepository;
+import com.example.weup.validate.ChatValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -36,8 +36,6 @@ public class ChatService{
 
     private final ChatMessageRepository chatMessageRepository;
 
-    private final ChatRoomRepository chatRoomRepository;
-
     private final UserRepository userRepository;
 
     private final MemberRepository memberRepository;
@@ -50,6 +48,8 @@ public class ChatService{
 
     private final SimpMessagingTemplate messagingTemplate;
 
+    private final ChatValidator chatValidator;
+
     @Transactional
     public ReceiveMessageResponseDto saveChatMessage(Long roomId, SendMessageRequestDto dto) throws JsonProcessingException {
 
@@ -57,8 +57,7 @@ public class ChatService{
         String jsonMessage = objectMapper.writeValueAsString(dto);
 
         redisTemplate.opsForList().rightPush(key, jsonMessage);
-        log.debug("send message service 진입");
-        log.debug("redis 저장 여부 확인" + redisTemplate.opsForList().index(key, -1));
+        log.info("websocket send chatting -> db read success : room id - {}, sender id - {}", roomId, dto.getSenderId());
 
         User sendUser = userRepository.findById(dto.getSenderId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
@@ -76,23 +75,8 @@ public class ChatService{
     @Transactional
     public void handleImageMessage(SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
 
-        log.debug("handle image message service 진입");
-        log.debug(String.valueOf(sendImageMessageRequestDTO.getProjectId()));
-        log.debug(String.valueOf(sendImageMessageRequestDTO.getRoomId()));
-        log.debug(String.valueOf(sendImageMessageRequestDTO.getUserId()));
-
         if (sendImageMessageRequestDTO.getFile() == null || sendImageMessageRequestDTO.getFile().isEmpty()) {
             throw new GeneralException(ErrorInfo.FILE_UPLOAD_FAILED);
-        }
-
-        Optional<Member> memberOpt = memberRepository.findByUser_UserIdAndProject_ProjectId(Long.parseLong(sendImageMessageRequestDTO.getUserId()), Long.parseLong(sendImageMessageRequestDTO.getProjectId()));
-
-        if (memberOpt.isEmpty()) {
-            log.error("Member 조회 실패: userId={}, projectId={}",
-                    sendImageMessageRequestDTO.getUserId(),
-                    sendImageMessageRequestDTO.getProjectId()
-            );
-            throw new GeneralException(ErrorInfo.TODO_NOT_FOUND);
         }
 
         String storedFileName = s3Service.uploadSingleFile(sendImageMessageRequestDTO.getFile()).getStoredFileName();
@@ -120,13 +104,14 @@ public class ChatService{
     @Scheduled(fixedDelay = 300000)
     public void flushAllRooms() throws JsonProcessingException {
 
-        log.debug("flush all rooms 실행 시간");
         LocalDateTime now = LocalDateTime.now();
-        log.debug(String.valueOf(now));
+        log.info("flush all rooms chatting -> start, time : {}", now);
 
         List<Long> activeRoomIds = getAllActiveRoomIds();
+        log.info("flush all rooms chatting -> db read success : data size : {}", activeRoomIds.size());
 
         for (Long roomId : activeRoomIds) {
+            log.info("flush all rooms chatting -> db read success : room id : {}", roomId);
             String key = "chat:room:" + roomId;
             flushMessagesToDb(roomId, key);
         }
@@ -143,7 +128,7 @@ public class ChatService{
         return keys.stream()
                 .map(key -> {
                     String[] parts = key.split(":");
-                    return Long.parseLong(parts[2]);  // roomId만 추출
+                    return Long.parseLong(parts[2]);
                 })
                 .collect(Collectors.toList());
     }
@@ -156,9 +141,7 @@ public class ChatService{
 
             List<ChatMessage> chatMessageList = new ArrayList<>();
 
-            ChatRoom chatRoom = chatRoomRepository.findById(roomId)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
-
+            ChatRoom chatRoom = chatValidator.validateChatRoom(roomId);
             for (String json : messages) {
                 SendMessageRequestDto dto = objectMapper.readValue(json, SendMessageRequestDto.class);
 
@@ -177,8 +160,10 @@ public class ChatService{
             }
 
             chatMessageRepository.saveAll(chatMessageList);
+            log.info("flush chat message to db -> success : data size - {}", chatMessageList.size());
 
             redisTemplate.delete(key);
+            log.info("flush chat message to db -> success : delete redis key - {}", key);
         }
     }
 
@@ -186,8 +171,7 @@ public class ChatService{
     public ChatPageResponseDto getChatMessages(Long roomId, int page, int size) throws JsonProcessingException {
 
         List<ChatMessage> chatMessages = chatMessageRepository.findByChatRoom_ChatRoomId(roomId);
-        log.debug("get mysql chat messages 개수 확인");
-        log.debug(String.valueOf(chatMessages.size()));
+        log.info("get chat message -> db read success : data size : {}", chatMessages.size());
 
         String key = "chat:room:" + roomId;
         List<String> redisMessages = redisTemplate.opsForList().range(key, 0, -1);
@@ -195,12 +179,9 @@ public class ChatService{
         List<ChatMessage> redisChatMessages = new ArrayList<>();
 
         if (redisMessages != null) {
-            log.debug("get redis chat messages 개수 확인");
-            log.debug(String.valueOf(redisMessages.size()));
+            log.info("get redis chat message -> redis db read success : data size : {}", redisMessages.size());
 
-            ChatRoom chatRoom = chatRoomRepository.findById(roomId)
-                    .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
-
+            ChatRoom chatRoom = chatValidator.validateChatRoom(roomId);
             for (String json : redisMessages) {
                 SendMessageRequestDto dto = objectMapper.readValue(json, SendMessageRequestDto.class);
 
@@ -229,9 +210,6 @@ public class ChatService{
         int end = Math.min(start + size, totalSize);
         boolean isLastPage = end >= totalSize;
 
-        log.debug("계산 값 확인하기");
-        log.debug("totalSize: " + totalSize + ", start: " + start + ", end: " + end + ", isLastPage: " + isLastPage);
-
         List<ReceiveMessageResponseDto> messages = combinedMessages.subList(start, end).stream()
                 .map(msg -> ReceiveMessageResponseDto.builder()
                         .senderId(msg.getUser().getUserId())
@@ -246,18 +224,7 @@ public class ChatService{
         List<ReceiveMessageResponseDto> reverseMessages = new ArrayList<>(messages);
         Collections.reverse(reverseMessages);
 
-        log.debug("첫 번째 값 확인");
-        log.debug(messages.getFirst().getMessage());
-        log.debug(messages.getFirst().getSenderName());
-        log.debug(String.valueOf(messages.getFirst().getSentAt()));
-        log.debug(String.valueOf(messages.getFirst().getSenderId()));
-
-        log.debug("마지막 값 확인");
-        log.debug(messages.getLast().getMessage());
-        log.debug(messages.getLast().getSenderName());
-        log.debug(String.valueOf(messages.getLast().getSentAt()));
-        log.debug(String.valueOf(messages.getLast().getSenderId()));
-
+        log.info("get chat message -> success : db size - {}", reverseMessages.size());
         return ChatPageResponseDto.builder()
                 .messageList(reverseMessages)
                 .page(page)
