@@ -209,15 +209,15 @@ public class ProjectService {
         log.info("delete project test -> db read data size - {}", projectToDelete.size());
 
         for (Project project : projectToDelete) {
-            log.info("delete project -> db delete success : project id - {}", project.getProjectId());
+            log.info("delete project -> db read success : project id - {}", project.getProjectId());
 
             List<Board> boardsToDelete = boardRepository.findByProject(project);
             for (Board board : boardsToDelete) {
-                log.info("\n\n\n\n\n\n\n 파일 내역 먼저 지울게요 ~");
                 fileRepository.deleteByBoard(board);
+                log.info("delete project -> File db data deleted");
             }
-            log.info("\n\n\n\n\n\n\n 이제 보드 지웁니다 ~ ~");
             boardRepository.deleteByProject(project);
+            log.info("delete project -> Board db data deleted");
 
             // 채팅방, 채팅 메시지
             List<ChatRoom> chatRoomsToDelete = chatRoomRepository.findByProject(project);
