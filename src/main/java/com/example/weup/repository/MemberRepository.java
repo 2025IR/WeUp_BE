@@ -32,5 +32,11 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     List<Member> findAllByUser_UserId(Long userId);
 
+    List<Member> findByUser_UserIdAndIsLeaderTrue(Long userId);
+
+    Optional<Member> findFirstByProjectAndUser_UserIdNotOrderByMemberIdAsc(Project project, Long userId);
+
+    List<Member> findByUser(User user);
+
     List<Member> findByProject(Project project);
 }

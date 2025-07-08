@@ -1,24 +1,24 @@
 package com.example.weup.controller;
 
+import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
 import com.example.weup.dto.request.PasswordRequestDTO;
 import com.example.weup.dto.request.ProfileEditRequestDTO;
+import com.example.weup.dto.request.RestoreUserRequestDTO;
 import com.example.weup.dto.request.SignUpRequestDto;
-import com.example.weup.dto.request.TokenRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
+import com.example.weup.security.JwtCookieFactory;
 import com.example.weup.security.JwtDto;
-import com.example.weup.security.JwtUtil;
 import com.example.weup.service.UserService;
-import jakarta.servlet.http.HttpServletRequest;
+import jakarta.validation.Valid;
+import org.springframework.http.HttpHeaders;
 import lombok.RequiredArgsConstructor;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.Map;
-
-//TODO. 여기 response entity의 message 부분이 다른 곳이랑 형태가 아예 다름... 수정하기 !
-//TODO. ResponseEntity.ok(DataResponseDTO.of()); 형태로 수정하기
 
 @RestController
 @RequestMapping("/user")
@@ -27,71 +27,78 @@ public class UserController {
 
     private final UserService userService;
 
-    private final JwtUtil jwtUtil;
-
     @PostMapping("/signup")
     public ResponseEntity<DataResponseDTO<String>> signUp(@RequestBody SignUpRequestDto signUpRequestDto) {
 
         userService.signUp(signUpRequestDto);
-
-        String username = signUpRequestDto.getName();
-        String message = "회원가입하신 걸 환영합니다, " + username + "님!";
         
-        return ResponseEntity.ok(DataResponseDTO.of(message));
+        return ResponseEntity.ok(DataResponseDTO.of("회원가입이 완료되었습니다."));
     }
 
     @PostMapping("/profile")
-    public ResponseEntity<DataResponseDTO<GetProfileResponseDTO>> profile(HttpServletRequest request) {
+    public ResponseEntity<DataResponseDTO<GetProfileResponseDTO>> profile(@LoginUser Long userId) {
 
-        String token = jwtUtil.resolveToken(request);
+        GetProfileResponseDTO getProfileResponseDTO = userService.getProfile(userId);
 
-        GetProfileResponseDTO getProfileResponseDTO = userService.getProfile(token);
-
-        return ResponseEntity.ok(DataResponseDTO.of(getProfileResponseDTO, "프로필 조회 완료"));
+        return ResponseEntity.ok(DataResponseDTO.of(getProfileResponseDTO, "프로필 조회가 완료되었습니다."));
     }
 
     @PostMapping("/reissuetoken")
     public ResponseEntity<DataResponseDTO<JwtDto>> reissueToken(
             @CookieValue(name = "refresh_token", required = false) String refreshToken) {
 
-        return userService.reissueToken(refreshToken);
+        JwtDto jwtDto = userService.reissueToken(refreshToken);
+        ResponseCookie cookie = JwtCookieFactory.createRefreshCookie(jwtDto.getRefreshToken());
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(DataResponseDTO.of(jwtDto.withoutRefreshToken(), "토큰 재발급이 완료되었습니다."));
     }
 
     @PostMapping("/password")
-    public ResponseEntity<DataResponseDTO<String>> changePassword(HttpServletRequest request, @RequestBody PasswordRequestDTO passwordRequestDTO) {
+    public ResponseEntity<DataResponseDTO<String>> changePassword(@LoginUser Long userId, @RequestBody PasswordRequestDTO passwordRequestDTO) {
 
-        String token = jwtUtil.resolveToken(request);
+        userService.changePassword(userId, passwordRequestDTO);
 
-        userService.changePassword(token, passwordRequestDTO);
-
-        String message = "비밀번호가 성공적으로 변경되었습니다.";
-        return ResponseEntity.ok(DataResponseDTO.of(message));
+        return ResponseEntity.ok(DataResponseDTO.of("비밀번호가 성공적으로 변경되었습니다."));
     }
 
     @PutMapping("/profile/edit")
-    public ResponseEntity<DataResponseDTO<String>> editProfile(HttpServletRequest request,
-                                                               @ModelAttribute ProfileEditRequestDTO profileEditRequestDTO) throws IOException {
+    public ResponseEntity<DataResponseDTO<String>> editProfile(@LoginUser Long userId,
+                                                               @Valid @ModelAttribute ProfileEditRequestDTO profileEditRequestDTO) throws IOException {
 
-        String token = jwtUtil.resolveToken(request);
-
-        userService.editProfile(
-                token,
-                profileEditRequestDTO.getName(),
-                profileEditRequestDTO.getPhoneNumber(),
-                profileEditRequestDTO.getProfileImage());
+        userService.editProfile(userId, profileEditRequestDTO);
 
         return ResponseEntity.ok(DataResponseDTO.of("회원 정보가 성공적으로 수정되었습니다."));
     }
 
 
     @PutMapping("/withdraw")
-    public ResponseEntity<DataResponseDTO<String>> withdrawUser(HttpServletRequest request) {
+    public ResponseEntity<DataResponseDTO<String>> withdrawUser(@LoginUser Long userId) {
 
-        String token = jwtUtil.resolveToken(request);
+        userService.withdrawUser(userId);
 
-        userService.withdrawUser(token);
+        return ResponseEntity.ok(DataResponseDTO.of("회원 탈퇴가 완료되었습니다."));
+    }
 
-        String message = "회원 탈퇴가 완료되었습니다.";
-        return ResponseEntity.ok(DataResponseDTO.of(message));
+    @PostMapping("/restore")
+    @PreAuthorize("hasRole('ADMIN')")
+    public ResponseEntity<DataResponseDTO<String>> restoreWithdrawnUser(@RequestBody RestoreUserRequestDTO restoreUserRequestDTO) {
+        userService.restoreWithdrawnUser(restoreUserRequestDTO);
+        return ResponseEntity.ok(DataResponseDTO.of("유저 복구가 완료되었습니다."));
+    }
+
+    @PostMapping("/logout")
+    public ResponseEntity<DataResponseDTO<String>> logout(
+            @LoginUser Long userId,
+            @CookieValue(name = "refresh_token", required = false) String refreshToken) {
+
+        userService.logout(userId, refreshToken);
+
+        ResponseCookie deleteCookie = JwtCookieFactory.deleteRefreshCookie();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, deleteCookie.toString())
+                .body(DataResponseDTO.of("로그아웃이 완료되었습니다."));
     }
 }

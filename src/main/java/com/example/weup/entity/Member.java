@@ -22,7 +22,7 @@ public class Member {
     private Long memberId;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -44,7 +44,23 @@ public class Member {
     @Builder.Default
     private boolean isLeader = false;
 
+    public void promoteToLeader() {
+        this.isLeader = true;
+    }
+
+    public void demoteFromLeader() {
+        this.isLeader = false;
+    }
+
+    public void markAsDeleted() {
+        this.isMemberDeleted = true;
+    }
+
+    public void restoreMember() {
+        this.isMemberDeleted = false;
+    }
+
     public void editSchedule(String availableTime) {
         this.availableTime = availableTime;
     }
-} 
+}

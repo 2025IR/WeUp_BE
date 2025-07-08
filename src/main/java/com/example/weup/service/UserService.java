@@ -2,12 +2,11 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.dto.request.SignUpRequestDto;
-import com.example.weup.dto.request.PasswordRequestDTO;
-import com.example.weup.dto.response.DataResponseDTO;
+import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.GetProfileResponseDTO;
 import com.example.weup.entity.AccountSocial;
 import com.example.weup.entity.Member;
+import com.example.weup.entity.Project;
 import com.example.weup.entity.User;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.UserRepository;
@@ -16,15 +15,14 @@ import com.example.weup.security.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.ResponseCookie;
-import org.springframework.http.ResponseEntity;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Optional;
 
 @Service
 @RequiredArgsConstructor
@@ -47,7 +45,6 @@ public class UserService {
 
     @Transactional
     public void signUp(SignUpRequestDto signUpRequestDto) {
-
         String email = signUpRequestDto.getEmail();
         if (!mailService.isEmailVerified(email)) {
             throw new GeneralException(ErrorInfo.EMAIL_NOT_VERIFIED);
@@ -65,15 +62,13 @@ public class UserService {
                 .user(signUpUser)
                 .build();
 
-        signUpUser.setAccountSocial(accountSocial);
+        signUpUser.linkAccount(accountSocial);
 
         userRepository.save(signUpUser);
     }
 
     @Transactional
-    public GetProfileResponseDTO getProfile(String token) {
-        Long userId = jwtUtil.getUserId(token);
-
+    public GetProfileResponseDTO getProfile(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
@@ -85,7 +80,7 @@ public class UserService {
                 .build();
     }
 
-    public ResponseEntity<DataResponseDTO<JwtDto>> reissueToken(String refreshToken) {
+    public JwtDto reissueToken(String refreshToken) {
         if (refreshToken == null) {
             throw new GeneralException(ErrorInfo.REFRESH_TOKEN_NOT_FOUND);
         }
@@ -95,33 +90,24 @@ public class UserService {
         }
 
         Long userId = jwtUtil.getUserId(refreshToken);
+
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
         String newAccessToken = jwtUtil.createAccessToken(userId, user.getRole());
         String newRefreshToken = jwtUtil.createRefreshToken(userId);
 
-        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", newRefreshToken)
-                .httpOnly(true)
-                .secure(true)
-                .path("/")
-                .sameSite("Strict")
-                .maxAge(7 * 24 * 60 * 60)
-                .build();
+        user.renewalToken(newRefreshToken);
 
-        JwtDto jwtDto = JwtDto.builder()
+        return JwtDto.builder()
                 .accessToken(newAccessToken)
+                .refreshToken(newRefreshToken)
+                .userId(userId)
                 .build();
-
-        return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
-                .body(DataResponseDTO.of(jwtDto, "토큰 재발급 완료"));
     }
 
     @Transactional
-    public void changePassword(String token, PasswordRequestDTO passwordRequestDTO) {
-
-        Long userId = jwtUtil.getUserId(token);
+    public void changePassword(Long userId, PasswordRequestDTO passwordRequestDTO) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
@@ -129,45 +115,100 @@ public class UserService {
             throw new GeneralException(ErrorInfo.UNAUTHORIZED);
         }
 
-        user.getAccountSocial().setPassword(passwordEncoder.encode(passwordRequestDTO.getNewPassword()));
+        user.getAccountSocial().changePassword(passwordEncoder.encode(passwordRequestDTO.getNewPassword()));
     }
 
     @Transactional
-    public void editProfile(String token, String name, String phoneNumber, MultipartFile file) throws IOException {
-        Long userId = jwtUtil.getUserId(token);
+    public void editProfile(Long userId, ProfileEditRequestDTO profileEditRequestDTO) throws IOException {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-        if (name != null) {
-            user.setName(name.trim());
-        }
+        user.editName(profileEditRequestDTO.getName())
+            .editPhoneNumber(profileEditRequestDTO.getPhoneNumber());
 
-        if (phoneNumber != null) {
-            user.setPhoneNumber(phoneNumber.trim());
-        }
-
-        if (file != null && !file.isEmpty()) {
+        if (profileEditRequestDTO.getProfileImage() != null && !profileEditRequestDTO.getProfileImage().isEmpty()) {
             String existingImage = user.getProfileImage();
             if (existingImage != null && !existingImage.isEmpty()) {
                 s3Service.deleteFile(existingImage);
             }
 
-            String storedFileName = s3Service.uploadSingleFile(file).getStoredFileName();
-            user.setProfileImage(storedFileName);
+            String storedFileName = s3Service.uploadSingleFile(profileEditRequestDTO.getProfileImage()).getStoredFileName();
+            user.updateProfileImage(storedFileName);
         }
     }
 
     @Transactional
-    public void withdrawUser(String token) {
-        Long userId = jwtUtil.getUserId(token);
+    public void withdrawUser(Long userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-        user.setUserWithdrawal(true);
+        user.withdraw();
+
+        List<Member> leaders = memberRepository.findByUser_UserIdAndIsLeaderTrue(userId);
+
+        for (Member leader : leaders) {
+            Project project = leader.getProject();
+
+            Optional<Member> nextLeaderOpt = memberRepository
+                    .findFirstByProjectAndUser_UserIdNotOrderByMemberIdAsc(project, userId);
+
+            if (nextLeaderOpt.isPresent()) {
+                Member nextLeader = nextLeaderOpt.get();
+                nextLeader.promoteToLeader();
+            } else {
+                // todo. 프로젝트 삭제 로직 추가
+            }
+
+            leader.demoteFromLeader();
+        }
 
         List<Member> memberList = memberRepository.findAllByUser_UserId(userId);
         for (Member member : memberList) {
-            member.setMemberDeleted(true);
+            member.markAsDeleted();
         }
+    }
+
+    @Scheduled(cron = "0 0 0 * * *")
+    @Transactional
+    public void deleteExpiredUsers() {
+        LocalDateTime threshold = LocalDateTime.now().minusDays(90);
+        List<User> expiredUsers = userRepository.findAllByDeletedAtBefore(threshold);
+
+        for (User user : expiredUsers) {
+            List<Member> members = memberRepository.findByUser(user);
+            for (Member member : members) {
+                member.setUser(null);
+            }
+            memberRepository.saveAll(members);
+            userRepository.delete(user);
+        }
+    }
+
+    @Transactional
+    public void restoreWithdrawnUser(RestoreUserRequestDTO restoreUserRequestDTO) {
+        User user = userRepository.findById(restoreUserRequestDTO.getUserId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+        if (user.getDeletedAt() == null) {
+            throw new GeneralException(ErrorInfo.USER_IS_NOT_WITHDRAWN);
+        }
+
+        user.restore();
+
+        List<Member> memberList = memberRepository.findAllByUser_UserId(restoreUserRequestDTO.getUserId());
+        for (Member member : memberList) {
+            member.restoreMember();
+        }
+    }
+
+    public void logout(Long userId, String refreshToken) {
+        if (refreshToken == null || refreshToken.isBlank()) {
+            throw new GeneralException(ErrorInfo.REFRESH_TOKEN_NOT_FOUND);
+        }
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+        user.clearRefreshToken();
     }
 }

@@ -1,5 +1,6 @@
 package com.example.weup.controller;
 
+import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
 import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.TodoListResponseDTO;
@@ -19,14 +20,9 @@ public class TodoController {
 
     private final TodoService todoService;
 
-    private final JwtUtil jwtUtil;
-
     @PostMapping("/create")
-    public ResponseEntity<DataResponseDTO<String>> createTodo(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<String>> createTodo(@LoginUser Long userId,
                                                               @RequestBody CreateTodoRequestDTO createTodoRequestDTO) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
 
         todoService.createTodo(userId, createTodoRequestDTO);
 
@@ -34,11 +30,8 @@ public class TodoController {
     }
 
     @PostMapping("/list/{projectId}")
-    public ResponseEntity<DataResponseDTO<List<TodoListResponseDTO>>> getTodoList(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<List<TodoListResponseDTO>>> getTodoList(@LoginUser Long userId,
                                                                                   @PathVariable Long projectId) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
 
         List<TodoListResponseDTO> todos = todoService.getTodoList(userId, projectId);
 
@@ -46,11 +39,8 @@ public class TodoController {
     }
 
     @PutMapping("/edit")
-    public ResponseEntity<DataResponseDTO<String>> editTodo(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<String>> editTodo(@LoginUser Long userId,
                                                             @RequestBody EditTodoRequestDTO editTodoRequestDTO) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
 
         todoService.editTodo(userId, editTodoRequestDTO);
 
@@ -58,11 +48,8 @@ public class TodoController {
     }
 
     @PutMapping("/state")
-    public ResponseEntity<DataResponseDTO<String>> editTodoStatus(HttpServletRequest request,
+    public ResponseEntity<DataResponseDTO<String>> editTodoStatus(@LoginUser Long userId,
                                                                   @RequestBody EditTodoStatusRequestDTO editTodoStatusRequestDTO) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
 
         todoService.editTodoStatus(userId, editTodoStatusRequestDTO);
 
@@ -70,10 +57,8 @@ public class TodoController {
     }
 
     @DeleteMapping("/delete/{todoId}")
-    public ResponseEntity<DataResponseDTO<String>> deleteTodo(HttpServletRequest request, @PathVariable Long todoId) {
-
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
+    public ResponseEntity<DataResponseDTO<String>> deleteTodo(@LoginUser Long userId,
+                                                              @PathVariable Long todoId) {
 
         todoService.deleteTodo(userId, todoId);
 

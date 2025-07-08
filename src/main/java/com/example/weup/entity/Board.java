@@ -41,4 +41,11 @@ public class Board {
 
     @Column(name= "contents")
     private String contents;
+
+    public void editBoard(String title, String contents, Tag tag) {
+        this.title = title;
+        this.contents = contents;
+        this.tag = tag;
+    }
+
 }

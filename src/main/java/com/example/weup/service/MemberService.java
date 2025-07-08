@@ -194,8 +194,8 @@ public class MemberService {
                 throw new GeneralException(ErrorInfo.DELETED_MEMBER);
             }
 
-            formerLeaderMember.setLeader(false);
-            newLeaderMember.setLeader(true);
+            formerLeaderMember.demoteFromLeader();
+            newLeaderMember.promoteToLeader();
 
             memberRepository.save(formerLeaderMember);
             memberRepository.save(newLeaderMember);
@@ -258,7 +258,7 @@ public class MemberService {
                 throw new GeneralException(ErrorInfo.FORBIDDEN);
             }
 
-            targetMember.setMemberDeleted(true);
+            targetMember.markAsDeleted();
             memberRepository.save(targetMember);
 
         } catch (GeneralException e) {
@@ -365,8 +365,7 @@ public class MemberService {
                 return;
             }
 
-            role.setRoleName(roleName);
-            role.setRoleColor(roleColor);
+            role.editRole(roleName, roleColor);
 
             roleRepository.save(role);
 

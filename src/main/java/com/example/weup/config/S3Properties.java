@@ -6,7 +6,7 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.context.annotation.Configuration;
 
 @Getter
-@Setter  //TODO. Setter 없어도 될 것 같은데
+@Setter
 @Configuration
 @ConfigurationProperties(prefix = "aws.s3")
 public class S3Properties {

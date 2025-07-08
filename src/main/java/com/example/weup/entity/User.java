@@ -6,6 +6,7 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.LocalDateTime;
 import java.util.Collection;
 import java.util.List;
 
@@ -42,6 +43,9 @@ public class User implements UserDetails {
 
     @Column(name = "is_user_withdrawal", nullable = false)
     private boolean isUserWithdrawal;
+
+    @Column(name = "deleted_at")
+    private LocalDateTime deletedAt;
 
     @Column(name = "refresh_token")
     private String refreshToken;
@@ -82,5 +86,43 @@ public class User implements UserDetails {
     @Override
     public boolean isEnabled() {
         return !isUserWithdrawal;
+    }
+
+    public void withdraw() {
+        this.isUserWithdrawal = true;
+        this.deletedAt = LocalDateTime.now();
+        this.refreshToken = null;
+    }
+
+    public void restore() {
+        this.isUserWithdrawal = false;
+        this.deletedAt = null;
+    }
+
+    public void renewalToken(String refreshToken) {
+        this.refreshToken = refreshToken;
+    }
+
+    public void linkAccount(AccountSocial accountSocial) {
+        this.accountSocial = accountSocial;
+        accountSocial.assignUser(this);
+    }
+
+    public User editName(String name) {
+        this.name = name;
+        return this;
+    }
+
+    public User editPhoneNumber(String phoneNumber) {
+        this.phoneNumber = phoneNumber;
+        return this;
+    }
+
+    public void updateProfileImage(String profileImage) {
+        this.profileImage = profileImage;
+    }
+
+    public void clearRefreshToken() {
+        this.refreshToken = null;
     }
 }

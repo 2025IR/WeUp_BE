@@ -19,42 +19,21 @@ public class MailController {
 
     private final MailService mailService;
 
-    //TODO. try-catch 문은 service에서 터지는 에러를 잡는거니까 service에 있는게 좋지 않을까...
     @PostMapping("/email")
     public ResponseEntity<DataResponseDTO<HashMap<String, Object>>> sendMail(@RequestBody MailRequestDTO mailRequestDTO) {
-        try {
-            String mail = mailRequestDTO.getEmail();
+        String mail = mailRequestDTO.getEmail();
 
-            mailService.validateEmailNotRegistered(mail);
-            
-            mailService.sendMail(mail);
+        mailService.validateEmailNotRegistered(mail);
+        mailService.sendMail(mail);
 
-            return ResponseEntity.ok(DataResponseDTO.of("이메일 전송이 완료되었습니다."));
-        } catch (Exception e) {
-            throw new GeneralException(ErrorInfo.EMAIL_SEND_FAILED);
-        }
+        return ResponseEntity.ok(DataResponseDTO.of("이메일 전송이 완료되었습니다."));
     }
 
     @PostMapping("/email/check")
-    public ResponseEntity<DataResponseDTO<String>> mailCheck(@RequestBody MailCheckRequestDTO mailCheckRequestDTO) {
+    public ResponseEntity<DataResponseDTO<String>> mailCheck(@RequestBody MailCheckRequestDTO dto) {
+        mailService.verifyEmailCode(dto);
 
-        String mail = mailCheckRequestDTO.getEmail();
-        int checkCode;
-
-        //TODO. 이런 예외처리도... service가 좋지 않을까...
-        try {
-            checkCode = Integer.parseInt(mailCheckRequestDTO.getCheckCode());
-        } catch (NumberFormatException e) {
-            throw new GeneralException(ErrorInfo.BAD_REQUEST);  //TODO. bad request ?
-        }
-
-        boolean isMatch = mailService.checkVerificationNumber(mail, checkCode);
-
-        //TODO. 얘는 무조건 service. 이런 평가는 service 에서 진행하기
-        if (isMatch) {
-            return ResponseEntity.ok(DataResponseDTO.of("이메일 인증이 완료되었습니다. 회원가입을 진행해주세요."));
-        } else {
-            throw new GeneralException(ErrorInfo.EMAIL_VERIFICATION_FAILED);
-        }
+        return ResponseEntity.ok(DataResponseDTO.of("이메일 인증이 완료되었습니다. 회원가입을 진행해주세요."));
     }
+
 }

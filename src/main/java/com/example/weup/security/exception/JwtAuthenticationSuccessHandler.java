@@ -1,9 +1,8 @@
 package com.example.weup.security.exception;
 
-import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.response.DataResponseDTO;
-import com.example.weup.dto.response.ErrorResponseDTO;
 import com.example.weup.entity.User;
+import com.example.weup.security.JwtCookieFactory;
 import com.example.weup.security.JwtDto;
 import com.example.weup.security.JwtUtil;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,13 +33,9 @@ public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHan
         String accessToken = jwtUtil.createAccessToken(user.getUserId(), user.getRole());
         String refreshToken = jwtUtil.createRefreshToken(user.getUserId());
 
-        ResponseCookie refreshCookie = ResponseCookie.from("refresh_token", refreshToken)
-                .httpOnly(true)
-                .secure(false) //todo. 나중에 배포 시 true로
-                .path("/")
-                .sameSite("Strict") //todo. lax, None 확인해서 CORS 프론트 보고 수정하기
-                .maxAge(7 * 24 * 60 * 60) // 7일
-                .build();
+        user.renewalToken(refreshToken);
+
+        ResponseCookie refreshCookie = JwtCookieFactory.createRefreshCookie(refreshToken);
 
         JwtDto jwtDto = JwtDto.builder()
                 .accessToken(accessToken)
@@ -58,4 +53,3 @@ public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHan
         log.info("로그인 성공 - USER_ID : {}", user.getUserId());
     }
 }
-
