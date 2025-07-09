@@ -1,0 +1,29 @@
+name: Deploy to Ubuntu Server
+
+on:
+  push:
+    branches: [ dev ]
+
+jobs:
+  deploy:
+    name: SSH deploy to server
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 1. Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 2. Set up SSH
+        uses: webfactory/ssh-agent@v0.8.0
+        with:
+          ssh-private-key: ${{ secrets.SSH_PRIVATE_KEY }}
+
+      - name: 3. Deploy via SSH
+        run: |
+          ssh -o StrictHostKeyChecking=no ${{ secrets.REMOTE_USER }}@${{ secrets.REMOTE_HOST }} << 'EOF'
+            cd ~/deploy/weup
+            git pull origin dev
+
+            sudo docker compose down
+            sudo docker compose up --build -d
+          EOF
