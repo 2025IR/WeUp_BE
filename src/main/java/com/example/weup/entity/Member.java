@@ -59,4 +59,8 @@ public class Member {
     public void restoreMember() {
         this.isMemberDeleted = false;
     }
-} 
+
+    public void editSchedule(String availableTime) {
+        this.availableTime = availableTime;
+    }
+}

@@ -1,54 +1,49 @@
 package com.example.weup.controller;
 
+import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
 import com.example.weup.dto.response.DataResponseDTO;
-import com.example.weup.security.JwtUtil;
 import com.example.weup.service.LiveKitService;
-import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+@Slf4j
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/meeting")
 public class LiveKitController {
 
-    private final JwtUtil jwtUtil;
-
     private final LiveKitService liveKitService;
 
     @PostMapping("/enter/{projectId}")
-    public ResponseEntity<DataResponseDTO<String>> enterRoom(@PathVariable Long projectId, HttpServletRequest request) {
+    public ResponseEntity<DataResponseDTO<String>> enterRoom(@LoginUser Long userId, @PathVariable Long projectId) {
 
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
-
+        log.info("요청자 : {}, enter meeting room -> start", userId);
         String liveKitToken = liveKitService.generateLiveKitToken(projectId, userId);
-
         liveKitService.enterRoom(projectId, userId);
 
+        log.info("요청자 : {}, enter meeting room -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of(liveKitToken, "LiveKit Token 발급이 완료되었습니다."));
     }
 
     @PostMapping("/leave/{projectId}")
-    public ResponseEntity<DataResponseDTO<String>> leaveRoom(@PathVariable Long projectId, HttpServletRequest request) {
+    public ResponseEntity<DataResponseDTO<String>> leaveRoom(@LoginUser Long userId, @PathVariable Long projectId) {
 
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
-
+        log.info("요청자 : {}, leave metting room -> start", userId);
         liveKitService.leaveRoom(projectId, userId);
 
+        log.info("요청자 : {}, leave metting room -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of("회의실 연결이 종료되었습니다."));
     }
 
     @GetMapping("/count/{projectId}")
-    public ResponseEntity<DataResponseDTO<String>> getRoomUserCount(@PathVariable Long projectId, HttpServletRequest request) {
+    public ResponseEntity<DataResponseDTO<String>> getRoomUserCount(@LoginUser Long userId, @PathVariable Long projectId) {
 
-        String token = jwtUtil.resolveToken(request);
-        Long userId = jwtUtil.getUserId(token);
+        log.info("요청자 : {}, get participant count -> start", userId);
+        Long count = liveKitService.getParticipantCount(projectId, userId);
 
-        Long count = liveKitService.getRoomUserCount(projectId, userId);
-
+        log.info("요청자 : {}, get participant count -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of(String.valueOf(count), "화상 회의실 현재 참여 인원 수 조회가 완료되었습니다."));
     }
 
