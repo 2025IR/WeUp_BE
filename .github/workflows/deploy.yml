@@ -15,7 +15,7 @@ jobs:
 
       - name: 2. Pull latest code from dev branch
         run: |
-          cd ~/deploy/weup
+          cd ~/deploy/weup/backend
           git pull origin dev
 
       - name: 3. Restart Docker
