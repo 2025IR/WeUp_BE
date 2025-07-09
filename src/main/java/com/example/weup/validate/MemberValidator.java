@@ -4,6 +4,7 @@ import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.entity.Board;
 import com.example.weup.entity.Member;
+import com.example.weup.entity.Project;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.service.MemberService;
 import lombok.RequiredArgsConstructor;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Component;
 public class MemberValidator {
 
     private final MemberRepository memberRepository;
+
     private final MemberService memberService;
 
     public Member validateActiveMemberInProject(Long userId, Long projectId) {
@@ -30,6 +32,14 @@ public class MemberValidator {
     public void validateBoardWriter(Board board, Member member) {
         if (!board.getMember().getMemberId().equals(member.getMemberId())) {
             throw new GeneralException(ErrorInfo.NOT_WRITER);
+        }
+    }
+
+    public void isLeader(Long userId, Project project) {
+        Member targetMember = validateActiveMemberInProject(userId, project.getProjectId());
+
+        if(!targetMember.isLeader()) {
+            throw new GeneralException(ErrorInfo.NOT_LEADER);
         }
     }
 }

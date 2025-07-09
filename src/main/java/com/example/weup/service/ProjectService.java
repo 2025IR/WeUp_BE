@@ -1,31 +1,29 @@
 package com.example.weup.service;
 
-import com.example.weup.GeneralException;
-import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.ProjectCreateRequestDTO;
 import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
+import com.example.weup.entity.Board;
 import com.example.weup.entity.ChatRoom;
 import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
-import com.example.weup.entity.User;
-import com.example.weup.repository.ChatRoomRepository;
-import com.example.weup.repository.MemberRepository;
-import com.example.weup.repository.ProjectRepository;
-import com.example.weup.repository.UserRepository;
+import com.example.weup.repository.*;
+import com.example.weup.validate.MemberValidator;
+import com.example.weup.validate.ProjectValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
-import org.springframework.web.bind.annotation.ModelAttribute;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Optional;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -37,22 +35,44 @@ public class ProjectService {
 
     private final MemberRepository memberRepository;
 
-    private final UserRepository userRepository;
-
     private final S3Service s3Service;
 
     private final ChatRoomRepository chatRoomRepository;
 
+    private final MemberValidator memberValidator;
+
+    private final ProjectValidator projectValidator;
+
+    private final BoardRepository boardRepository;
+
+    private final ChatMessageRepository chatMessageRepository;
+
+    private final MemberRoleRepository memberRoleRepository;
+
+    private final TodoMemberRepository todoMemberRepository;
+
+    private final StringRedisTemplate redisTemplate;
+
+    private final FileRepository fileRepository;
+
+    private final RoleRepository roleRepository;
+
+    private final TodoRepository todoRepository;
+
+    @Value("${project.default-image}")
+    private String defaultProjectImage;
+
     @Transactional
-    public Project createProject(@ModelAttribute ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
-        String storedFileName = null;
-        MultipartFile image = projectCreateRequestDTO.getFile();
+    public Project createProject(ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
+
+        String storedFileName;
+        MultipartFile image = projectCreateRequestDTO.getProjectImage();
 
 
         if (image != null && !image.isEmpty()) {
             storedFileName = s3Service.uploadSingleFile(image).getStoredFileName();
         } else {
-            storedFileName = "086d1ece-d1dd-424b-97ae-892075355026-smiley1.png";
+            storedFileName = defaultProjectImage;
         }
 
         Project newProject = Project.builder()
@@ -66,15 +86,19 @@ public class ProjectService {
                 .build();
 
         projectRepository.save(newProject);
+        newProject.editProjectRoomName(String.valueOf(newProject.getProjectId()));
+        log.info("create project -> db save success : project id - {}", newProject.getProjectId());
+
         chatRoomRepository.save(chatRoom);
+        log.info("create chat room -> db save success : chat room id - {}", chatRoom.getChatRoomId());
 
         return newProject;
     }
 
-    @Transactional
-    public List<ListUpProjectResponseDTO> listUpProject(Long userId) {
+    public List<ListUpProjectResponseDTO> getProjectList(Long userId) {
 
         List<Member> activeMember = memberRepository.findActiveMemberByUserId(userId);
+        log.info("get project list -> db read success : data size - {}", activeMember.size());
 
         return activeMember.stream().map(member -> {
 
@@ -98,23 +122,21 @@ public class ProjectService {
                             .memberCount(memberCount)
                             .build();
                 })
-                .sorted(Comparator.comparing(ListUpProjectResponseDTO::getProjectCreatedTime).reversed())
+                .sorted(Comparator.comparing(ListUpProjectResponseDTO::getProjectId).reversed())
                 .collect(Collectors.toList());
     }
 
-    @Transactional
-    public DetailProjectResponseDTO detailProject(Long projectId, Long userId) {
+    public DetailProjectResponseDTO getProjectDetail(Long projectId, Long userId) {
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
-
-        Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.FORBIDDEN));
+        Project project = projectValidator.validateAccessToGetProjectDetail(projectId);
+        Member member = memberValidator.validateActiveMemberInProject(userId, projectId);
+        log.info("get project detail -> member validate : member id - {}", member.getMemberId());
 
         return DetailProjectResponseDTO.builder()
                 .projectName(project.getProjectName())
                 .projectImage(s3Service.getPresignedUrl(project.getProjectImage()))
                 .description(project.getDescription())
+                .projectCreatedTime(project.getProjectCreatedTime())
                 .status(project.isStatus())
                 .isRevealedNumber(project.isRevealedNumber())
                 .isLeader(member.isLeader())
@@ -124,48 +146,116 @@ public class ProjectService {
     @Transactional
     public void editProject(Long userId, Long projectId, ProjectEditRequestDTO dto) throws IOException {
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
-
-        if (!isLeader(userId, project)) {
-            throw new GeneralException(ErrorInfo.FORBIDDEN);
-        }
+        Project project = projectValidator.validateActiveProject(projectId);
+        memberValidator.validateActiveMemberInProject(userId, projectId);
+        memberValidator.isLeader(userId, project);
 
         MultipartFile image = dto.getProjectImage();
         if (image != null && !image.isEmpty()) {
             String existingImage = project.getProjectImage();
-
-            if (existingImage != null && !existingImage.isEmpty()) {
-                s3Service.deleteFile(existingImage);
-            }
+            s3Service.deleteFile(existingImage);
 
             String storedFileName = s3Service.uploadSingleFile(image).getStoredFileName();
-            project.setProjectImage(storedFileName);
+            project.editProjectImage(storedFileName);
         }
 
-        project.setProjectName(dto.getProjectName());
-        project.setStatus(dto.isStatus());
-        project.setRevealedNumber(dto.isRevealedNumber());
+        project.editProjectInfo(dto);
+
+        projectRepository.save(project);
+        log.info("edit project information -> db save success : project id - {}", project.getProjectId());
     }
 
     @Transactional
-    public void editProjectDescription(Long projectId, String description) {
+    public void editProjectDescription(Long userId, Long projectId, String description) {
 
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+        Project project = projectValidator.validateActiveProject(projectId);
+        memberValidator.validateActiveMemberInProject(userId, projectId);
 
-        project.setDescription(description);
+        project.editProjectDescription(description);
 
         projectRepository.save(project);
+        log.info("edit project description -> db save success : project id - {}", project.getProjectId());
     }
 
-    private boolean isLeader(Long userId, Project project) {
+    @Transactional
+    public void deleteProject(Long userId, Long projectId) {
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+        Project project = projectValidator.validateAccessToGetProjectDetail(projectId);
+        memberValidator.validateActiveMemberInProject(userId, projectId);
+        memberValidator.isLeader(userId, project);
 
-        Optional<Member> member = memberRepository.findByUserAndProject(user, project);
+        project.editProjectDeletedTime(LocalDateTime.now());
 
-        return member.isPresent() && member.get().isLeader();
+        projectRepository.save(project);
+        log.info("delete project -> db save success : project id - {}", project.getProjectId());
+    }
+
+    @Transactional
+    public void restoreProject(Long userId, Long projectId) {
+
+        Project project = projectValidator.validateRestoreProject(projectId);
+        memberValidator.validateActiveMemberInProject(userId, projectId);
+
+        project.editProjectDeletedTime(null);
+
+        projectRepository.save(project);
+        log.info("restore project -> db save success : project id - {}", project.getProjectId());
+    }
+
+    @Scheduled(cron = "0 0 0 * * *")
+    @Transactional
+    public void deleteExpiredProjects() {
+
+        LocalDateTime limitTime = LocalDateTime.now().minusDays(90);
+        List<Project> projectToDelete = projectRepository.findByProjectDeletedTimeBefore(limitTime);
+
+        //List<Project> projectToDelete = projectRepository.findByProjectDeletedTimeIsNotNull();
+        log.info("delete project test -> db read data size - {}", projectToDelete.size());
+
+        for (Project project : projectToDelete) {
+            log.info("delete project -> db read success : project id - {}", project.getProjectId());
+
+            List<Board> boardsToDelete = boardRepository.findByProject(project);
+            for (Board board : boardsToDelete) {
+                fileRepository.deleteByBoard(board);
+                log.info("delete project -> File db data deleted");
+            }
+            boardRepository.deleteByProject(project);
+            log.info("delete project -> Board db data deleted");
+
+            // 채팅방, 채팅 메시지
+            List<ChatRoom> chatRoomsToDelete = chatRoomRepository.findByProject(project);
+            for (ChatRoom chatRoom : chatRoomsToDelete) {
+                redisTemplate.delete("chat:room:"+chatRoom.getChatRoomId());
+                log.info("delete project -> redis db chatting data deleted");
+                chatMessageRepository.deleteByChatRoom(chatRoom);
+            }
+            log.info("delete project -> Chat Message db data deleted");
+            chatRoomRepository.deleteAll(chatRoomsToDelete);
+            log.info("delete project -> Chat Room db data deleted");
+
+            List<Member> membersToDelete = memberRepository.findByProject(project);
+            for (Member member : membersToDelete) {
+                log.info("delete project -> db read success : project id: {}, member id : {}", member.getProject().getProjectId(), member.getMemberId());
+
+                memberRoleRepository.deleteByMember(member);
+                log.info("delete project -> Member Role db data deleted");
+
+                todoMemberRepository.deleteByMember(member);
+                log.info("delete project -> Todo Member db data deleted");
+            }
+
+            roleRepository.deleteByProject(project);
+            log.info("delete project -> Role db data deleted");
+
+            todoRepository.deleteByProject(project);
+            log.info("delete project -> Todo db data deleted");
+
+            memberRepository.deleteAll(membersToDelete);
+            log.info("delete project -> Member db data deleted");
+        }
+
+        projectRepository.deleteAll(projectToDelete);
+        log.info("delete project -> Project db data deleted");
     }
 }

@@ -21,7 +21,7 @@ public class ChatRoom {
     @Column(name = "chatroom_id", nullable = false, updatable = false)
     private Long chatRoomId;
 
-    @OneToOne
+    @OneToOne(fetch = FetchType.EAGER)
     private Project project;
 
     @Column(name = "created_at", nullable = false)

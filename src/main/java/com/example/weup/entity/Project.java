@@ -1,9 +1,11 @@
 package com.example.weup.entity;
 
+import com.example.weup.dto.request.ProjectEditRequestDTO;
 import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -42,6 +44,9 @@ public class Project {
     @Column(name = "project_ended_time")
     private LocalDate projectEndedTime;
 
+    @Column(name = "project_deleted_time")
+    private LocalDateTime projectDeletedTime;
+
     @Column(name = "is_revealed_number", nullable = false)
     @Builder.Default
     private boolean isRevealedNumber = false;
@@ -52,5 +57,28 @@ public class Project {
     @OneToMany(mappedBy = "project", cascade = CascadeType.REMOVE)
     @Builder.Default
     private List<Member> members = new ArrayList<>();
+
+
+    public void editProjectInfo(ProjectEditRequestDTO dto) {
+        this.projectName = dto.getProjectName();
+        this.status = dto.isStatus();
+        this.isRevealedNumber = dto.isRevealedNumber();
+    }
+
+    public void editProjectImage(String image) {
+        this.projectImage = image;
+    }
+
+    public void editProjectDescription(String description) {
+        this.description = description;
+    }
+
+    public void editProjectRoomName(String roomName) {
+        this.roomName = roomName;
+    }
+
+    public void editProjectDeletedTime(LocalDateTime deletedTime) {
+        this.projectDeletedTime = deletedTime;
+    }
 
 }

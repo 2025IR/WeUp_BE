@@ -29,10 +29,15 @@ import java.util.Optional;
 public class UserService {
 
     private final UserRepository userRepository;
+
     private final MemberRepository memberRepository;
+
     private final JwtUtil jwtUtil;
+
     private final PasswordEncoder passwordEncoder;
+
     private final MailService mailService;
+
     private final S3Service s3Service;
 
     @Value("${user.default-profile-image}")
