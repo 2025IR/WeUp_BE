@@ -76,7 +76,7 @@ public class AiChatService {
 
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(jsonBody, headers);
 
-            log.info("send message to ai -> POST Request To AI Flask Server start");
+            log.info("send message to ai -> POST Request To AI Flask Server start : url - {}", aiServerUrl);
             ResponseEntity<String> response = restTemplate.postForEntity(aiServerUrl, requestEntity, String.class);
 
             JsonNode root = objectMapper.readTree(response.getBody());
@@ -85,7 +85,7 @@ public class AiChatService {
             if (Objects.equals(realMessage, "")) {
                 throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
             }
-            log.info("send message to ai -> POST Request To AI Flask Server success");
+            log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
 
             SendMessageRequestDto responseData = SendMessageRequestDto.builder()
                     .senderId(1L)
