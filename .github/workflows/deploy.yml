@@ -2,7 +2,7 @@ name: Deploy to Research Server (Self-hosted)
 
 on:
   push:
-    branches: [ dev ]
+    branches: [ main ]
 
 jobs:
   deploy:
@@ -13,10 +13,10 @@ jobs:
       - name: 1. Checkout repository
         uses: actions/checkout@v4
 
-      - name: 2. Pull latest code from dev branch
+      - name: 2. Pull latest code from main branch
         run: |
           cd ~/deploy/weup/backend
-          git pull origin dev
+          git pull origin main
 
       - name: 3. Restart Docker
         run: |
