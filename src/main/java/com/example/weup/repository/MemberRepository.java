@@ -15,7 +15,6 @@ import java.util.Optional;
 public interface MemberRepository extends JpaRepository<Member, Long> {
     boolean existsByUserAndProject(User user, Project project);
 
-    // 메소드 명 체크 "is member deleted false" 부분
     List<Member> findByProject_ProjectIdAndIsMemberDeletedFalse(Long projectId);
 
     Optional<Member> findByUserAndProject(User user, Project project);
