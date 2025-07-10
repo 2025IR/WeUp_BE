@@ -20,6 +20,5 @@ jobs:
 
       - name: 3. Restart Docker
         run: |
-          cd ~/deploy/weup
           sudo docker compose down
           sudo docker compose up --build -d
