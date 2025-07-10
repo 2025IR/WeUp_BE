@@ -42,3 +42,4 @@ gradlew.bat
 /.idea
 .env
 logs/
+docker-compose.yml
