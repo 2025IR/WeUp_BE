@@ -1,0 +1,25 @@
+name: Deploy to Research Server (Self-hosted)
+
+on:
+  push:
+    branches: [ dev ]
+
+jobs:
+  deploy:
+    name: Deploy using local runner
+    runs-on: self-hosted
+
+    steps:
+      - name: 1. Checkout repository
+        uses: actions/checkout@v4
+
+      - name: 2. Pull latest code from dev branch
+        run: |
+          cd ~/deploy/weup/backend
+          git pull origin dev
+
+      - name: 3. Restart Docker
+        run: |
+          cd ~/deploy/weup/backend
+          sudo docker compose down
+          sudo docker compose up --build -d

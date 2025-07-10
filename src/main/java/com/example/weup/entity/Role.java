@@ -30,5 +30,12 @@ public class Role {
     private String roleName;
 
     @Column(name = "role_color", nullable = false)
-    private String roleColor;
+    @Builder.Default
+    private String roleColor = "green";
+
+    public void editRole(String name, String color) {
+        this.roleName = name;
+        this.roleColor = color;
+    }
+
 }

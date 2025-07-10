@@ -25,6 +25,7 @@ repositories {
 
 dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
@@ -33,8 +34,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-websocket'
 
     implementation 'org.springframework.boot:spring-boot-starter'
-    runtimeOnly 'com.mysql:mysql-connector-j'
-    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    implementation 'com.mysql:mysql-connector-j:9.3.0'
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.boot:spring-boot-starter-validation'
@@ -43,7 +43,8 @@ dependencies {
     implementation group: 'io.jsonwebtoken', name: 'jjwt-api', version: '0.11.5'
     runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-impl', version: '0.11.5'
     runtimeOnly group: 'io.jsonwebtoken', name: 'jjwt-jackson', version: '0.11.5'
-
+    // livekit
+    implementation 'io.livekit:livekit-server:0.9.0'
     // sockjs
     implementation 'org.webjars:sockjs-client:1.5.1'
     // stomp
@@ -58,7 +59,10 @@ dependencies {
     implementation 'nz.net.ultraq.thymeleaf:thymeleaf-layout-dialect'
 
     implementation 'org.springframework.cloud:spring-cloud-starter-aws:2.2.6.RELEASE'
-//    implementation 'software.amazon.awssdk:s3:2.20.XX'
+    implementation 'com.amazonaws:aws-java-sdk-s3:1.12.767'
+    implementation 'software.amazon.awssdk:s3:2.27.3'
+    implementation 'software.amazon.awssdk:s3control:2.27.3'
+    implementation 'software.amazon.awssdk:s3outposts:2.27.3'
 }
 
 tasks.named('test') {

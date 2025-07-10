@@ -19,10 +19,23 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     Optional<Member> findByUserAndProject(User user, Project project);
 
-    Optional<Member> findByMemberId(Long memberId);
-
     @Query("SELECT member FROM Member member JOIN FETCH member.project project " +
             "WHERE member.user.userId = :userId AND member.isMemberDeleted = false")
     List<Member> findActiveMemberByUserId(@Param("userId") Long userId);
 
-} 
+    boolean existsByUser_UserIdAndProject_ProjectId(Long userId, Long projectId);
+
+    Optional<Member> findByUser_UserIdAndProject_ProjectId(Long userId, Long projectId);
+
+    Member findByUser_NameAndProject_ProjectId(String userName, Long projectId);
+
+    List<Member> findAllByUser_UserId(Long userId);
+
+    List<Member> findByUser_UserIdAndIsLeaderTrue(Long userId);
+
+    Optional<Member> findFirstByProjectAndUser_UserIdNotOrderByMemberIdAsc(Project project, Long userId);
+
+    List<Member> findByUser(User user);
+
+    List<Member> findByProject(Project project);
+}
