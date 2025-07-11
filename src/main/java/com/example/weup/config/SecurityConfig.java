@@ -46,7 +46,7 @@ public class SecurityConfig {
 
      private final ObjectMapper objectMapper;
 
-     @Value("${server.address}")
+     @Value("${server.addr}")
      private String serverAddress;
 
      @Bean
