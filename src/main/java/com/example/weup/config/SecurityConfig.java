@@ -8,6 +8,7 @@ import com.example.weup.security.exception.JwtAuthenticationSuccessHandler;
 import com.example.weup.service.CustomUserDetailsService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -44,6 +45,9 @@ public class SecurityConfig {
      private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
      private final ObjectMapper objectMapper;
+
+     @Value("${server.address}")
+     private String serverAddress;
 
      @Bean
      public SecurityFilterChain securityFilterChain(HttpSecurity http, AuthenticationManager authenticationManager) throws Exception {
@@ -94,7 +98,7 @@ public class SecurityConfig {
      @Bean
      public CorsConfigurationSource corsConfigurationSource() {
          CorsConfiguration configuration = new CorsConfiguration();
-         configuration.addAllowedOrigin("http://localhost:5173");
+         configuration.addAllowedOrigin("http://" + serverAddress);
          configuration.addAllowedMethod("*");
          configuration.addAllowedHeader("*");
          configuration.setAllowCredentials(true);
