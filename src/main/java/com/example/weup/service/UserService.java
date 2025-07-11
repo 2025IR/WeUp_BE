@@ -180,7 +180,7 @@ public class UserService {
             for (Member member : members) {
                 User deletedUser = userRepository.findById(3L)
                         .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-                member.setUser(deletedUser); //todo
+                member.assignDeletedUser(deletedUser);
             }
             memberRepository.saveAll(members);
             userRepository.delete(user);

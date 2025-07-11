@@ -64,4 +64,8 @@ public class Member {
         this.isMemberDeleted = false;
         this.lastAccessTime = LocalDateTime.now();
     }
+
+    public void assignDeletedUser(User user) {
+        this.user = user;
+    }
 }
