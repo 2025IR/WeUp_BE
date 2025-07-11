@@ -60,7 +60,6 @@ public class MemberService {
     @Transactional
     public String inviteUser(Long userId, ProjectInviteRequestDTO projectInviteRequestDTO) {
         try {
-
             User inviter = userRepository.findById(userId)
                     .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
@@ -84,8 +83,16 @@ public class MemberService {
                     return "계정이 존재하지 않습니다.";
                 }
 
-                if (memberRepository.existsByUserAndProject(user, project)) {
-                    return "이미 초대된 계정입니다.";
+                Optional<Member> existingMemberOpt = memberRepository.findByUserAndProject(user, project);
+                if (existingMemberOpt.isPresent()) {
+                    Member existingMember = existingMemberOpt.get();
+
+                    if (existingMember.isMemberDeleted()) {
+                        existingMember.reJoin();
+                        return "멤버 재초대가 완료되었습니다.";
+                    } else {
+                        return "이미 초대된 계정입니다.";
+                    }
                 }
 
                 asyncMailService.sendProjectInviteEmail(
@@ -102,7 +109,6 @@ public class MemberService {
                         .lastAccessTime(LocalDateTime.now())
                         .build();
 
-
                 memberRepository.save(member);
 
                 return "초대가 완료되었습니다.";
@@ -116,6 +122,7 @@ public class MemberService {
             throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
         }
     }
+
 
     @Transactional
     public List<MemberInfoResponseDTO> getProjectMembers(Long userId, Long projectId) {
