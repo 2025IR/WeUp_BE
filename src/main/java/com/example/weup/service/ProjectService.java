@@ -68,7 +68,6 @@ public class ProjectService {
         String storedFileName;
         MultipartFile image = projectCreateRequestDTO.getProjectImage();
 
-
         if (image != null && !image.isEmpty()) {
             storedFileName = s3Service.uploadSingleFile(image).getStoredFileName();
         } else {
