@@ -150,16 +150,17 @@ public class UserService {
             Project project = leader.getProject();
 
             Optional<Member> nextLeaderOpt = memberRepository
-                    .findFirstByProjectAndUser_UserIdNotOrderByMemberIdAsc(project, userId);
+                    .findAllByProjectAndUser_UserIdNotOrderByMemberIdAsc(project, userId).stream()
+                    .filter(m -> !m.isMemberDeleted())
+                    .findFirst();
 
             if (nextLeaderOpt.isPresent()) {
                 Member nextLeader = nextLeaderOpt.get();
                 nextLeader.promoteToLeader();
+                leader.demoteFromLeader();
             } else {
                 // todo. 프로젝트 삭제 로직 추가
             }
-
-            leader.demoteFromLeader();
         }
 
         List<Member> memberList = memberRepository.findAllByUser_UserId(userId);
@@ -171,13 +172,15 @@ public class UserService {
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void deleteExpiredUsers() {
-        LocalDateTime threshold = LocalDateTime.now().minusDays(90);
+        LocalDateTime threshold = LocalDateTime.now().minusDays(30);
         List<User> expiredUsers = userRepository.findAllByDeletedAtBefore(threshold);
 
         for (User user : expiredUsers) {
             List<Member> members = memberRepository.findByUser(user);
             for (Member member : members) {
-                member.setUser(null);
+                User deletedUser = userRepository.findById(3L)
+                        .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));;
+                member.setUser(deletedUser); //todo
             }
             memberRepository.saveAll(members);
             userRepository.delete(user);
@@ -194,11 +197,6 @@ public class UserService {
         }
 
         user.restore();
-
-        List<Member> memberList = memberRepository.findAllByUser_UserId(restoreUserRequestDTO.getUserId());
-        for (Member member : memberList) {
-            member.restoreMember();
-        }
     }
 
     public void logout(Long userId, String refreshToken) {

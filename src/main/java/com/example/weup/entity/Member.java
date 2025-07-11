@@ -22,7 +22,7 @@ public class Member {
     private Long memberId;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = true)
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -56,11 +56,12 @@ public class Member {
         this.isMemberDeleted = true;
     }
 
-    public void restoreMember() {
-        this.isMemberDeleted = false;
-    }
-
     public void editSchedule(String availableTime) {
         this.availableTime = availableTime;
+    }
+
+    public void reJoin() {
+        this.isMemberDeleted = false;
+        this.lastAccessTime = LocalDateTime.now();
     }
 }
