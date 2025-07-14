@@ -205,10 +205,8 @@ public class ProjectService {
     @Transactional
     public void deleteExpiredProjects() {
 
-        LocalDateTime limitTime = LocalDateTime.now().minusDays(90);
+        LocalDateTime limitTime = LocalDateTime.now().minusDays(30);
         List<Project> projectToDelete = projectRepository.findByProjectDeletedTimeBefore(limitTime);
-
-        //List<Project> projectToDelete = projectRepository.findByProjectDeletedTimeIsNotNull();
         log.info("delete project test -> db read data size - {}", projectToDelete.size());
 
         for (Project project : projectToDelete) {
@@ -233,6 +231,7 @@ public class ProjectService {
             chatRoomRepository.deleteAll(chatRoomsToDelete);
             log.info("delete project -> Chat Room db data deleted");
 
+            // 멤버 역할, 역할, 투두 담당자, 투두, 멤버
             List<Member> membersToDelete = memberRepository.findByProject(project);
             for (Member member : membersToDelete) {
                 log.info("delete project -> db read success : project id: {}, member id : {}", member.getProject().getProjectId(), member.getMemberId());
@@ -254,6 +253,7 @@ public class ProjectService {
             log.info("delete project -> Member db data deleted");
         }
 
+        // 프로젝트
         projectRepository.deleteAll(projectToDelete);
         log.info("delete project -> Project db data deleted");
     }
