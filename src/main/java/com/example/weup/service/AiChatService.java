@@ -88,7 +88,7 @@ public class AiChatService {
             log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
 
             SendMessageRequestDto responseData = SendMessageRequestDto.builder()
-                    .senderId(1L)
+                    .senderId(2L)
                     .message(realMessage)
                     .build();
 
