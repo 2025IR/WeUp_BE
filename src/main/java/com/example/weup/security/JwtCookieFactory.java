@@ -12,7 +12,7 @@ public class JwtCookieFactory {
                 .httpOnly(true)
                 .secure(false) // todo. 배포 시 true로
                 .path("/")
-                .sameSite("Strict") //todo. lax, None 확인해서 CORS 프론트 보고 수정하기
+                .sameSite("Lax") //todo. lax, None 확인해서 CORS 프론트 보고 수정하기
                 .maxAge(MAX_AGE)
                 .build();
     }
@@ -22,10 +22,8 @@ public class JwtCookieFactory {
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
-                .sameSite("Strict")
+                .sameSite("Lax")
                 .maxAge(0)
                 .build();
     }
-
 }
-

@@ -9,9 +9,11 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
+import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -20,9 +22,9 @@ public class JwtUtil {
 
     private final JwtProperties jwtProperties;
 
-    private final SecretKey secretKey;
+    private final StringRedisTemplate redisTemplate;
 
-    private final UserRepository userRepository;
+    private final SecretKey secretKey;
 
     public String createAccessToken(Long userId, String role) {
         Date now = new Date();
@@ -51,10 +53,7 @@ public class JwtUtil {
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-        user.setRefreshToken(refreshToken);
-        userRepository.save(user);
+        redisTemplate.opsForValue().set("refreshToken:" + userId, refreshToken, jwtProperties.getRefreshTokenExpiration(), TimeUnit.MILLISECONDS);
 
         return refreshToken;
     }

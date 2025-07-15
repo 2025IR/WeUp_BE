@@ -15,6 +15,7 @@ import com.example.weup.security.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -33,6 +34,8 @@ public class UserService {
     private final MemberRepository memberRepository;
 
     private final JwtUtil jwtUtil;
+
+    private final StringRedisTemplate redisTemplate;
 
     private final PasswordEncoder passwordEncoder;
 
@@ -94,10 +97,14 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
+        String storedToken = redisTemplate.opsForValue().get("refreshToken:" + userId);
+
+        if (storedToken == null || !storedToken.equals(refreshToken)) {
+            throw new GeneralException(ErrorInfo.INVALID_TOKEN);
+        }
+
         String newAccessToken = jwtUtil.createAccessToken(userId, user.getRole());
         String newRefreshToken = jwtUtil.createRefreshToken(userId);
-
-        user.renewalToken(newRefreshToken);
 
         return JwtDto.builder()
                 .accessToken(newAccessToken)
@@ -184,6 +191,8 @@ public class UserService {
             }
             memberRepository.saveAll(members);
             userRepository.delete(user);
+            
+            //chatmessages에서 userid 다 3번으로
         }
     }
 
@@ -204,9 +213,6 @@ public class UserService {
             throw new GeneralException(ErrorInfo.REFRESH_TOKEN_NOT_FOUND);
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-
-        user.clearRefreshToken();
+        redisTemplate.delete("refreshToken:" + userId);
     }
 }
