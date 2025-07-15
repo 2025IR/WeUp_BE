@@ -1,9 +1,5 @@
 package com.example.weup.security;
 
-import com.example.weup.GeneralException;
-import com.example.weup.constant.ErrorInfo;
-import com.example.weup.entity.User;
-import com.example.weup.repository.UserRepository;
 import io.jsonwebtoken.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
