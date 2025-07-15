@@ -79,7 +79,7 @@ public class MemberService {
             User user = userOpt.get();
 
             if (user.isUserWithdrawal()) {
-                return "계정이 존재하지 않습니다.";
+                throw new GeneralException(ErrorInfo.USER_NOT_FOUND);
             }
 
             Optional<Member> existingMemberOpt = memberRepository.findByUserAndProject(user, project);
@@ -90,7 +90,7 @@ public class MemberService {
                     existingMember.reJoin();
                     return "초대가 완료되었습니다.";
                 } else {
-                    return "이미 초대된 계정입니다.";
+                    throw new GeneralException(ErrorInfo.AlREADY_IN_PROJECT);
                 }
             }
 
@@ -112,9 +112,10 @@ public class MemberService {
 
             return "초대가 완료되었습니다.";
         } else {
-            return "계정이 존재하지 않습니다.";
+            throw new GeneralException(ErrorInfo.USER_NOT_FOUND);
         }
     }
+
 
     @Transactional
     public List<MemberInfoResponseDTO> getProjectMembers(Long userId, Long projectId) {
