@@ -5,8 +5,11 @@ import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.service.LiveKitService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.coyote.Response;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Map;
 
 @Slf4j
 @RestController
@@ -45,6 +48,15 @@ public class LiveKitController {
 
         log.info("요청자 : {}, get participant count -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of(String.valueOf(count), "화상 회의실 현재 참여 인원 수 조회가 완료되었습니다."));
+    }
+
+    @PostMapping("/webhook")
+    public ResponseEntity<DataResponseDTO<String>> handleWebhook(@LoginUser Long userId, @RequestBody Map<String, Object> payload) {
+
+        String event = (String) payload.get("event");
+        liveKitService.handleWebhook(payload, event);
+
+        return ResponseEntity.ok(DataResponseDTO.of("WebHook Event 성공"));
     }
 
 }
