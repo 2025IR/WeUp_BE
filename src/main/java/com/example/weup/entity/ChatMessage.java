@@ -38,4 +38,8 @@ public class ChatMessage {
 
     @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt;
+
+    public void changeSender(User user){
+        this.user = user;
+    }
 }

@@ -4,10 +4,8 @@ import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.GetProfileResponseDTO;
-import com.example.weup.entity.AccountSocial;
-import com.example.weup.entity.Member;
-import com.example.weup.entity.Project;
-import com.example.weup.entity.User;
+import com.example.weup.entity.*;
+import com.example.weup.repository.ChatMessageRepository;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.security.JwtDto;
@@ -32,6 +30,8 @@ public class UserService {
     private final UserRepository userRepository;
 
     private final MemberRepository memberRepository;
+
+    private final ChatMessageRepository chatMessageRepository;
 
     private final JwtUtil jwtUtil;
 
@@ -182,19 +182,32 @@ public class UserService {
         LocalDateTime threshold = LocalDateTime.now().minusDays(30);
         List<User> expiredUsers = userRepository.findAllByDeletedAtBefore(threshold);
 
+        User deletedUser = userRepository.findById(3L)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
         for (User user : expiredUsers) {
             List<Member> members = memberRepository.findByUser(user);
             for (Member member : members) {
-                User deletedUser = userRepository.findById(3L)
-                        .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
                 member.assignDeletedUser(deletedUser);
             }
             memberRepository.saveAll(members);
-            userRepository.delete(user);
-            
-            //chatmessages에서 userid 다 3번으로
+
+            List<ChatMessage> messages = chatMessageRepository.findByUser(user);
+            for (ChatMessage message : messages) {
+                message.changeSender(deletedUser);
+            }
+            chatMessageRepository.saveAll(messages);
+
+            AccountSocial accountSocial = user.getAccountSocial();
+            if (accountSocial != null) {
+                String email = accountSocial.getEmail();
+                if (email != null && !email.startsWith("deleted_")) {
+                    accountSocial.markAsDeleted();
+                }
+            }
         }
     }
+
 
     @Transactional
     public void restoreWithdrawnUser(RestoreUserRequestDTO restoreUserRequestDTO) {
