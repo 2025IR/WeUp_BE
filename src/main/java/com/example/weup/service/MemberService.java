@@ -11,6 +11,7 @@ import com.example.weup.repository.ProjectRepository;
 import com.example.weup.repository.RoleRepository;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.repository.MemberRoleRepository;
+import com.example.weup.validate.MemberValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -30,6 +31,8 @@ public class MemberService {
     private final ProjectRepository projectRepository;
 
     private final MemberRepository memberRepository;
+
+    private final MemberValidator memberValidator;
 
     private final AsyncMailService asyncMailService;
 
@@ -65,9 +68,7 @@ public class MemberService {
         Project project = projectRepository.findById(projectInviteRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-        if (!hasAccess(userId, projectInviteRequestDTO.getProjectId())) {
-            throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
-        }
+        memberValidator.validateActiveMemberInProject(userId, projectInviteRequestDTO.getProjectId());
 
         String email = projectInviteRequestDTO.getEmail().trim();
         if (email.isEmpty()) {
@@ -119,9 +120,7 @@ public class MemberService {
 
     @Transactional
     public List<MemberInfoResponseDTO> getProjectMembers(Long userId, Long projectId) {
-        if (!hasAccess(userId, projectId)) {
-            throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
-        }
+        memberValidator.validateActiveMemberInProject(userId, projectId);
 
         List<Member> members = memberRepository.findByProject_ProjectIdAndIsMemberDeletedFalse(projectId);
         List<MemberRole> memberRoles = memberRoleRepository.findAllByProjectId(projectId);
@@ -155,9 +154,7 @@ public class MemberService {
 
     @Transactional
     public void delegateLeader(Long formerLeaderUserId, LeaderDelegateRequestDTO leaderDelegateRequestDTO) {
-        if (!hasAccess(formerLeaderUserId, leaderDelegateRequestDTO.getProjectId())) {
-            throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
-        }
+        memberValidator.validateActiveMemberInProject(formerLeaderUserId, leaderDelegateRequestDTO.getProjectId());
 
         Project project = projectRepository.findById(leaderDelegateRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
@@ -192,9 +189,7 @@ public class MemberService {
 
     @Transactional
     public List<RoleListResponseDTO> listRoles(Long userId, Long projectId) {
-        if (!hasAccess(userId, projectId)) {
-            throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
-        }
+        memberValidator.validateActiveMemberInProject(userId, projectId);
 
         Project project = projectRepository.findById(projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
@@ -208,9 +203,8 @@ public class MemberService {
 
     @Transactional
     public void deleteMember(Long userId, DeleteMemberRequestDTO deleteMemberRequestDTO) {
-        if (!hasAccess(userId, deleteMemberRequestDTO.getProjectId())) {
-            throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
-        }
+        memberValidator.validateActiveMemberInProject(userId, deleteMemberRequestDTO.getProjectId());
+
         User requestUser = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
@@ -237,9 +231,7 @@ public class MemberService {
 
     @Transactional
     public void assignRoleToMember(Long userId, AssignRoleRequestDTO assignRoleRequestDTO) {
-        if (!hasAccess(userId, assignRoleRequestDTO.getProjectId())) {
-            throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
-        }
+        memberValidator.validateActiveMemberInProject(userId, assignRoleRequestDTO.getProjectId());
 
         if (isDeletedMember(assignRoleRequestDTO.getMemberId())){
             throw new GeneralException(ErrorInfo.DELETED_MEMBER);
@@ -275,9 +267,7 @@ public class MemberService {
 
     @Transactional
     public void createRole(Long userId, CreateRoleRequestDTO createRoleRequestDTO) {
-        if (!hasAccess(userId, createRoleRequestDTO.getProjectId())) {
-            throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
-        }
+        memberValidator.validateActiveMemberInProject(userId, createRoleRequestDTO.getProjectId());
 
         Project project = projectRepository.findById(createRoleRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
@@ -299,9 +289,7 @@ public class MemberService {
         String roleName = editRoleRequestDTO.getRoleName();
         String roleColor = editRoleRequestDTO.getRoleColor();
 
-        if (!hasAccess(userId, editRoleRequestDTO.getProjectId())) {
-            throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
-        }
+        memberValidator.validateActiveMemberInProject(userId, editRoleRequestDTO.getProjectId());
 
         if ((roleName == null || roleName.isEmpty()) && (roleColor == null || roleColor.isEmpty())) {
             throw new GeneralException(ErrorInfo.EMPTY_INPUT_VALUE);
@@ -321,9 +309,8 @@ public class MemberService {
 
     @Transactional
     public void removeRole(Long userId, DeleteRoleRequestDTO deleteRoleRequestDTO) {
-        if (!hasAccess(userId, deleteRoleRequestDTO.getProjectId())) {
-            throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
-        }
+        memberValidator.validateActiveMemberInProject(userId, deleteRoleRequestDTO.getProjectId());
+
 
         Role role = roleRepository.findById(deleteRoleRequestDTO.getRoleId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.ROLE_NOT_FOUND));
@@ -331,10 +318,6 @@ public class MemberService {
         memberRoleRepository.deleteByRole(role);
 
         roleRepository.delete(role);
-    }
-
-    public boolean hasAccess(Long userId, Long projectId) {
-        return memberRepository.existsByUser_UserIdAndProject_ProjectId(userId, projectId);
     }
 
     public boolean isDeletedMember(Long memberId) {
