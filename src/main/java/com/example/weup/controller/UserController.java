@@ -43,17 +43,17 @@ public class UserController {
         return ResponseEntity.ok(DataResponseDTO.of(getProfileResponseDTO, "프로필 조회가 완료되었습니다."));
     }
 
-        @PostMapping("/reissuetoken")
-        public ResponseEntity<DataResponseDTO<JwtDto>> reissueToken(
-                @CookieValue(name = "refresh_token", required = false) String refreshToken) {
+    @PostMapping("/reissuetoken")
+    public ResponseEntity<DataResponseDTO<JwtDto>> reissueToken(
+            @CookieValue(name = "refresh_token", required = false) String refreshToken) {
 
-            JwtDto jwtDto = userService.reissueToken(refreshToken);
-            ResponseCookie cookie = JwtCookieFactory.createRefreshCookie(jwtDto.getRefreshToken());
+        JwtDto jwtDto = userService.reissueToken(refreshToken);
+        ResponseCookie cookie = JwtCookieFactory.createRefreshCookie(jwtDto.getRefreshToken());
 
-            return ResponseEntity.ok()
-                    .header(HttpHeaders.SET_COOKIE, cookie.toString())
-                    .body(DataResponseDTO.of(jwtDto.withoutRefreshToken(), "토큰 재발급이 완료되었습니다."));
-        }
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, cookie.toString())
+                .body(DataResponseDTO.of(jwtDto.withoutRefreshToken(), "토큰 재발급이 완료되었습니다."));
+    }
 
     @PostMapping("/password")
     public ResponseEntity<DataResponseDTO<String>> changePassword(@LoginUser Long userId, @RequestBody PasswordRequestDTO passwordRequestDTO) {
