@@ -103,14 +103,7 @@ public class TodoService {
 
         memberValidator.validateActiveMemberInProject(userId, todo.getProject().getProjectId());
 
-        if (editTodoRequestDTO.getTodoName() != null) {
-            todo.setTodoName(editTodoRequestDTO.getTodoName());
-        }
-
-        if (editTodoRequestDTO.getStartDate() != null && editTodoRequestDTO.getEndDate() != null) {
-            todo.setStartDate(editTodoRequestDTO.getStartDate());
-            todo.setEndDate(editTodoRequestDTO.getEndDate());
-        }
+        todo.edit(editTodoRequestDTO.getTodoName(), editTodoRequestDTO.getStartDate(), editTodoRequestDTO.getEndDate());
 
         todoRepository.save(todo);
 
@@ -143,7 +136,7 @@ public class TodoService {
 
         memberValidator.validateActiveMemberInProject(userId, todo.getProject().getProjectId());
 
-        todo.setTodoStatus(editTodoStatusRequestDTO.getStatus());
+        todo.changeStatus(editTodoStatusRequestDTO.getStatus());
         todoRepository.save(todo);
     }
 
