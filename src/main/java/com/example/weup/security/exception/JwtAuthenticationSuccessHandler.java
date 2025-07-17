@@ -33,8 +33,6 @@ public class JwtAuthenticationSuccessHandler implements AuthenticationSuccessHan
         String accessToken = jwtUtil.createAccessToken(user.getUserId(), user.getRole());
         String refreshToken = jwtUtil.createRefreshToken(user.getUserId());
 
-        user.renewalToken(refreshToken);
-
         ResponseCookie refreshCookie = JwtCookieFactory.createRefreshCookie(refreshToken);
 
         JwtDto jwtDto = JwtDto.builder()

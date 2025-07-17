@@ -34,4 +34,8 @@ public class AccountSocial {
     public void assignUser(User user) {
         this.user = user;
     }
+
+    public void markAsDeleted() {
+        this.email = "deleted_" + this.email;
+    }
 }

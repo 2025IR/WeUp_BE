@@ -12,6 +12,7 @@ import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.ProjectRepository;
 import com.example.weup.repository.TodoMemberRepository;
 import com.example.weup.repository.TodoRepository;
+import com.example.weup.validate.MemberValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -26,8 +27,8 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class TodoService {
 
-    private final MemberService memberService;
     private final S3Service s3Service;
+    private final MemberValidator memberValidator;
     private final ProjectRepository projectRepository;
     private final MemberRepository memberRepository;
     private final TodoRepository todoRepository;
@@ -36,12 +37,7 @@ public class TodoService {
     @Transactional
     public void createTodo(Long userId, CreateTodoRequestDTO createTodoRequestDTO) {
 
-        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, createTodoRequestDTO.getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
-
-        if (memberService.isDeletedMember(requestMember.getMemberId())) {
-            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
-        }
+        memberValidator.validateActiveMemberInProject(userId, createTodoRequestDTO.getProjectId());
 
         Project project = projectRepository.findById(createTodoRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
@@ -55,12 +51,7 @@ public class TodoService {
 
     public List<TodoListResponseDTO> getTodoList(Long userId, Long projectId) {
 
-        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
-
-        if (memberService.isDeletedMember(requestMember.getMemberId())) {
-            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
-        }
+        Member requestMember = memberValidator.validateActiveMemberInProject(userId, projectId);
 
         List<Todo> todos = todoRepository.findByProject_ProjectId(projectId);
 
@@ -110,21 +101,9 @@ public class TodoService {
         Todo todo = todoRepository.findById(editTodoRequestDTO.getTodoId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));
 
-        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, todo.getProject().getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
+        memberValidator.validateActiveMemberInProject(userId, todo.getProject().getProjectId());
 
-        if (memberService.isDeletedMember(requestMember.getMemberId())) {
-            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
-        }
-
-        if (editTodoRequestDTO.getTodoName() != null) {
-            todo.setTodoName(editTodoRequestDTO.getTodoName());
-        }
-
-        if (editTodoRequestDTO.getStartDate() != null && editTodoRequestDTO.getEndDate() != null) {
-            todo.setStartDate(editTodoRequestDTO.getStartDate());
-            todo.setEndDate(editTodoRequestDTO.getEndDate());
-        }
+        todo.edit(editTodoRequestDTO.getTodoName(), editTodoRequestDTO.getStartDate(), editTodoRequestDTO.getEndDate());
 
         todoRepository.save(todo);
 
@@ -155,14 +134,9 @@ public class TodoService {
         Todo todo = todoRepository.findById(editTodoStatusRequestDTO.getTodoId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));
 
-        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, todo.getProject().getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
+        memberValidator.validateActiveMemberInProject(userId, todo.getProject().getProjectId());
 
-        if (memberService.isDeletedMember(requestMember.getMemberId())) {
-            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
-        }
-
-        todo.setTodoStatus(editTodoStatusRequestDTO.getStatus());
+        todo.changeStatus(editTodoStatusRequestDTO.getStatus());
         todoRepository.save(todo);
     }
 
@@ -172,12 +146,7 @@ public class TodoService {
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));
 
-        Member requestMember = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, todo.getProject().getProjectId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
-
-        if (memberService.isDeletedMember(requestMember.getMemberId())) {
-            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
-        }
+        memberValidator.validateActiveMemberInProject(userId, todo.getProject().getProjectId());
 
         todoMemberRepository.deleteAllByTodo_TodoId(todoId);
 

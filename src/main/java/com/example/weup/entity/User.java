@@ -99,10 +99,6 @@ public class User implements UserDetails {
         this.deletedAt = null;
     }
 
-    public void renewalToken(String refreshToken) {
-        this.refreshToken = refreshToken;
-    }
-
     public void linkAccount(AccountSocial accountSocial) {
         this.accountSocial = accountSocial;
         accountSocial.assignUser(this);
@@ -120,9 +116,5 @@ public class User implements UserDetails {
 
     public void updateProfileImage(String profileImage) {
         this.profileImage = profileImage;
-    }
-
-    public void clearRefreshToken() {
-        this.refreshToken = null;
     }
 }
