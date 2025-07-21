@@ -49,6 +49,8 @@ public enum ErrorInfo {
 
     REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 없습니다."),
 
+    INVALID_TOKEN(HttpStatus.FORBIDDEN, "토큰이 유효하지 않습니다."),
+
     TOKEN_EXPIRED(HttpStatus.FORBIDDEN, "토큰이 만료되었습니다."),
 
     NOT_IN_PROJECT(HttpStatus.FORBIDDEN, "해당 프로젝트에 접근 권한이 없습니다."),
