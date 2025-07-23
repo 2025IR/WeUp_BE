@@ -23,7 +23,6 @@ public class LiveKitController {
 
         log.info("요청자 : {}, enter meeting room -> start", userId);
         String liveKitToken = liveKitService.generateLiveKitToken(projectId, userId);
-        //liveKitService.enterRoom(projectId, userId);
 
         log.info("요청자 : {}, enter meeting room -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of(liveKitToken, "LiveKit Token 발급이 완료되었습니다."));
