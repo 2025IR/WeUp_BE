@@ -6,7 +6,6 @@ import com.example.weup.entity.Board;
 import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
 import com.example.weup.repository.MemberRepository;
-import com.example.weup.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
@@ -16,13 +15,11 @@ public class MemberValidator {
 
     private final MemberRepository memberRepository;
 
-    private final MemberService memberService;
-
     public Member validateActiveMemberInProject(Long userId, Long projectId) {
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
-        if (memberService.isDeletedMember(member.getMemberId())) {
+        if (isDeletedMember(member.getMemberId())) {
             throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
@@ -41,5 +38,11 @@ public class MemberValidator {
         if(!targetMember.isLeader()) {
             throw new GeneralException(ErrorInfo.NOT_LEADER);
         }
+    }
+
+    public boolean isDeletedMember(Long memberId) {
+        return memberRepository.findById(memberId)
+                .map(Member::isMemberDeleted)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
     }
 }

@@ -176,7 +176,7 @@ public class MemberService {
             throw new GeneralException(ErrorInfo.FORBIDDEN);
         }
 
-        if (isDeletedMember(newLeaderMember.getMemberId())){
+        if (memberValidator.isDeletedMember(newLeaderMember.getMemberId())){
             throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
@@ -233,7 +233,7 @@ public class MemberService {
     public void assignRoleToMember(Long userId, AssignRoleRequestDTO assignRoleRequestDTO) {
         memberValidator.validateActiveMemberInProject(userId, assignRoleRequestDTO.getProjectId());
 
-        if (isDeletedMember(assignRoleRequestDTO.getMemberId())){
+        if (memberValidator.isDeletedMember(assignRoleRequestDTO.getMemberId())){
             throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
@@ -320,20 +320,4 @@ public class MemberService {
         roleRepository.delete(role);
     }
 
-    public boolean isDeletedMember(Long memberId) {
-        Member member = memberRepository.findById(memberId)
-                .orElse(null);
-
-        if (member == null) {
-            return true;
-        }
-
-        try {
-            if (member.isMemberDeleted())
-                return true;
-        } catch (Exception e) {
-            return false;
-        }
-        return false;
-    }
 }
