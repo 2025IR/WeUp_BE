@@ -6,7 +6,6 @@ import com.example.weup.entity.Board;
 import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
 import com.example.weup.repository.MemberRepository;
-import com.example.weup.service.MemberService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
