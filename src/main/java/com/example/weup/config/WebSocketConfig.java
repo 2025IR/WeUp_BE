@@ -14,12 +14,12 @@ import org.springframework.web.socket.config.annotation.WebSocketMessageBrokerCo
 @RequiredArgsConstructor
 public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
-    private final CustomChannelInterceptor customChannelInterceptor;
+    private final StompChannelInterceptor stompChannelInterceptor;
 
     @Override
     public void configureMessageBroker(MessageBrokerRegistry registry) {
-        registry.enableSimpleBroker("/topic", "/session");  // server -> 구독 중인 모든 client 한테 브로드캐스팅
-        registry.setApplicationDestinationPrefixes("/app");  // client -> server 메시지 보냄
+        registry.enableSimpleBroker("/topic", "/queue");
+        registry.setApplicationDestinationPrefixes("/app");
     }
 
     @Override
@@ -29,6 +29,6 @@ public class WebSocketConfig implements WebSocketMessageBrokerConfigurer {
 
     @Override
     public void configureClientInboundChannel(@NotNull ChannelRegistration registration) {
-        registration.interceptors(customChannelInterceptor);
+        registration.interceptors(stompChannelInterceptor);
     }
 }

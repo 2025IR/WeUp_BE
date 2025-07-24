@@ -55,7 +55,8 @@ public class SecurityConfig {
          http
                  .csrf(AbstractHttpConfigurer::disable)
                  .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
+//                 .formLogin(AbstractHttpConfigurer::disable)
+//                 .httpBasic(AbstractHttpConfigurer::disable)
                  .exceptionHandling(exception -> exception
                          .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                          .accessDeniedHandler(jwtAccessDeniedHandler)

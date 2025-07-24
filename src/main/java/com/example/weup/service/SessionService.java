@@ -3,7 +3,7 @@ package com.example.weup.service;
 import org.springframework.stereotype.Service;
 
 import java.util.Collection;
-import java.util.HashSet;
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -20,14 +20,31 @@ public class SessionService {
     }
 
     public void remove(String sessionId) {
-        String removed = sessionIdToUserMap.remove(sessionId);
+        String userId = sessionIdToUserMap.remove(sessionId);
+        if (userId != null) {
+            Set<String> sessions = userToSessionIdMap.get(userId);
+            if (sessions != null) {
+                sessions.remove(sessionId);
+                if (sessions.isEmpty()) {
+                    userToSessionIdMap.remove(userId);
+                }
+            }
+        }
     }
 
     public String getUserId(String sessionId) {
         return sessionIdToUserMap.get(sessionId);
     }
 
-    public Collection<String> getOnlineUsers() {
-        return sessionIdToUserMap.values();
+    public Set<String> getSessionsByUserId(String userId) {
+        return userToSessionIdMap.getOrDefault(userId, Collections.emptySet());
+    }
+
+    public Collection<String> getOnlineUserIds() {
+        return userToSessionIdMap.keySet();
+    }
+
+    public boolean isUserOnline(String userId) {
+        return userToSessionIdMap.containsKey(userId) && !userToSessionIdMap.get(userId).isEmpty();
     }
 }
