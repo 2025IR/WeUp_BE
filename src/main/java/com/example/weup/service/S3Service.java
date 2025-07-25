@@ -5,6 +5,7 @@ import com.example.weup.config.S3Properties;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.response.FileFullResponseDTO;
 import lombok.RequiredArgsConstructor;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 import software.amazon.awssdk.core.sync.RequestBody;
@@ -27,19 +28,34 @@ public class S3Service {
     private final S3Client s3Client;
     private final S3Presigner presigner;
     private final S3Properties s3Properties;
+    private final StringRedisTemplate redisTemplate;
+
+    private static final Duration PRESIGNED_DURATION = Duration.ofMinutes(5);
+    private static final Duration REDIS_TTL = Duration.ofMinutes(4).plusSeconds(40);
 
     public String getPresignedUrl(String fileName) {
+        String redisKey = "presigned: " + fileName;
+        String cachedUrl = redisTemplate.opsForValue().get(redisKey);
+
+        if (cachedUrl != null) {
+            return cachedUrl;
+        }
+
         GetObjectRequest getObjectRequest = GetObjectRequest.builder()
                 .bucket(s3Properties.getBucket())
                 .key(fileName)
                 .build();
 
         GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
-                .signatureDuration(Duration.ofMinutes(5))
+                .signatureDuration(PRESIGNED_DURATION)
                 .getObjectRequest(getObjectRequest)
                 .build();
 
-        return presigner.presignGetObject(presignRequest).url().toString();
+        String presignedUrl = presigner.presignGetObject(presignRequest).url().toString();
+
+        redisTemplate.opsForValue().set(redisKey, presignedUrl, REDIS_TTL);
+
+        return presignedUrl;
     }
 
     public List<FileFullResponseDTO> uploadFiles(List<MultipartFile> files) {
