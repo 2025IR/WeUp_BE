@@ -193,9 +193,9 @@ public class UserService {
             memberRepository.saveAll(members);
 
             List<ChatMessage> messages = chatMessageRepository.findByUser(user);
-            for (ChatMessage message : messages) {
-                message.changeSender(deletedUser);
-            }
+//            for (ChatMessage message : messages) {
+//                message.changeSender(deletedUser);
+//            }
             chatMessageRepository.saveAll(messages);
 
             AccountSocial accountSocial = user.getAccountSocial();

@@ -23,10 +23,12 @@ public class ChatMessage {
     private Long messageId;
 
     @ManyToOne
+    @JoinColumn(name = "chat_room_id")
     private ChatRoom chatRoom;
 
     @ManyToOne
-    private User user;
+    @JoinColumn(name = "chat_room_member_id")
+    private User user; // TODO. 수정
 
     @Column
     private String message;
@@ -39,7 +41,7 @@ public class ChatMessage {
     @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt;
 
-    public void changeSender(User user){
-        this.user = user;
-    }
+//    public void changeSender(Member member){
+//        this.member = member;
+//    }
 }
