@@ -28,17 +28,17 @@ public class JwtSignInAuthenticationFilter extends UsernamePasswordAuthenticatio
         this.objectMapper = objectMapper;
     }
 
-    @Override
-    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
-
-        try {
-            SignInRequestDto requestDto = objectMapper.readValue(request.getInputStream(), SignInRequestDto.class);
-            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(requestDto.getEmail(), requestDto.getPassword());
-
-            return getAuthenticationManager().authenticate(authenticationToken);
-        }
-        catch (IOException e) {
-            throw new AuthenticationServiceException("", e);
-        }
-    }
+//    @Override
+//    public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
+//
+//        try {
+//            SignInRequestDto requestDto = objectMapper.readValue(request.getInputStream(), SignInRequestDto.class);
+//            UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(requestDto.getEmail(), requestDto.getPassword());
+//
+//            return getAuthenticationManager().authenticate(authenticationToken);
+//        }
+//        catch (IOException e) {
+//            throw new AuthenticationServiceException("", e);
+//        }
+//    }
 }

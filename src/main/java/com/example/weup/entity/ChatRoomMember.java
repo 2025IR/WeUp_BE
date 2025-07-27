@@ -6,29 +6,29 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.time.LocalDateTime;
-
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Entity
 @Table
-public class ChatRoom {
+public class ChatRoomMember {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(nullable = false, updatable = false)
-    private Long chatRoomId;
-
-    @OneToOne(fetch = FetchType.EAGER)
-    private Project project;
+    private Long chatRoomMemberId;
 
     @Column(nullable = false)
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();
+    private boolean isWithdrawal = false;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean basic = false;
+    @ManyToOne
+    @JoinColumn(name = "member_id")
+    private Member member;
+
+    @ManyToOne
+    @JoinColumn(name = "chat_room_id")
+    private ChatRoom chatRoom;
+
 }
