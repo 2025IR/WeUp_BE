@@ -21,6 +21,9 @@ public class ChatRoom {
     @Column(nullable = false, updatable = false)
     private Long chatRoomId;
 
+    @Column(nullable = false)
+    private String chatRoomName;
+
     @OneToOne(fetch = FetchType.EAGER)
     private Project project;
 
@@ -31,4 +34,8 @@ public class ChatRoom {
     @Column(nullable = false)
     @Builder.Default
     private boolean basic = false;
+
+    public void editChatRoomName(String chatRoomName) {
+        this.chatRoomName = chatRoomName;
+    }
 }

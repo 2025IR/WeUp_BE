@@ -69,7 +69,9 @@ public enum ErrorInfo {
 
     USER_IS_NOT_WITHDRAWN(HttpStatus.BAD_REQUEST, "탈퇴한 유저가 아닙니다."),
 
-    PROJECT_IS_NOT_DELETED(HttpStatus.BAD_REQUEST, "삭제되지 않은 프로젝트입니다.");
+    PROJECT_IS_NOT_DELETED(HttpStatus.BAD_REQUEST, "삭제되지 않은 프로젝트입니다."),
+
+    MEMBER_ALREADY_EXISTS_IN_CHAT_ROOM(HttpStatus.CONFLICT, "이미 채팅방에 존재하는 멤버입니다.");
 
     private final HttpStatus httpStatus;
 

@@ -4,7 +4,7 @@ import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
 import com.example.weup.dto.request.PasswordRequestDTO;
 import com.example.weup.dto.request.ProfileEditRequestDTO;
 import com.example.weup.dto.request.RestoreUserRequestDTO;
-import com.example.weup.dto.request.SignUpRequestDto;
+import com.example.weup.dto.request.SignUpRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.GetProfileResponseDTO;
 import com.example.weup.security.JwtCookieFactory;
@@ -28,7 +28,7 @@ public class UserController {
     private final UserService userService;
 
     @PostMapping("/signup")
-    public ResponseEntity<DataResponseDTO<String>> signUp(@RequestBody SignUpRequestDto signUpRequestDto) {
+    public ResponseEntity<DataResponseDTO<String>> signUp(@RequestBody SignUpRequestDTO signUpRequestDto) {
 
         userService.signUp(signUpRequestDto);
         

@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Data
-public class SendMessageRequestDto {
+public class SendMessageRequestDTO {
 
     @NotNull(message = "메시지를 보내는 사람이 없습니다.")
     private Long senderId;

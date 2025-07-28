@@ -1,5 +1,6 @@
 package com.example.weup.entity;
 
+import com.example.weup.constant.SenderType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -19,16 +20,16 @@ public class ChatMessage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "message_id", nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false)
     private Long messageId;
 
     @ManyToOne
-    @JoinColumn(name = "chat_room_id")
+    @JoinColumn
     private ChatRoom chatRoom;
 
     @ManyToOne
-    @JoinColumn(name = "chat_room_member_id")
-    private User user; // TODO. 수정
+    @JoinColumn
+    private Member senderId;
 
     @Column
     private String message;
@@ -41,7 +42,10 @@ public class ChatMessage {
     @Column(name = "sent_at", nullable = false)
     private LocalDateTime sentAt;
 
-//    public void changeSender(Member member){
-//        this.member = member;
-//    }
+    @Column(nullable = false)
+    private SenderType senderType;
+
+    public void changeSender(Member member){
+        this.member = member;
+    }
 }
