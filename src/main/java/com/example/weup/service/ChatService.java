@@ -40,7 +40,6 @@ import java.util.stream.Collectors;
 public class ChatService{
 
     private final ChatMessageRepository chatMessageRepository;
-    private final UserRepository userRepository;
     private final S3Service s3Service;
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
@@ -169,7 +168,7 @@ public class ChatService{
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
         Member sendMember = memberRepository.findById(dto.getSenderId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+                .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
         String key = "chat:room:" + chatRoomId;
         DisplayType displayType = DisplayType.DEFAULT;

@@ -40,7 +40,7 @@ public class ChatMessage {
     @JsonProperty("isImage")
     private Boolean isImage = false;
 
-    @Column(name = "sent_at", nullable = false)
+    @Column(nullable = false)
     private LocalDateTime sentAt;
 
     @Column(nullable = false)
