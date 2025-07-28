@@ -32,31 +32,18 @@ import java.util.stream.Collectors;
 public class ProjectService {
 
     private final ProjectRepository projectRepository;
-
     private final MemberRepository memberRepository;
-
     private final S3Service s3Service;
-
     private final ChatRoomRepository chatRoomRepository;
-
     private final MemberValidator memberValidator;
-
     private final ProjectValidator projectValidator;
-
     private final BoardRepository boardRepository;
-
     private final ChatMessageRepository chatMessageRepository;
-
     private final MemberRoleRepository memberRoleRepository;
-
     private final TodoMemberRepository todoMemberRepository;
-
     private final StringRedisTemplate redisTemplate;
-
     private final FileRepository fileRepository;
-
     private final RoleRepository roleRepository;
-
     private final TodoRepository todoRepository;
 
     @Value("${project.default-image}")
@@ -79,18 +66,10 @@ public class ProjectService {
                 .projectImage(storedFileName)
                 .build();
 
-        ChatRoom chatRoom = ChatRoom.builder()
-                .chatRoomId(newProject.getProjectId())
-                .project(newProject)
-                .build();
-
         projectRepository.save(newProject);
         newProject.editProjectRoomName(String.valueOf(newProject.getProjectId()));
+
         log.info("create project -> db save success : project id - {}", newProject.getProjectId());
-
-        chatRoomRepository.save(chatRoom);
-        log.info("create chat room -> db save success : chat room id - {}", chatRoom.getChatRoomId());
-
         return newProject;
     }
 

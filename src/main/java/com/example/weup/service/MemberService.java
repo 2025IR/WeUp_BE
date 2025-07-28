@@ -41,9 +41,10 @@ public class MemberService {
     private final RoleRepository roleRepository;
 
     private final MemberRoleRepository memberRoleRepository;
+    private final ChatService chatService;
 
     @Transactional
-    public void addProjectCreater(Long userId, Project project) {
+    public Member addProjectCreater(Long userId, Project project) {
 
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
@@ -56,8 +57,9 @@ public class MemberService {
                 .build();
 
         project.getMembers().add(newMember);
-        memberRepository.save(newMember);
         log.info("create project leader -> db save success : member {}", newMember.getMemberId());
+        return memberRepository.save(newMember);
+
     }
 
     @Transactional

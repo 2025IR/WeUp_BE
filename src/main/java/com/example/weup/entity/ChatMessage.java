@@ -46,6 +46,6 @@ public class ChatMessage {
     private SenderType senderType;
 
     public void changeSender(Member member){
-        this.member = member;
+        this.senderId = member;
     }
 }

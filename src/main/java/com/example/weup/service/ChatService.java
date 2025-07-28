@@ -2,12 +2,14 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.constant.SenderType;
 import com.example.weup.dto.request.CreateChatRoomDTO;
 import com.example.weup.dto.request.InviteChatRoomDTO;
 import com.example.weup.dto.request.SendImageMessageRequestDTO;
 import com.example.weup.dto.request.SendMessageRequestDTO;
 import com.example.weup.dto.response.ChatPageResponseDto;
 import com.example.weup.dto.response.GetChatRoomListDTO;
+import com.example.weup.dto.response.GetInvitableListDTO;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
@@ -45,8 +47,20 @@ public class ChatService{
     private final MemberValidator memberValidator;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
+    private final MemberRepository memberRepository;
 
-    @Transactional
+
+    public ChatRoom createBasicChatRoom(Project project, String projectName) {
+
+        ChatRoom chatRoom = ChatRoom.builder()
+                .chatRoomName(projectName + " 채팅방")
+                .project(project)
+                .basic(true)
+                .build();
+
+        return chatRoomRepository.save(chatRoom);
+    }
+
     public void createChatRoom(User user, CreateChatRoomDTO createChatRoomDto) {
 
         Project project = projectValidator.validateActiveProject(createChatRoomDto.getProjectId());
@@ -67,26 +81,52 @@ public class ChatService{
         chatRoomMemberRepository.save(chatRoomMember);
     }
 
-    @Transactional
-    public void inviteChatMember(Long chatRoomId, InviteChatRoomDTO inviteChatRoomDTO) {
+    public List<GetInvitableListDTO> getMemberNotInChatRoom(Long chatRoomId) {
 
-        Project project = projectValidator.validateActiveProject(inviteChatRoomDTO.getProjectId());
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
+        Project project = projectValidator.validateActiveProject(chatRoom.getProject().getProjectId());
 
-        for (Long memberId : inviteChatRoomDTO.getInviteMemberIds()) {
-            Member member = memberValidator.validateMemberInChatRoom(project.getProjectId(), chatRoomId, memberId);
+        List<Member> allProjectMember = memberRepository.findByProject(project);
+        Set<Member> memberInChatRoom = chatRoomMemberRepository.findByChatRoom(chatRoom).stream()
+                .map(ChatRoomMember::getMember)
+                .collect(Collectors.toSet());
 
-            ChatRoomMember chatRoomMember = ChatRoomMember.builder()
-                    .member(member)
-                    .chatRoom(chatRoom)
-                    .build();
-
-            chatRoomMemberRepository.save(chatRoomMember);
-        }
+        return allProjectMember.stream()
+                .filter(member -> !memberInChatRoom.contains(member))
+                .map(member -> GetInvitableListDTO.builder()
+                        .memberId(member.getMemberId())
+                        .memberName(member.getUser().getName())
+                        .profileImage(s3Service.getPresignedUrl(member.getUser().getProfileImage()))
+                        .build())
+                .collect(Collectors.toList());
     }
 
     @Transactional
+    public void inviteChatMember(Long chatRoomId, InviteChatRoomDTO inviteChatRoomDTO) {
+
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
+        Project project = projectValidator.validateActiveProject(chatRoom.getProject().getProjectId());
+
+        for (Long memberId : inviteChatRoomDTO.getInviteMemberIds()) {
+            addChatRoomMember(project, chatRoom, memberId);
+        }
+    }
+
+    public void addChatRoomMember(Project project, ChatRoom chatRoom, Long memberId) {
+
+        Member member = memberValidator.validateMember(project.getProjectId(), memberId);
+        memberValidator.isMemberAlreadyInChatRoom(chatRoom, member, false);
+
+        ChatRoomMember chatRoomMember = ChatRoomMember.builder()
+                .member(member)
+                .chatRoom(chatRoom)
+                .build();
+
+        chatRoomMemberRepository.save(chatRoomMember);
+    }
+
     public void editChatRoomName(Long chatRoomId, String chatRoomName) {
 
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
@@ -121,23 +161,26 @@ public class ChatService{
     }
 
     @Transactional
-    public ReceiveMessageResponseDto saveChatMessage(Long roomId, SendMessageRequestDTO dto) throws JsonProcessingException {
+    public ReceiveMessageResponseDto saveChatMessage(Long chatRoomId, SendMessageRequestDTO dto) throws JsonProcessingException {
 
-        String key = "chat:room:" + roomId;
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
+        Member sendMember = memberRepository.findById(dto.getSenderId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+        String key = "chat:room:" + chatRoomId;
         String jsonMessage = objectMapper.writeValueAsString(dto);
 
         redisTemplate.opsForList().rightPush(key, jsonMessage);
-        log.info("websocket send chatting -> db read success : room id - {}, sender id - {}", roomId, dto.getSenderId());
-
-        User sendUser = userRepository.findById(dto.getSenderId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+        log.info("websocket send chatting -> db read success : room id - {}, sender id - {}", chatRoomId, dto.getSenderId());
 
         return ReceiveMessageResponseDto.builder()
                 .senderId(dto.getSenderId())
-                .senderName(sendUser.getName())
-                .senderProfileImage(s3Service.getPresignedUrl(sendUser.getProfileImage()))
+                .senderName(sendMember.getUser().getName())
+                .senderProfileImage(s3Service.getPresignedUrl(sendMember.getUser().getProfileImage()))
                 .message(dto.getMessage())
                 .sentAt(dto.getSentAt())
+                .senderType(SenderType.MEMBER)
                 .isImage(dto.getIsImage())
                 .build();
     }
