@@ -1,5 +1,6 @@
 package com.example.weup.entity;
 
+import com.example.weup.constant.DisplayType;
 import com.example.weup.constant.SenderType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
@@ -45,7 +46,11 @@ public class ChatMessage {
     @Column(nullable = false)
     private SenderType senderType;
 
-    public void changeSender(Member member){
-        this.senderId = member;
+    @Enumerated(EnumType.STRING)
+    private DisplayType displayType;
+
+    public void changeSenderToWithdraw() {
+        this.senderId = null;
+        this.senderType = SenderType.WITHDRAW;
     }
 }

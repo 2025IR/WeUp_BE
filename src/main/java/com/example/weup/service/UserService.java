@@ -182,21 +182,16 @@ public class UserService {
         LocalDateTime threshold = LocalDateTime.now().minusDays(30);
         List<User> expiredUsers = userRepository.findAllByDeletedAtBefore(threshold);
 
-        User deletedUser = userRepository.findById(3L)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-
         for (User user : expiredUsers) {
             List<Member> members = memberRepository.findByUser(user);
-            for (Member member : members) {
-                member.assignDeletedUser(deletedUser);
-            }
-            memberRepository.saveAll(members);
 
-            List<ChatMessage> messages = chatMessageRepository.findByUser(user);
-            for (ChatMessage message : messages) {
-                message.changeSender(deletedUser);
+            for (Member member : members) {
+                List<ChatMessage> messages = chatMessageRepository.findBySenderId(member);
+                for (ChatMessage message : messages) {
+                    message.changeSenderToWithdraw();
+                }
+                chatMessageRepository.saveAll(messages);
             }
-            chatMessageRepository.saveAll(messages);
 
             AccountSocial accountSocial = user.getAccountSocial();
             if (accountSocial != null) {
