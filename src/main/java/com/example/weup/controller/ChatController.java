@@ -35,7 +35,7 @@ public class ChatController {
     public ResponseEntity<DataResponseDTO<String>> createChatRoom(@LoginUser User user,
                                                                   @RequestBody CreateChatRoomDTO createChatRoomDto) {
 
-        Long newChatRoomId = chatService.createChatRoom(user, createChatRoomDto);
+        chatService.createChatRoom(user, createChatRoomDto);
 
         return ResponseEntity.ok(DataResponseDTO.of("채팅방 생성이 완료되었습니다."));
     }

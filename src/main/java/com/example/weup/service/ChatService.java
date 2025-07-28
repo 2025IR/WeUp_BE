@@ -47,7 +47,7 @@ public class ChatService{
     private final ChatRoomMemberRepository chatRoomMemberRepository;
 
     @Transactional
-    public Long createChatRoom(User user, CreateChatRoomDTO createChatRoomDto) {
+    public void createChatRoom(User user, CreateChatRoomDTO createChatRoomDto) {
 
         Project project = projectValidator.validateActiveProject(createChatRoomDto.getProjectId());
         Member member = memberValidator.validateActiveMemberInProject(user.getUserId(), project.getProjectId());
@@ -65,8 +65,6 @@ public class ChatService{
 
         chatRoomRepository.save(chatRoom);
         chatRoomMemberRepository.save(chatRoomMember);
-
-        return chatRoom.getChatRoomId();
     }
 
     @Transactional
