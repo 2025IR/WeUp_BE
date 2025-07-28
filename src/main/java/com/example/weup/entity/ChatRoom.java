@@ -18,13 +18,24 @@ public class ChatRoom {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "chatroom_id", nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false)
     private Long chatRoomId;
+
+    @Column(nullable = false)
+    private String chatRoomName;
 
     @OneToOne(fetch = FetchType.EAGER)
     private Project project;
 
-    @Column(name = "created_at", nullable = false)
+    @Column(nullable = false)
     @Builder.Default
-    private LocalDateTime createdAt = LocalDateTime.now();  // 이게 필요한가 ?
+    private LocalDateTime createdAt = LocalDateTime.now();
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean basic = false;
+
+    public void editChatRoomName(String chatRoomName) {
+        this.chatRoomName = chatRoomName;
+    }
 }

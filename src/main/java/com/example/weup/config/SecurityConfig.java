@@ -55,14 +55,15 @@ public class SecurityConfig {
          http
                  .csrf(AbstractHttpConfigurer::disable)
                  .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-
+//                 .formLogin(AbstractHttpConfigurer::disable)
+//                 .httpBasic(AbstractHttpConfigurer::disable)
                  .exceptionHandling(exception -> exception
                          .authenticationEntryPoint(jwtAuthenticationEntryPoint)
                          .accessDeniedHandler(jwtAccessDeniedHandler)
                  )
 
                  .authorizeHttpRequests(auth -> auth
-                         .requestMatchers("/error", "/ws", "/ws/**", "/ai", "/ai/**").permitAll()
+                         .requestMatchers("/error", "/ai", "/ai/**").permitAll()
                          .requestMatchers("/user/signIn", "/user/signup", "/user/reissuetoken", "/user/email", "/user/email/check").permitAll()
                          .requestMatchers("/text").hasRole("USER")
                          .anyRequest().authenticated()

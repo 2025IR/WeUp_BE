@@ -2,16 +2,18 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.dto.request.CreateChatRoomDTO;
+import com.example.weup.dto.request.InviteChatRoomDTO;
 import com.example.weup.dto.request.SendImageMessageRequestDTO;
-import com.example.weup.dto.request.SendMessageRequestDto;
+import com.example.weup.dto.request.SendMessageRequestDTO;
 import com.example.weup.dto.response.ChatPageResponseDto;
+import com.example.weup.dto.response.GetChatRoomListDTO;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
-import com.example.weup.entity.ChatMessage;
-import com.example.weup.entity.ChatRoom;
-import com.example.weup.entity.User;
-import com.example.weup.repository.ChatMessageRepository;
-import com.example.weup.repository.UserRepository;
+import com.example.weup.entity.*;
+import com.example.weup.repository.*;
 import com.example.weup.validate.ChatValidator;
+import com.example.weup.validate.MemberValidator;
+import com.example.weup.validate.ProjectValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -33,21 +35,93 @@ import java.util.stream.Collectors;
 public class ChatService{
 
     private final ChatMessageRepository chatMessageRepository;
-
     private final UserRepository userRepository;
-
     private final S3Service s3Service;
-
     private final StringRedisTemplate redisTemplate;
-
     private final ObjectMapper objectMapper;
-
     private final SimpMessagingTemplate messagingTemplate;
-
     private final ChatValidator chatValidator;
+    private final ProjectValidator projectValidator;
+    private final MemberValidator memberValidator;
+    private final ChatRoomRepository chatRoomRepository;
+    private final ChatRoomMemberRepository chatRoomMemberRepository;
 
     @Transactional
-    public ReceiveMessageResponseDto saveChatMessage(Long roomId, SendMessageRequestDto dto) throws JsonProcessingException {
+    public void createChatRoom(User user, CreateChatRoomDTO createChatRoomDto) {
+
+        Project project = projectValidator.validateActiveProject(createChatRoomDto.getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(user.getUserId(), project.getProjectId());
+
+        ChatRoom chatRoom = ChatRoom.builder()
+                .chatRoomName(createChatRoomDto.getChatRoomName())
+                .project(project)
+                .basic(true)
+                .build();
+
+        ChatRoomMember chatRoomMember = ChatRoomMember.builder()
+                .member(member)
+                .chatRoom(chatRoom)
+                .build();
+
+        chatRoomRepository.save(chatRoom);
+        chatRoomMemberRepository.save(chatRoomMember);
+    }
+
+    @Transactional
+    public void inviteChatMember(Long chatRoomId, InviteChatRoomDTO inviteChatRoomDTO) {
+
+        Project project = projectValidator.validateActiveProject(inviteChatRoomDTO.getProjectId());
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
+
+        for (Long memberId : inviteChatRoomDTO.getInviteMemberIds()) {
+            Member member = memberValidator.validateMemberInChatRoom(project.getProjectId(), chatRoomId, memberId);
+
+            ChatRoomMember chatRoomMember = ChatRoomMember.builder()
+                    .member(member)
+                    .chatRoom(chatRoom)
+                    .build();
+
+            chatRoomMemberRepository.save(chatRoomMember);
+        }
+    }
+
+    @Transactional
+    public void editChatRoomName(Long chatRoomId, String chatRoomName) {
+
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
+
+        chatRoom.editChatRoomName(chatRoomName);
+        chatRoomRepository.save(chatRoom);
+    }
+
+    @Transactional
+    public List<GetChatRoomListDTO> getChatRoomList(User user, Long projectId) {
+
+        Project project = projectValidator.validateActiveProject(projectId);
+        Member member = memberValidator.validateActiveMemberInProject(user.getUserId(), project.getProjectId());
+
+        return chatRoomRepository.findByProject(project).stream()
+                .map(chatRoom -> {
+                    ChatRoomMember targetChatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, member);
+
+                    List<String> chatRoomMemberNames = chatRoomMemberRepository.findByChatRoom(chatRoom).stream()
+                            .map(chatRoomMember -> chatRoomMember.getMember().getUser().getName())
+                            .collect(Collectors.toList());
+
+                    return GetChatRoomListDTO.builder()
+                            .chatRoomId(chatRoom.getChatRoomId())
+                            .chatRoomMemberId(targetChatRoomMember.getChatRoomMemberId())
+                            .chatRoomName(chatRoom.getChatRoomName())
+                            .chatRoomMemberNames(chatRoomMemberNames)
+                            .build();
+                })
+                .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public ReceiveMessageResponseDto saveChatMessage(Long roomId, SendMessageRequestDTO dto) throws JsonProcessingException {
 
         String key = "chat:room:" + roomId;
         String jsonMessage = objectMapper.writeValueAsString(dto);
@@ -77,14 +151,14 @@ public class ChatService{
 
         String storedFileName = s3Service.uploadSingleFile(sendImageMessageRequestDTO.getFile()).getStoredFileName();
 
-        SendMessageRequestDto dto = SendMessageRequestDto.builder()
+        SendMessageRequestDTO dto = SendMessageRequestDTO.builder()
                 .senderId(Long.parseLong(sendImageMessageRequestDTO.getUserId()))
                 .message(s3Service.getPresignedUrl(storedFileName))
                 .isImage(true)
                 .sentAt(LocalDateTime.now())
                 .build();
 
-        SendMessageRequestDto saveDTO = SendMessageRequestDto.builder()
+        SendMessageRequestDTO saveDTO = SendMessageRequestDTO.builder()
                 .senderId(Long.parseLong(sendImageMessageRequestDTO.getUserId()))
                 .message(storedFileName)
                 .isImage(true)
@@ -139,7 +213,7 @@ public class ChatService{
 
             ChatRoom chatRoom = chatValidator.validateChatRoom(roomId);
             for (String json : messages) {
-                SendMessageRequestDto dto = objectMapper.readValue(json, SendMessageRequestDto.class);
+                SendMessageRequestDTO dto = objectMapper.readValue(json, SendMessageRequestDTO.class);
 
                 User chatUser = userRepository.findById(dto.getSenderId())
                         .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
@@ -179,7 +253,7 @@ public class ChatService{
 
             ChatRoom chatRoom = chatValidator.validateChatRoom(roomId);
             for (String json : redisMessages) {
-                SendMessageRequestDto dto = objectMapper.readValue(json, SendMessageRequestDto.class);
+                SendMessageRequestDTO dto = objectMapper.readValue(json, SendMessageRequestDTO.class);
 
                 User chatUser = userRepository.findById(dto.getSenderId())
                         .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));

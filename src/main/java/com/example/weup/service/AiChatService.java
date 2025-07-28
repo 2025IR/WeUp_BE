@@ -5,7 +5,7 @@ import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.AiChatRequestDTO;
 import com.example.weup.dto.request.AiRoleAssignRequestDTO;
 import com.example.weup.dto.request.AiTodoCreateRequestDTO;
-import com.example.weup.dto.request.SendMessageRequestDto;
+import com.example.weup.dto.request.SendMessageRequestDTO;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
@@ -58,7 +58,7 @@ public class AiChatService {
 
     public void sendMessageToAi(Long roomId, AiChatRequestDTO aiChatRequestDTO) throws JsonProcessingException {
 
-        SendMessageRequestDto sendMessageRequestDto = SendMessageRequestDto.builder()
+        SendMessageRequestDTO sendMessageRequestDto = SendMessageRequestDTO.builder()
                 .senderId(aiChatRequestDTO.getSenderId())
                 .message(aiChatRequestDTO.getUserInput())
                 .build();
@@ -87,7 +87,7 @@ public class AiChatService {
             }
             log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
 
-            SendMessageRequestDto responseData = SendMessageRequestDto.builder()
+            SendMessageRequestDTO responseData = SendMessageRequestDTO.builder()
                     .senderId(2L)
                     .message(realMessage)
                     .build();

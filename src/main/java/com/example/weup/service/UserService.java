@@ -47,7 +47,7 @@ public class UserService {
     private String defaultProfileImage;
 
     @Transactional
-    public void signUp(SignUpRequestDto signUpRequestDto) {
+    public void signUp(SignUpRequestDTO signUpRequestDto) {
         String email = signUpRequestDto.getEmail();
         if (!mailService.isEmailVerified(email)) {
             throw new GeneralException(ErrorInfo.EMAIL_NOT_VERIFIED);
@@ -207,7 +207,6 @@ public class UserService {
             }
         }
     }
-
 
     @Transactional
     public void restoreWithdrawnUser(RestoreUserRequestDTO restoreUserRequestDTO) {
