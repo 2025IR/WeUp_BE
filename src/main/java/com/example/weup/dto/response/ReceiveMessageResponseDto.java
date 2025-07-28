@@ -1,5 +1,6 @@
 package com.example.weup.dto.response;
 
+import com.example.weup.constant.DisplayType;
 import com.example.weup.constant.SenderType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
@@ -29,4 +30,6 @@ public class ReceiveMessageResponseDto {
 
     @JsonProperty("isImage")
     private boolean isImage;
+
+    private DisplayType displayType;
 }
