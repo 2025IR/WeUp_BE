@@ -72,4 +72,35 @@ public class MemberValidator {
 
         return member;
     }
+
+    public Member validateMember(Long projectId, Long memberId) {
+
+        Member member = memberRepository.findById(memberId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
+
+        if (!member.getProject().getProjectId().equals(projectId)) {
+            throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
+        }
+
+        if (isDeletedMember(member.getMemberId())) {
+            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
+        }
+
+        return member;
+    }
+
+    public void isMemberAlreadyInChatRoom(ChatRoom chatRoom, Member member, boolean targetResult) {
+
+        if (targetResult) {
+            if (!chatRoomMemberRepository.existsByChatRoomAndMember(chatRoom, member)) {
+                throw new GeneralException(ErrorInfo.MEMBER_NOT_FOUND);
+            }
+        }
+
+        if (!targetResult) {
+            if (chatRoomMemberRepository.existsByChatRoomAndMember(chatRoom, member)) {
+                throw new GeneralException(ErrorInfo.MEMBER_ALREADY_EXISTS_IN_CHAT_ROOM);
+            }
+        }
+    }
 }
