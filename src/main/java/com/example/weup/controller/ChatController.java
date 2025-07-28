@@ -44,7 +44,7 @@ public class ChatController {
     @PostMapping("/chat/invite/{chatRoomId}")
     public ResponseEntity<DataResponseDTO<String>> inviteChatRoom(@LoginUser User user,
                                                                   @PathVariable Long chatRoomId,
-                                                                  @RequestBody InviteChatRoomDTO inviteChatRoomDTO) {
+                                                                  @RequestBody InviteChatRoomDTO inviteChatRoomDTO) throws JsonProcessingException {
 
         chatService.inviteChatMember(chatRoomId, inviteChatRoomDTO);
 
