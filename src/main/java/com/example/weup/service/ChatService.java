@@ -21,7 +21,6 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.cglib.core.Local;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -193,7 +192,7 @@ public class ChatService{
             }
         } else {
             ChatMessage lastMsg = chatMessageRepository.findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(chatRoomId);
-            if (lastMsg != null && lastMsg.getSenderId().getMemberId().equals(dto.getSenderId())) {
+            if (lastMsg != null && lastMsg.getMember().getMemberId().equals(dto.getSenderId())) {
                 if (lastMsg.getSentAt().withSecond(0).withNano(0)
                         .equals(dto.getSentAt().withSecond(0).withNano(0))) {
                     displayType = DisplayType.SAME_TIME;
@@ -348,12 +347,12 @@ public class ChatService{
             for (String json : messages) {
                 SendMessageRequestDTO dto = objectMapper.readValue(json, SendMessageRequestDTO.class);
 
-                User chatUser = userRepository.findById(dto.getSenderId())
-                        .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+                Member chatMember = memberRepository.findById(dto.getSenderId())
+                        .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
                 ChatMessage chatMessage = ChatMessage.builder()
                         .chatRoom(chatRoom)
-                        .user(chatUser)
+                        .member(chatMember)
                         .message(dto.getMessage())
                         .sentAt(dto.getSentAt())
                         .isImage(dto.getIsImage())
@@ -389,12 +388,12 @@ public class ChatService{
             for (String json : redisMessages) {
                 SendMessageRequestDTO dto = objectMapper.readValue(json, SendMessageRequestDTO.class);
 
-                User chatUser = userRepository.findById(dto.getSenderId())
-                        .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+                Member chatMember = memberRepository.findById(dto.getSenderId())
+                        .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
                 ChatMessage chatMessage = ChatMessage.builder()
                         .chatRoom(chatRoom)
-                        .user(chatUser)
+                        .member(chatMember)
                         .message(dto.getMessage())
                         .sentAt(dto.getSentAt())
                         .isImage(dto.getIsImage())
@@ -417,9 +416,9 @@ public class ChatService{
 
         List<ReceiveMessageResponseDto> messages = combinedMessages.subList(start, end).stream()
                 .map(msg -> ReceiveMessageResponseDto.builder()
-                        .senderId(msg.getUser().getUserId())
-                        .senderName(msg.getUser().getName())
-                        .senderProfileImage(s3Service.getPresignedUrl(msg.getUser().getProfileImage()))
+                        .senderId(msg.getMember().getMemberId())
+                        .senderName(msg.getMember().getUser().getName())
+                        .senderProfileImage(s3Service.getPresignedUrl(msg.getMember().getUser().getProfileImage()))
                         .message(msg.getIsImage() ? s3Service.getPresignedUrl(msg.getMessage()) : msg.getMessage())
                         .isImage(msg.getIsImage())
                         .sentAt(msg.getSentAt())

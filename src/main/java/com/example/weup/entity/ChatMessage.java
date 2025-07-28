@@ -29,8 +29,8 @@ public class ChatMessage {
     private ChatRoom chatRoom;
 
     @ManyToOne
-    @JoinColumn
-    private Member senderId;
+    @JoinColumn(name = "sender_id")
+    private Member member;
 
     @Column
     private String message;
@@ -50,7 +50,7 @@ public class ChatMessage {
     private DisplayType displayType;
 
     public void changeSenderToWithdraw() {
-        this.senderId = null;
+        this.member = null;
         this.senderType = SenderType.WITHDRAW;
     }
 }
