@@ -129,6 +129,7 @@ public class ChatService{
         return chatRoomMemberRepository.save(chatRoomMember);
     }
 
+    @Transactional
     public void editChatRoomName(Long chatRoomId, String chatRoomName) {
 
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
@@ -435,4 +436,33 @@ public class ChatService{
                 .isLastPage(isLastPage)
                 .build();
     }
+
+    @Transactional
+    public void leaveChatRoom(User user, Long chatRoomId) throws JsonProcessingException {
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
+
+        Member member = memberValidator.validateActiveMemberInProject(user.getUserId(), chatRoom.getProject().getProjectId());
+
+        memberValidator.isMemberAlreadyInChatRoom(chatRoom, member, true);
+
+        ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, member);
+
+        chatRoomMemberRepository.delete(chatRoomMember);
+
+        saveSystemMessage(chatRoomId, member.getUser().getName() + "님이 채팅방에서 퇴장했습니다.");
+
+        List<ChatRoomMember> remainingMembers = chatRoomMemberRepository.findByChatRoom(chatRoom);
+
+        if (remainingMembers.isEmpty()) {
+            String key = "chat:room:" + chatRoomId;
+
+            redisTemplate.delete(key);
+            chatMessageRepository.deleteByChatRoom(chatRoom);
+            chatRoomRepository.delete(chatRoom);
+
+            log.info("chat room deleted -> roomId: {}", chatRoomId);
+        }
+    }
+
 }
