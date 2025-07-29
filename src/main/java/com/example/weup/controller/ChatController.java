@@ -2,10 +2,7 @@ package com.example.weup.controller;
 
 import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
 import com.example.weup.dto.request.*;
-import com.example.weup.dto.response.ChatPageResponseDto;
-import com.example.weup.dto.response.DataResponseDTO;
-import com.example.weup.dto.response.GetChatRoomListDTO;
-import com.example.weup.dto.response.ReceiveMessageResponseDto;
+import com.example.weup.dto.response.*;
 import com.example.weup.entity.User;
 import com.example.weup.service.ChatService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -27,7 +24,6 @@ import java.util.List;
 public class ChatController {
 
     private final ChatService chatService;
-
     private final SimpMessagingTemplate messagingTemplate;
 
     @ResponseBody
@@ -41,6 +37,16 @@ public class ChatController {
     }
 
     @ResponseBody
+    @PostMapping("/chat/list/{chatRoomId}")
+    public ResponseEntity<DataResponseDTO<List<GetInvitableListDTO>>> getMemberNotInChatRoom (@LoginUser User user,
+                                                                                              @PathVariable Long chatRoomId) {
+
+        List<GetInvitableListDTO> getInvitableList = chatService.getMemberNotInChatRoom(chatRoomId);
+
+        return ResponseEntity.ok(DataResponseDTO.of(getInvitableList, "채팅방 초대 가능한 멤버를 불러왔습니다."));
+    }
+
+    @ResponseBody
     @PostMapping("/chat/invite/{chatRoomId}")
     public ResponseEntity<DataResponseDTO<String>> inviteChatRoom(@LoginUser User user,
                                                                   @PathVariable Long chatRoomId,
@@ -49,16 +55,6 @@ public class ChatController {
         chatService.inviteChatMember(chatRoomId, inviteChatRoomDTO);
 
         return ResponseEntity.ok(DataResponseDTO.of("채팅방에 초대되었습니다."));
-    }
-
-    @ResponseBody
-    @DeleteMapping("/chat/leave/{chatRoomId}")
-    public ResponseEntity<DataResponseDTO<String>> exitChatRoom(@LoginUser User user,
-                                                                @PathVariable Long chatRoomId) throws JsonProcessingException {
-
-        chatService.leaveChatRoom(user, chatRoomId);
-
-        return ResponseEntity.ok(DataResponseDTO.of("채팅방에서 퇴장하였습니다."));
     }
 
     @ResponseBody
@@ -94,7 +90,7 @@ public class ChatController {
     }
 
     @ResponseBody
-    @PostMapping("/send/image")
+    @PostMapping("/send/image")  // chatRoomId 밖으로 빼기
     public void sendImageMessage(@LoginUser Long userId,
                                  @ModelAttribute SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
 
@@ -115,5 +111,15 @@ public class ChatController {
 
         log.info("요청자 : {}, get chatting messages -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of(data, "채팅 내역 조회가 완료되었습니다."));
+    }
+
+    @ResponseBody
+    @DeleteMapping("/chat/leave/{chatRoomId}")
+    public ResponseEntity<DataResponseDTO<String>> exitChatRoom(@LoginUser User user,
+                                                                @PathVariable Long chatRoomId) throws JsonProcessingException {
+
+        chatService.leaveChatRoom(user, chatRoomId);
+
+        return ResponseEntity.ok(DataResponseDTO.of("채팅방에서 퇴장하였습니다."));
     }
 }

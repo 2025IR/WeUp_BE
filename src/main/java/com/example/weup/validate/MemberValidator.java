@@ -7,7 +7,6 @@ import com.example.weup.entity.ChatRoom;
 import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
 import com.example.weup.repository.ChatRoomMemberRepository;
-import com.example.weup.repository.ChatRoomRepository;
 import com.example.weup.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -17,7 +16,6 @@ import org.springframework.stereotype.Component;
 public class MemberValidator {
 
     private final MemberRepository memberRepository;
-    private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
 
     public Member validateActiveMemberInProject(Long userId, Long projectId) {
@@ -49,28 +47,6 @@ public class MemberValidator {
         return memberRepository.findById(memberId)
                 .map(Member::isMemberDeleted)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
-    }
-
-    public Member validateMemberInChatRoom(Long projectId, Long memberId, Long chatRoomId) {
-
-        Member member = memberRepository.findById(memberId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
-        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
-
-        if (!member.getProject().getProjectId().equals(projectId)) {
-            throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
-        }
-
-        if (isDeletedMember(member.getMemberId())) {
-            throw new GeneralException(ErrorInfo.DELETED_MEMBER);
-        }
-
-        if (chatRoomMemberRepository.existsByChatRoomAndMember(chatRoom, member)) {
-            throw new GeneralException(ErrorInfo.NOT_LEADER);
-        }
-
-        return member;
     }
 
     public Member validateMember(Long projectId, Long memberId) {
