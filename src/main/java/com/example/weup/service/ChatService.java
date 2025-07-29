@@ -111,12 +111,11 @@ public class ChatService{
         Project project = projectValidator.validateActiveProject(chatRoom.getProject().getProjectId());
 
         for (Long memberId : inviteChatRoomDTO.getInviteMemberIds()) {
-            ChatRoomMember newMember = addChatRoomMember(project, chatRoom, memberId);
-            saveSystemMessage(chatRoomId, newMember.getMember().getUser().getName() + "님이 채팅방에 참여했습니다.");
+            addChatRoomMember(project, chatRoom, memberId);
         }
     }
 
-    public ChatRoomMember addChatRoomMember(Project project, ChatRoom chatRoom, Long memberId) {
+    public void addChatRoomMember(Project project, ChatRoom chatRoom, Long memberId) throws JsonProcessingException {
 
         Member member = memberValidator.validateMember(project.getProjectId(), memberId);
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, member, false);
@@ -126,7 +125,9 @@ public class ChatService{
                 .chatRoom(chatRoom)
                 .build();
 
-        return chatRoomMemberRepository.save(chatRoomMember);
+        saveSystemMessage(chatRoom.getChatRoomId(), member.getUser().getName() + "님이 채팅방에 참여했습니다.");
+
+        chatRoomMemberRepository.save(chatRoomMember);
     }
 
     @Transactional
