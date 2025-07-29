@@ -146,6 +146,10 @@ public class ChatService{
         Member member = memberValidator.validateActiveMemberInProject(user.getUserId(), project.getProjectId());
 
         return chatRoomRepository.findByProject(project).stream()
+                .sorted(Comparator
+                        .comparing(ChatRoom::isBasic, Comparator.reverseOrder())
+                        .thenComparing(ChatRoom::getCreatedAt, Comparator.reverseOrder())
+                )
                 .map(chatRoom -> {
                     ChatRoomMember targetChatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, member);
 
@@ -168,22 +172,22 @@ public class ChatService{
 
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
-        Member sendMember = memberRepository.findById(dto.getSenderId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
+        Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), dto.getSenderId());
+        memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
 
         String key = "chat:room:" + chatRoomId;
         DisplayType displayType = DisplayType.DEFAULT;
 
         checkAndSendDateChangeMessage(chatRoomId, dto.getSentAt());
 
-        String lastJson = redisTemplate.opsForList().size(key) > 0
+        String lastJson = redisTemplate.opsForList().size(key) != null
                 ? redisTemplate.opsForList().index(key, -1)
                 : null;
 
         if (lastJson != null) {
-            SendMessageRequestDTO lastDto = objectMapper.readValue(lastJson, SendMessageRequestDTO.class);
-            if (lastDto.getSenderId().equals(dto.getSenderId())) {
-                if (lastDto.getSentAt().withSecond(0).withNano(0)
+            SendMessageRequestDTO lastMessage = objectMapper.readValue(lastJson, SendMessageRequestDTO.class);
+            if (lastMessage.getSenderId().equals(dto.getSenderId())) {
+                if (lastMessage.getSentAt().withSecond(0).withNano(0)
                         .equals(dto.getSentAt().withSecond(0).withNano(0))) {
                     displayType = DisplayType.SAME_TIME;
                 } else {
@@ -220,30 +224,28 @@ public class ChatService{
                 .build();
     }
 
-    private void checkAndSendDateChangeMessage(Long roomId, LocalDateTime currentMessageTime) throws JsonProcessingException {
-        String key = "chat:room:" + roomId;
-        LocalDate currentDate = currentMessageTime.toLocalDate();
+    private void checkAndSendDateChangeMessage(Long chatRoomId, LocalDateTime currentMessageTime) throws JsonProcessingException {
 
+        String key = "chat:room:" + chatRoomId;
+        Long redisSize = redisTemplate.opsForList().size(key);
+
+        LocalDate currentDate = currentMessageTime.toLocalDate();
         LocalDate lastDate = null;
 
-        Long redisSize = redisTemplate.opsForList().size(key);
         if (redisSize != null && redisSize > 0) {
             String lastJson = redisTemplate.opsForList().index(key, -1);
-            if (lastJson != null) {
-                SendMessageRequestDTO lastDto = objectMapper.readValue(lastJson, SendMessageRequestDTO.class);
-                lastDate = lastDto.getSentAt().toLocalDate();
-            }
+            SendMessageRequestDTO lastDto = objectMapper.readValue(lastJson, SendMessageRequestDTO.class);
+            lastDate = lastDto.getSentAt().toLocalDate();
         }
-
-        if (lastDate == null) {
-            ChatMessage lastMessage = chatMessageRepository.findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(roomId);
+        if(lastDate == null) {
+            ChatMessage lastMessage = chatMessageRepository.findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(chatRoomId);
             if (lastMessage != null) {
                 lastDate = lastMessage.getSentAt().toLocalDate();
             }
         }
 
         if (lastDate == null || !lastDate.equals(currentDate)) {
-            saveSystemMessage(roomId, currentDate.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일")));
+            saveSystemMessage(chatRoomId, currentDate.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일")));
         }
     }
 
@@ -439,21 +441,19 @@ public class ChatService{
 
     @Transactional
     public void leaveChatRoom(User user, Long chatRoomId) throws JsonProcessingException {
+
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
 
         Member member = memberValidator.validateActiveMemberInProject(user.getUserId(), chatRoom.getProject().getProjectId());
-
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, member, true);
 
         ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, member);
-
         chatRoomMemberRepository.delete(chatRoomMember);
 
         saveSystemMessage(chatRoomId, member.getUser().getName() + "님이 채팅방에서 퇴장했습니다.");
 
         List<ChatRoomMember> remainingMembers = chatRoomMemberRepository.findByChatRoom(chatRoom);
-
         if (remainingMembers.isEmpty()) {
             String key = "chat:room:" + chatRoomId;
 

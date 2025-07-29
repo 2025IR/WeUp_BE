@@ -32,4 +32,6 @@ public class ReceiveMessageResponseDto {
     private boolean isImage;
 
     private DisplayType displayType;
+
+
 }
