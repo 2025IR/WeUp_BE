@@ -28,8 +28,4 @@ public class SendMessageRequestDTO {
     @Builder.Default
     @JsonProperty("isImage")
     private Boolean isImage = false;
-
-    private DisplayType displayType;
-
-    private SenderType senderType;
 }

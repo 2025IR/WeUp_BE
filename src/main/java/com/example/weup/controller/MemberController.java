@@ -5,13 +5,13 @@ import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.MemberInfoResponseDTO;
 import com.example.weup.dto.response.RoleListResponseDTO;
-import com.example.weup.security.JwtUtil;
 import com.example.weup.service.MemberService;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import jakarta.servlet.http.HttpServletRequest;
 import java.util.List;
 
 @RestController
@@ -23,7 +23,7 @@ public class MemberController {
 
     @PostMapping("/invite")
     public ResponseEntity<DataResponseDTO<String>> inviteUser(@LoginUser Long userId,
-                                                              @RequestBody ProjectInviteRequestDTO projectInviteRequestDTO) {
+                                                              @Valid @RequestBody ProjectInviteRequestDTO projectInviteRequestDTO) throws JsonProcessingException {
 
         String result = memberService.inviteUser(userId, projectInviteRequestDTO);
 

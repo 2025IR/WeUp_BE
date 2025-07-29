@@ -111,12 +111,11 @@ public class ChatService{
         Project project = projectValidator.validateActiveProject(chatRoom.getProject().getProjectId());
 
         for (Long memberId : inviteChatRoomDTO.getInviteMemberIds()) {
-            ChatRoomMember newMember = addChatRoomMember(project, chatRoom, memberId);
-            saveSystemMessage(chatRoomId, newMember.getMember().getUser().getName() + "님이 채팅방에 참여했습니다.");
+            addChatRoomMember(project, chatRoom, memberId);
         }
     }
 
-    public ChatRoomMember addChatRoomMember(Project project, ChatRoom chatRoom, Long memberId) {
+    public void addChatRoomMember(Project project, ChatRoom chatRoom, Long memberId) throws JsonProcessingException {
 
         Member member = memberValidator.validateMember(project.getProjectId(), memberId);
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, member, false);
@@ -126,7 +125,9 @@ public class ChatService{
                 .chatRoom(chatRoom)
                 .build();
 
-        return chatRoomMemberRepository.save(chatRoomMember);
+        saveSystemMessage(chatRoom.getChatRoomId(), member.getUser().getName() + "님이 채팅방에 참여했습니다.");
+
+        chatRoomMemberRepository.save(chatRoomMember);
     }
 
     @Transactional
@@ -175,40 +176,21 @@ public class ChatService{
         Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), dto.getSenderId());
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
 
-        String key = "chat:room:" + chatRoomId;
-        DisplayType displayType = DisplayType.DEFAULT;
-
         checkAndSendDateChangeMessage(chatRoomId, dto.getSentAt());
 
-        String lastJson = redisTemplate.opsForList().size(key) != null
-                ? redisTemplate.opsForList().index(key, -1)
-                : null;
+        DisplayType displayType = setDisplayType(chatRoomId, dto.getSenderId(), dto.getSentAt());
 
-        if (lastJson != null) {
-            SendMessageRequestDTO lastMessage = objectMapper.readValue(lastJson, SendMessageRequestDTO.class);
-            if (lastMessage.getSenderId().equals(dto.getSenderId())) {
-                if (lastMessage.getSentAt().withSecond(0).withNano(0)
-                        .equals(dto.getSentAt().withSecond(0).withNano(0))) {
-                    displayType = DisplayType.SAME_TIME;
-                } else {
-                    displayType = DisplayType.SAME_SENDER;
-                }
-            }
-        } else {
-            ChatMessage lastMsg = chatMessageRepository.findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(chatRoomId);
-            if (lastMsg != null && lastMsg.getMember().getMemberId().equals(dto.getSenderId())) {
-                if (lastMsg.getSentAt().withSecond(0).withNano(0)
-                        .equals(dto.getSentAt().withSecond(0).withNano(0))) {
-                    displayType = DisplayType.SAME_TIME;
-                } else {
-                    displayType = DisplayType.SAME_SENDER;
-                }
-            }
-        }
+        ChatMessage message = ChatMessage.builder()
+                .chatRoom(chatRoom)
+                .member(sendMember)
+                .message(dto.getMessage())
+                .sentAt(dto.getSentAt())
+                .isImage(dto.getIsImage())
+                .displayType(displayType)
+                .build();
 
-        dto.setDisplayType(displayType);
-        String jsonMessage = objectMapper.writeValueAsString(dto);
-
+        String key = "chat:room:" + chatRoomId;
+        String jsonMessage = objectMapper.writeValueAsString(message);
         redisTemplate.opsForList().rightPush(key, jsonMessage);
         log.info("websocket send chatting -> db read success : room id - {}, sender id - {}", chatRoomId, dto.getSenderId());
 
@@ -222,6 +204,38 @@ public class ChatService{
                 .isImage(dto.getIsImage())
                 .displayType(displayType)
                 .build();
+    }
+
+    private DisplayType setDisplayType(Long chatRoomId, Long senderId, LocalDateTime sentAt) throws JsonProcessingException {
+        String key = "chat:room:" + chatRoomId;
+
+        String lastJson = redisTemplate.opsForList().size(key) > 0
+                ? redisTemplate.opsForList().index(key, -1)
+                : null;
+
+        if (lastJson != null) {
+            ChatMessage lastRedisMessage = objectMapper.readValue(lastJson, ChatMessage.class);
+
+            if (lastRedisMessage.getMember().getMemberId().equals(senderId)) {
+                if (lastRedisMessage.getSentAt().withSecond(0).withNano(0).equals(sentAt.withSecond(0).withNano(0))) {
+                    return DisplayType.SAME_TIME;
+                } else {
+                    return DisplayType.SAME_SENDER;
+                }
+            }
+        } else {
+            ChatMessage lastDBMessage = chatMessageRepository.findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(chatRoomId);
+
+            if (lastDBMessage != null && lastDBMessage.getMember().getMemberId().equals(senderId)) {
+                if (lastDBMessage.getSentAt().withSecond(0).withNano(0).equals(sentAt.withSecond(0).withNano(0))) {
+                    return DisplayType.SAME_TIME;
+                } else {
+                    return DisplayType.SAME_SENDER;
+                }
+            }
+        }
+
+        return DisplayType.DEFAULT;
     }
 
     private void checkAndSendDateChangeMessage(Long chatRoomId, LocalDateTime currentMessageTime) throws JsonProcessingException {
@@ -251,8 +265,8 @@ public class ChatService{
 
     @Transactional
     public void saveSystemMessage(Long roomId, String message) throws JsonProcessingException {
-        SendMessageRequestDTO sendMessageRequestDTO = SendMessageRequestDTO.builder()
-                .senderId(null)
+        ChatMessage chatMessage = ChatMessage.builder()
+                .member(null)
                 .senderType(SenderType.SYSTEM)
                 .message(message)
                 .isImage(false)
@@ -260,7 +274,7 @@ public class ChatService{
                 .displayType(DisplayType.DEFAULT)
                 .build();
 
-        String jsonMessage = objectMapper.writeValueAsString(sendMessageRequestDTO);
+        String jsonMessage = objectMapper.writeValueAsString(chatMessage);
         String key = "chat:room:" + roomId;
         redisTemplate.opsForList().rightPush(key, jsonMessage);
 
@@ -271,7 +285,7 @@ public class ChatService{
                         .senderProfileImage(null)
                         .message(message)
                         .isImage(false)
-                        .sentAt(sendMessageRequestDTO.getSentAt())
+                        .sentAt(chatMessage.getSentAt())
                         .displayType(DisplayType.DEFAULT)
                         .build());
     }
@@ -347,18 +361,20 @@ public class ChatService{
 
             ChatRoom chatRoom = chatValidator.validateChatRoom(roomId);
             for (String json : messages) {
-                SendMessageRequestDTO dto = objectMapper.readValue(json, SendMessageRequestDTO.class);
+                ChatMessage redisMessage = objectMapper.readValue(json, ChatMessage.class);
 
-                Member chatMember = memberRepository.findById(dto.getSenderId())
-                        .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
+                Member chatMember = redisMessage.getMember() != null
+                        ? memberRepository.findById(redisMessage.getMember().getMemberId())
+                            .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND))
+                        : null;
 
                 ChatMessage chatMessage = ChatMessage.builder()
                         .chatRoom(chatRoom)
                         .member(chatMember)
-                        .message(dto.getMessage())
-                        .sentAt(dto.getSentAt())
-                        .isImage(dto.getIsImage())
-                        .displayType(dto.getDisplayType())
+                        .message(redisMessage.getMessage())
+                        .sentAt(redisMessage.getSentAt())
+                        .isImage(redisMessage.getIsImage())
+                        .displayType(redisMessage.getDisplayType())
                         .build();
 
                 chatMessageList.add(chatMessage);
@@ -387,19 +403,22 @@ public class ChatService{
             log.info("get redis chat message -> redis db read success : data size : {}", redisMessages.size());
 
             ChatRoom chatRoom = chatValidator.validateChatRoom(roomId);
-            for (String json : redisMessages) {
-                SendMessageRequestDTO dto = objectMapper.readValue(json, SendMessageRequestDTO.class);
 
-                Member chatMember = memberRepository.findById(dto.getSenderId())
-                        .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
+            for (String json : redisMessages) {
+                ChatMessage redisMessage = objectMapper.readValue(json, ChatMessage.class);
+
+                Member chatMember = redisMessage.getMember() != null
+                        ? memberRepository.findById(redisMessage.getMember().getMemberId())
+                        .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND))
+                        : null;
 
                 ChatMessage chatMessage = ChatMessage.builder()
                         .chatRoom(chatRoom)
                         .member(chatMember)
-                        .message(dto.getMessage())
-                        .sentAt(dto.getSentAt())
-                        .isImage(dto.getIsImage())
-                        .displayType(dto.getDisplayType())
+                        .message(redisMessage.getMessage())
+                        .sentAt(redisMessage.getSentAt())
+                        .isImage(redisMessage.getIsImage())
+                        .displayType(redisMessage.getDisplayType())
                         .build();
 
                 redisChatMessages.add(chatMessage);
