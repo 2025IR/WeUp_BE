@@ -58,16 +58,6 @@ public class ChatController {
     }
 
     @ResponseBody
-    @DeleteMapping("/chat/leave/{chatRoomId}")
-    public ResponseEntity<DataResponseDTO<String>> exitChatRoom(@LoginUser User user,
-                                                                @PathVariable Long chatRoomId) throws JsonProcessingException {
-
-        chatService.leaveChatRoom(user, chatRoomId);
-
-        return ResponseEntity.ok(DataResponseDTO.of("채팅방에서 퇴장하였습니다."));
-    }
-
-    @ResponseBody
     @PostMapping("/chat/edit/{chatRoomId}")
     public ResponseEntity<DataResponseDTO<String>> editChatRoom(@LoginUser User user,
                                                                 @PathVariable Long chatRoomId,
@@ -121,5 +111,15 @@ public class ChatController {
 
         log.info("요청자 : {}, get chatting messages -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of(data, "채팅 내역 조회가 완료되었습니다."));
+    }
+
+    @ResponseBody
+    @DeleteMapping("/chat/leave/{chatRoomId}")
+    public ResponseEntity<DataResponseDTO<String>> exitChatRoom(@LoginUser User user,
+                                                                @PathVariable Long chatRoomId) throws JsonProcessingException {
+
+        chatService.leaveChatRoom(user, chatRoomId);
+
+        return ResponseEntity.ok(DataResponseDTO.of("채팅방에서 퇴장하였습니다."));
     }
 }
