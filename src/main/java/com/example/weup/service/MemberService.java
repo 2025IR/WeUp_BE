@@ -6,12 +6,9 @@ import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.MemberInfoResponseDTO;
 import com.example.weup.dto.response.RoleListResponseDTO;
 import com.example.weup.entity.*;
-import com.example.weup.repository.MemberRepository;
-import com.example.weup.repository.ProjectRepository;
-import com.example.weup.repository.RoleRepository;
-import com.example.weup.repository.UserRepository;
-import com.example.weup.repository.MemberRoleRepository;
+import com.example.weup.repository.*;
 import com.example.weup.validate.MemberValidator;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -26,22 +23,27 @@ import java.util.stream.Collectors;
 @Slf4j
 public class MemberService {
 
+    private final AsyncMailService asyncMailService;
+
+    private final S3Service s3Service;
+
+    private final ChatService chatService;
+
+    private final MemberValidator memberValidator;
+
     private final UserRepository userRepository;
 
     private final ProjectRepository projectRepository;
 
     private final MemberRepository memberRepository;
 
-    private final MemberValidator memberValidator;
-
-    private final AsyncMailService asyncMailService;
-
-    private final S3Service s3Service;
-
     private final RoleRepository roleRepository;
 
     private final MemberRoleRepository memberRoleRepository;
-    private final ChatService chatService;
+
+    private final ChatRoomRepository chatRoomRepository;
+
+    private final ChatRoomMemberRepository chatRoomMemberRepository;
 
     @Transactional
     public Member addProjectCreater(Long userId, Project project) {
@@ -63,7 +65,7 @@ public class MemberService {
     }
 
     @Transactional
-    public String inviteUser(Long userId, ProjectInviteRequestDTO projectInviteRequestDTO) {
+    public String inviteUser(Long userId, ProjectInviteRequestDTO projectInviteRequestDTO) throws JsonProcessingException {
         User inviter = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
@@ -73,52 +75,40 @@ public class MemberService {
         memberValidator.validateActiveMemberInProject(userId, projectInviteRequestDTO.getProjectId());
 
         String email = projectInviteRequestDTO.getEmail().trim();
-        if (email.isEmpty()) {
-            throw new GeneralException(ErrorInfo.EMPTY_INPUT_VALUE);
-        }
 
-        Optional<User> userOpt = userRepository.findByAccountSocialEmail(email);
-        if (userOpt.isPresent()) {
-            User user = userOpt.get();
+        User invitee = userRepository.findByAccountSocialEmail(email)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-            if (user.isUserWithdrawal()) {
-                throw new GeneralException(ErrorInfo.USER_NOT_FOUND);
-            }
-
-            Optional<Member> existingMemberOpt = memberRepository.findByUserAndProject(user, project);
-            if (existingMemberOpt.isPresent()) {
-                Member existingMember = existingMemberOpt.get();
-
-                if (existingMember.isMemberDeleted()) {
-                    existingMember.reJoin();
-                    return "초대가 완료되었습니다.";
-                } else {
-                    throw new GeneralException(ErrorInfo.AlREADY_IN_PROJECT);
-                }
-            }
-
-            asyncMailService.sendProjectInviteEmail(
-                    email,
-                    user.getName(),
-                    inviter.getName(),
-                    project.getProjectName()
-            );
-
-            Member member = Member.builder()
-                    .user(user)
-                    .project(project)
-                    .isLeader(false)
-                    .lastAccessTime(LocalDateTime.now())
-                    .build();
-
-            memberRepository.save(member);
-
-            return "초대가 완료되었습니다.";
-        } else {
+        if (invitee.isUserWithdrawal()) {
             throw new GeneralException(ErrorInfo.USER_NOT_FOUND);
         }
-    }
 
+        Member existingMember = memberRepository.findByUserAndProject(invitee, project).orElse(null);
+
+        if (existingMember != null) {
+            if (existingMember.isMemberDeleted()) {
+                existingMember.reJoin();
+                chatService.addChatRoomMember(project, chatRoomRepository.findByProjectAndBasicTrue(project), existingMember.getMemberId());
+                return "초대가 완료되었습니다.";
+            } else {
+                throw new GeneralException(ErrorInfo.ALREADY_IN_PROJECT);
+            }
+        }
+
+        asyncMailService.sendProjectInviteEmail(email, invitee.getName(), inviter.getName(), project.getProjectName());
+
+        Member member = Member.builder()
+                .user(invitee)
+                .project(project)
+                .isLeader(false)
+                .lastAccessTime(LocalDateTime.now())
+                .build();
+        memberRepository.save(member);
+
+        chatService.addChatRoomMember(project, chatRoomRepository.findByProjectAndBasicTrue(project), member.getMemberId());
+
+        return "초대가 완료되었습니다.";
+    }
 
     @Transactional
     public List<MemberInfoResponseDTO> getProjectMembers(Long userId, Long projectId) {
@@ -229,6 +219,14 @@ public class MemberService {
 
         targetMember.markAsDeleted();
         memberRepository.save(targetMember);
+
+        List<ChatRoom> chatRooms = chatRoomRepository.findByProject(project);
+        for (ChatRoom chatRoom : chatRooms) {
+            ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, targetMember);
+            if (chatRoomMember != null) {
+                chatRoomMemberRepository.delete(chatRoomMember);
+            }
+        }
     }
 
     @Transactional

@@ -27,9 +27,7 @@ public enum ErrorInfo {
 
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 파일 업로드에 실패했습니다."),
 
-    AlREADY_IN_PROJECT(HttpStatus.CONFLICT, "이미 프로젝트에 속해 있는 유저입니다."),
-
-    ROLE_ALREADY_GIVEN(HttpStatus.CONFLICT, "해당 멤버에게 이미 부여된 역할입니다."),
+    ALREADY_IN_PROJECT(HttpStatus.CONFLICT, "이미 프로젝트에 속해 있는 유저입니다."),
 
     ROLE_ALREADY_EXISTS(HttpStatus.CONFLICT, "해당 프로젝트에 이미 존재하는 역할입니다."),
 
