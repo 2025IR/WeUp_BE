@@ -1,7 +1,5 @@
 package com.example.weup.dto.request;
 
-import com.example.weup.constant.DisplayType;
-import com.example.weup.constant.SenderType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.validation.constraints.NotNull;
 import lombok.AllArgsConstructor;

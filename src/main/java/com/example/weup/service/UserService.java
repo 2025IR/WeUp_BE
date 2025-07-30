@@ -186,7 +186,7 @@ public class UserService {
             List<Member> members = memberRepository.findByUser(user);
 
             for (Member member : members) {
-                List<ChatMessage> messages = chatMessageRepository.findBySenderId(member);
+                List<ChatMessage> messages = chatMessageRepository.findByMember(member);
                 for (ChatMessage message : messages) {
                     message.changeSenderToWithdraw();
                 }
