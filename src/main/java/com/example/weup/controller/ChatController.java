@@ -3,7 +3,6 @@ package com.example.weup.controller;
 import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
 import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.*;
-import com.example.weup.entity.User;
 import com.example.weup.service.ChatService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;

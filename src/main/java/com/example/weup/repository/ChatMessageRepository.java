@@ -3,7 +3,6 @@ package com.example.weup.repository;
 import com.example.weup.entity.ChatMessage;
 import com.example.weup.entity.ChatRoom;
 import com.example.weup.entity.Member;
-import com.example.weup.entity.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
