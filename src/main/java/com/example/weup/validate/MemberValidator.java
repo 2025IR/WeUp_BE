@@ -9,8 +9,10 @@ import com.example.weup.entity.Project;
 import com.example.weup.repository.ChatRoomMemberRepository;
 import com.example.weup.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
+@Slf4j
 @Component
 @RequiredArgsConstructor
 public class MemberValidator {
@@ -50,6 +52,8 @@ public class MemberValidator {
     }
 
     public Member validateMember(Long projectId, Long memberId) {
+
+        log.info("project id -> {}, member id -> {}", projectId, memberId);
 
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));

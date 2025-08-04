@@ -2,11 +2,9 @@ package com.example.weup.dto.response;
 
 import com.example.weup.constant.DisplayType;
 import com.example.weup.constant.SenderType;
+import com.example.weup.entity.ChatMessage;
 import com.fasterxml.jackson.annotation.JsonProperty;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
@@ -14,6 +12,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Getter
+@Setter
 public class ReceiveMessageResponseDto {
 
     private Long senderId;
@@ -26,10 +25,23 @@ public class ReceiveMessageResponseDto {
 
     private LocalDateTime sentAt;
 
-    private SenderType senderType;
-
     @JsonProperty("isImage")
     private boolean isImage;
 
+    private SenderType senderType;
+
     private DisplayType displayType;
+
+    public static ReceiveMessageResponseDto fromEntity(ChatMessage chatMessage) {
+        return ReceiveMessageResponseDto.builder()
+                .senderId(chatMessage.getMessageId())
+                .senderName(chatMessage.getMember().getUser().getName())
+                //.senderProfileImage(s3Service.getPresignedUrl(chatMessage.getMember().getUser().getProfileImage()))
+                .message(chatMessage.getMessage())
+                .sentAt(chatMessage.getSentAt())
+                .isImage(chatMessage.getIsImage())
+                .senderType(chatMessage.getSenderType())
+                .displayType(chatMessage.getDisplayType())
+                .build();
+    }
 }

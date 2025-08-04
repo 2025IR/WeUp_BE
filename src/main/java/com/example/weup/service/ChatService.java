@@ -4,16 +4,14 @@ import com.example.weup.GeneralException;
 import com.example.weup.constant.DisplayType;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.constant.SenderType;
-import com.example.weup.dto.request.*;
+import com.example.weup.dto.request.SendImageMessageRequestDTO;
+import com.example.weup.dto.request.SendMessageRequestDTO;
 import com.example.weup.dto.response.ChatPageResponseDto;
-import com.example.weup.dto.response.GetChatRoomListDTO;
-import com.example.weup.dto.response.GetInvitableListDTO;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
 import com.example.weup.validate.ChatValidator;
 import com.example.weup.validate.MemberValidator;
-import com.example.weup.validate.ProjectValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
@@ -27,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -36,143 +35,82 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ChatService{
 
-    private final ChatMessageRepository chatMessageRepository;
-    private final S3Service s3Service;
-    private final StringRedisTemplate redisTemplate;
-    private final ObjectMapper objectMapper;
-    private final SimpMessagingTemplate messagingTemplate;
-    private final ChatValidator chatValidator;
-    private final ProjectValidator projectValidator;
-    private final MemberValidator memberValidator;
-    private final ChatRoomRepository chatRoomRepository;
-    private final ChatRoomMemberRepository chatRoomMemberRepository;
     private final MemberRepository memberRepository;
 
-    public ChatRoom createBasicChatRoom(Project project, String projectName) {
+    private final ChatRoomRepository chatRoomRepository;
 
-        ChatRoom chatRoom = ChatRoom.builder()
-                .chatRoomName(projectName + " 채팅방")
-                .project(project)
-                .basic(true)
-                .build();
+    private final ChatMessageRepository chatMessageRepository;
 
-        return chatRoomRepository.save(chatRoom);
-    }
+    private final S3Service s3Service;
 
-    public void createChatRoom(Long userId, CreateChatRoomDTO createChatRoomDto) throws JsonProcessingException {
+    private final StringRedisTemplate redisTemplate;
 
-        Project project = projectValidator.validateActiveProject(createChatRoomDto.getProjectId());
-        Member creator = memberValidator.validateActiveMemberInProject(userId, project.getProjectId());
+    private final ObjectMapper objectMapper;
 
-        ChatRoom chatRoom = ChatRoom.builder()
-                .chatRoomName(createChatRoomDto.getChatRoomName())
-                .project(project)
-                .basic(false)
-                .build();
+    private final SimpMessagingTemplate messagingTemplate;
 
-        chatRoomRepository.save(chatRoom);
+    private final ChatValidator chatValidator;
 
-        addChatRoomMember(project, chatRoom, creator.getMemberId());
-
-        List<Long> chatRoomMemberIds = createChatRoomDto.getChatRoomMemberId();
-        if (chatRoomMemberIds != null) {
-            for (Long memberId : chatRoomMemberIds) {
-                addChatRoomMember(project, chatRoom, memberId);
-            }
-        }
-    }
-
-
-    public List<GetInvitableListDTO> getMemberNotInChatRoom(Long chatRoomId) {
-
-        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
-        Project project = projectValidator.validateActiveProject(chatRoom.getProject().getProjectId());
-
-        List<Member> allProjectMember = memberRepository.findByProject(project);
-        Set<Member> memberInChatRoom = chatRoomMemberRepository.findByChatRoom(chatRoom).stream()
-                .map(ChatRoomMember::getMember)
-                .collect(Collectors.toSet());
-
-        return allProjectMember.stream()
-                .filter(member -> !memberInChatRoom.contains(member))
-                .map(member -> GetInvitableListDTO.builder()
-                        .memberId(member.getMemberId())
-                        .memberName(member.getUser().getName())
-                        .profileImage(s3Service.getPresignedUrl(member.getUser().getProfileImage()))
-                        .build())
-                .collect(Collectors.toList());
-    }
+    private final MemberValidator memberValidator;
 
     @Transactional
-    public void inviteChatMember(Long chatRoomId, InviteChatRoomDTO inviteChatRoomDTO) throws JsonProcessingException {
+    public ChatMessage testPrepareSaveMsg(Long chatRoomId, SendMessageRequestDTO messageRequestDTO) throws JsonProcessingException {
 
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
-        Project project = projectValidator.validateActiveProject(chatRoom.getProject().getProjectId());
 
-        for (Long memberId : inviteChatRoomDTO.getInviteMemberIds()) {
-            addChatRoomMember(project, chatRoom, memberId);
-        }
-    }
+        Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), messageRequestDTO.getSenderId());
+        memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
 
-    public void addChatRoomMember(Project project, ChatRoom chatRoom, Long memberId) throws JsonProcessingException {
+        checkAndSendDateChangeMessage(chatRoomId, messageRequestDTO.getSentAt());
 
-        Member member = memberValidator.validateMember(project.getProjectId(), memberId);
-        memberValidator.isMemberAlreadyInChatRoom(chatRoom, member, false);
-
-        ChatRoomMember chatRoomMember = ChatRoomMember.builder()
-                .member(member)
+        return ChatMessage.builder()
                 .chatRoom(chatRoom)
+                .member(sendMember)
+                .message(messageRequestDTO.getMessage())
+                .isImage(messageRequestDTO.getIsImage())
+                .sentAt(messageRequestDTO.getSentAt())
+                .displayType(setDisplayType(chatRoomId, messageRequestDTO.getSenderId(), messageRequestDTO.getSentAt()))
                 .build();
-
-        saveSystemMessage(chatRoom.getChatRoomId(), member.getUser().getName() + "님이 채팅방에 참여했습니다.");
-
-        chatRoomMemberRepository.save(chatRoomMember);
     }
 
     @Transactional
-    public void editChatRoomName(Long chatRoomId, EditChatRoomNameRequestDTO editChatRoomNameRequestDTO) {
+    public void testSaveMsg(Long chatRoomId, ChatMessage message) throws JsonProcessingException {
 
-        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
+        String key = "chat:room:" + chatRoomId;
+        redisTemplate.opsForZSet().add(key, objectMapper.writeValueAsString(message), message.getSentAt().toEpochSecond(ZoneOffset.UTC));
 
-        chatRoom.editChatRoomName(editChatRoomNameRequestDTO.getChatRoomName());
-        chatRoomRepository.save(chatRoom);
+        ReceiveMessageResponseDto receiveMessageResponseDto = ReceiveMessageResponseDto.fromEntity(message);
+        receiveMessageResponseDto.setSenderProfileImage(s3Service.getPresignedUrl(message.getMember().getUser().getProfileImage()));
+        messagingTemplate.convertAndSend("/topic/chat" + chatRoomId, receiveMessageResponseDto);
     }
 
+    // todo. system message
     @Transactional
-    public List<GetChatRoomListDTO> getChatRoomList(Long userId, Long projectId) {
+    public ChatMessage testPrepareSaveSystemMsg(Long chatRoomId, String message) throws JsonProcessingException {
 
-        Project project = projectValidator.validateActiveProject(projectId);
-        Member member = memberValidator.validateActiveMemberInProject(userId, project.getProjectId());
-
-        return chatRoomRepository.findByProject(project).stream()
-                .map(chatRoom -> {
-                    ChatRoomMember targetChatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, member);
-
-                    List<String> chatRoomMemberNames = chatRoomMemberRepository.findByChatRoom(chatRoom).stream()
-                            .map(chatRoomMember -> chatRoomMember.getMember().getUser().getName())
-                            .collect(Collectors.toList());
-
-                    return GetChatRoomListDTO.builder()
-                            .chatRoomId(chatRoom.getChatRoomId())
-                            .chatRoomMemberId(targetChatRoomMember.getChatRoomMemberId())
-                            .chatRoomName(chatRoom.getChatRoomName())
-                            .chatRoomMemberNames(chatRoomMemberNames)
-                            .isBasic(chatRoom.isBasic())
-                            .build();
-                })
-                .collect(Collectors.toList());
+        return ChatMessage.builder()
+                .member(null)
+                .senderType(SenderType.SYSTEM)
+                .message(message)
+                .isImage(false)
+                .sentAt(LocalDateTime.now())
+                .displayType(DisplayType.DEFAULT)
+                .build();
     }
+
+    // todo. ai message
+
+    // todo. image chat message
+
 
     @Transactional
     public ReceiveMessageResponseDto saveChatMessage(Long chatRoomId, SendMessageRequestDTO dto) throws JsonProcessingException {
 
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
-        Member sendMember = memberRepository.findById(dto.getSenderId())
-                .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
+        Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), dto.getSenderId());
+        memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
 
         checkAndSendDateChangeMessage(chatRoomId, dto.getSentAt());
 
@@ -190,7 +128,6 @@ public class ChatService{
         String key = "chat:room:" + chatRoomId;
         String jsonMessage = objectMapper.writeValueAsString(message);
         redisTemplate.opsForList().rightPush(key, jsonMessage);
-
         log.info("websocket send chatting -> db read success : room id - {}, sender id - {}", chatRoomId, dto.getSenderId());
 
         return ReceiveMessageResponseDto.builder()
@@ -237,30 +174,28 @@ public class ChatService{
         return DisplayType.DEFAULT;
     }
 
-    private void checkAndSendDateChangeMessage(Long roomId, LocalDateTime currentMessageTime) throws JsonProcessingException {
-        String key = "chat:room:" + roomId;
-        LocalDate currentDate = currentMessageTime.toLocalDate();
+    private void checkAndSendDateChangeMessage(Long chatRoomId, LocalDateTime currentMessageTime) throws JsonProcessingException {
 
+        String key = "chat:room:" + chatRoomId;
+        Long redisSize = redisTemplate.opsForList().size(key);
+
+        LocalDate currentDate = currentMessageTime.toLocalDate();
         LocalDate lastDate = null;
 
-        Long redisSize = redisTemplate.opsForList().size(key);
         if (redisSize != null && redisSize > 0) {
             String lastJson = redisTemplate.opsForList().index(key, -1);
-            if (lastJson != null) {
-                SendMessageRequestDTO lastDto = objectMapper.readValue(lastJson, SendMessageRequestDTO.class);
-                lastDate = lastDto.getSentAt().toLocalDate();
-            }
+            SendMessageRequestDTO lastDto = objectMapper.readValue(lastJson, SendMessageRequestDTO.class);
+            lastDate = lastDto.getSentAt().toLocalDate();
         }
-
-        if (lastDate == null) {
-            ChatMessage lastMessage = chatMessageRepository.findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(roomId);
+        if(lastDate == null) {
+            ChatMessage lastMessage = chatMessageRepository.findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(chatRoomId);
             if (lastMessage != null) {
                 lastDate = lastMessage.getSentAt().toLocalDate();
             }
         }
 
         if (lastDate == null || !lastDate.equals(currentDate)) {
-            saveSystemMessage(roomId, currentDate.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일")));
+            saveSystemMessage(chatRoomId, currentDate.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일")));
         }
     }
 
@@ -366,7 +301,7 @@ public class ChatService{
 
                 Member chatMember = redisMessage.getMember() != null
                         ? memberRepository.findById(redisMessage.getMember().getMemberId())
-                        .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND))
+                            .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND))
                         : null;
 
                 ChatMessage chatMessage = ChatMessage.builder()
@@ -440,9 +375,11 @@ public class ChatService{
 
         List<ReceiveMessageResponseDto> messages = combinedMessages.subList(start, end).stream()
                 .map(msg -> ReceiveMessageResponseDto.builder()
-                        .senderId(msg.getMember().getMemberId())
-                        .senderName(msg.getMember().getUser().getName())
-                        .senderProfileImage(s3Service.getPresignedUrl(msg.getMember().getUser().getProfileImage()))
+                        .senderId(msg.getMember() != null ? msg.getMember().getMemberId() : null)
+                        .senderName(msg.getMember() != null ? msg.getMember().getUser().getName() : null)
+                        .senderProfileImage(msg.getMember() != null
+                                ? s3Service.getPresignedUrl(msg.getMember().getUser().getProfileImage())
+                                : null)
                         .message(msg.getIsImage() ? s3Service.getPresignedUrl(msg.getMessage()) : msg.getMessage())
                         .isImage(msg.getIsImage())
                         .sentAt(msg.getSentAt())
@@ -462,31 +399,4 @@ public class ChatService{
                 .build();
     }
 
-    @Transactional
-    public void leaveChatRoom(Long userId, Long chatRoomId) throws JsonProcessingException {
-        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
-
-        Member member = memberValidator.validateActiveMemberInProject(userId, chatRoom.getProject().getProjectId());
-
-        memberValidator.isMemberAlreadyInChatRoom(chatRoom, member, true);
-
-        ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, member);
-
-        chatRoomMemberRepository.delete(chatRoomMember);
-
-        saveSystemMessage(chatRoomId, member.getUser().getName() + "님이 채팅방에서 퇴장했습니다.");
-
-        List<ChatRoomMember> remainingMembers = chatRoomMemberRepository.findByChatRoom(chatRoom);
-
-        if (remainingMembers.isEmpty()) {
-            String key = "chat:room:" + chatRoomId;
-
-            redisTemplate.delete(key);
-            chatMessageRepository.deleteByChatRoom(chatRoom);
-            chatRoomRepository.delete(chatRoom);
-
-            log.info("chat room deleted -> roomId: {}", chatRoomId);
-        }
-    }
 }

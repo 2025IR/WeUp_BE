@@ -3,6 +3,8 @@ package com.example.weup.config;
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.entity.User;
+import com.example.weup.repository.UserRepository;
+import com.example.weup.security.JwtUtil;
 import com.example.weup.validate.MemberValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +14,8 @@ import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
-import org.springframework.security.core.Authentication;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 import java.util.Objects;
@@ -24,6 +27,10 @@ import java.util.regex.Pattern;
 @RequiredArgsConstructor
 public class StompChannelInterceptor implements ChannelInterceptor {
 
+    private final JwtUtil jwtUtil;
+
+    private final UserRepository userRepository;
+
     private final MemberValidator memberValidator;
 
     private static final Pattern PROJECT_TOPIC_PATTERN = Pattern.compile("^/topic/project/(\\d+)(/.*)?$");
@@ -31,17 +38,34 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
     @Override
     public Message<?> preSend(@NotNull Message<?> message, @NotNull MessageChannel channel) {
-        StompHeaderAccessor accessor = StompHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
-        Authentication authentication = (Authentication) Objects.requireNonNull(accessor).getUser();
-        User user = (User) Objects.requireNonNull(authentication).getPrincipal();
+        StompHeaderAccessor accessor = StompHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
+        String token = String.valueOf(Objects.requireNonNull(Objects.requireNonNull(accessor).getNativeHeader("Authorization")).getFirst());
+
+        if (token == null) {
+            log.warn("Stomp Channel Interceptor 내부 - Authorization 헤더 없음");
+            throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+        }
+
+        if (jwtUtil.isExpired(token)) {
+            log.warn("Stomp Channel Interceptor 내부 - JWT 만료");
+            throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+        }
+
+        Long userId = jwtUtil.getUserId(token);
+
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
+
+        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+        accessor.setUser(authToken);
 
         StompCommand command = accessor.getCommand();
         String destination = accessor.getDestination();
 
         switch (Objects.requireNonNull(command)) {
             case CONNECT:
-                log.info("STOMP CONNECT from User - {}, Session - {}", user.getUserId(), accessor.getSessionId());
+                log.info("STOMP CONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
                 break;
 
             case SUBSCRIBE:
@@ -51,7 +75,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 }
 
                 if (destination.startsWith("/user/queue/notification")) {
-                    log.info("Personal notification Subscribe -> Success : User - {}", user.getUserId());
+                    log.info("Personal notification Subscribe -> Success : User - {}", userId);
                 }
                 else if (destination.startsWith("/topic/project")) {
                     Long targetEntityId = null;
@@ -66,12 +90,12 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                     }
 
                     if (targetEntityId != null) {
-                        memberValidator.validateActiveMemberInProject(user.getUserId(), targetEntityId);
+                        memberValidator.validateActiveMemberInProject(userId, targetEntityId);
                         // TODO. 지금은 projectId = chatRoomId 라서 이게 통하는데 나중에 확장하면 바꿔야 함.
-                        log.info("Topic Subscribe -> Success : User - {}, Destination - {}", user.getUserId(), destination);
+                        log.info("Topic Subscribe -> Success : User - {}, Destination - {}", userId, destination);
                     }
                     else {
-                        log.warn("Topic Subscribe -> Failure : User - {}, Destination - {}", user.getUserId(), destination);
+                        log.warn("Topic Subscribe -> Failure : User - {}, Destination - {}", userId, destination);
                     }
                 }
                 break;
@@ -80,17 +104,17 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 if (destination == null) {
                     log.warn("SEND command receive with Null Destination from Session Id - {}", accessor.getSessionId());
                 }
-                else if (destination.startsWith("/app/project") || destination.startsWith("/app/todo")
-                    || destination.startsWith("/app/chat") || destination.startsWith("/app/schedule")) {
-                    log.info("SEND Destination Validate -> Success : User - {}, Destination - {}", user.getUserId(), destination);
+                else if (destination.startsWith("app/send") || destination.startsWith("/app/project") ||
+                        destination.startsWith("/app/todo") || destination.startsWith("/app/chat") || destination.startsWith("/app/schedule")) {
+                    log.info("SEND Destination Validate -> Success : User - {}, Destination - {}", userId, destination);
                 }
                 else {
-                    log.warn("SEND Destination Validate-> Failure : User - {}, Destination - {}", user.getUserId(), destination);
+                    log.warn("SEND Destination Validate-> Failure : User - {}, Destination - {}", userId, destination);
                 }
                 break;
 
             case DISCONNECT:
-                log.info("STOMP DISCONNECT from User - {}, Session - {}", user.getUserId(), accessor.getSessionId());
+                log.info("STOMP DISCONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
                 break;
 
             default:

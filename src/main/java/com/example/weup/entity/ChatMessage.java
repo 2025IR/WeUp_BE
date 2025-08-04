@@ -43,11 +43,13 @@ public class ChatMessage {
     @Column(nullable = false)
     private LocalDateTime sentAt;
 
-    @Column(nullable = false)
-    private SenderType senderType;
-
+    @Builder.Default
     @Enumerated(EnumType.STRING)
-    private DisplayType displayType;
+    private SenderType senderType = SenderType.MEMBER;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    private DisplayType displayType = DisplayType.DEFAULT;
 
     public void changeSenderToWithdraw() {
         this.member = null;
