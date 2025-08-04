@@ -27,7 +27,7 @@ public class MemberService {
 
     private final S3Service s3Service;
 
-    private final ChatService chatService;
+    private final ChatRoomService chatRoomService;
 
     private final MemberValidator memberValidator;
 
@@ -88,7 +88,7 @@ public class MemberService {
         if (existingMember != null) {
             if (existingMember.isMemberDeleted()) {
                 existingMember.reJoin();
-                chatService.addChatRoomMember(project, chatRoomRepository.findByProjectAndBasicTrue(project), existingMember.getMemberId());
+                chatRoomService.addChatRoomMember(project, chatRoomRepository.findByProjectAndBasicTrue(project), existingMember.getMemberId());
                 return "초대가 완료되었습니다.";
             } else {
                 throw new GeneralException(ErrorInfo.ALREADY_IN_PROJECT);
@@ -105,7 +105,7 @@ public class MemberService {
                 .build();
         memberRepository.save(member);
 
-        chatService.addChatRoomMember(project, chatRoomRepository.findByProjectAndBasicTrue(project), member.getMemberId());
+        chatRoomService.addChatRoomMember(project, chatRoomRepository.findByProjectAndBasicTrue(project), member.getMemberId());
 
         return "초대가 완료되었습니다.";
     }

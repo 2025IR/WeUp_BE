@@ -117,6 +117,7 @@ public class ProjectService {
                 .projectCreatedTime(project.getProjectCreatedTime())
                 .status(project.isStatus())
                 .isRevealedNumber(project.isRevealedNumber())
+                .memberId(member.getMemberId())
                 .isLeader(member.isLeader())
                 .build();
     }

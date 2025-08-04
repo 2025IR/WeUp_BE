@@ -25,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.io.IOException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -51,6 +52,59 @@ public class ChatService{
     private final ChatValidator chatValidator;
 
     private final MemberValidator memberValidator;
+
+    @Transactional
+    public ChatMessage testPrepareSaveMsg(Long chatRoomId, SendMessageRequestDTO messageRequestDTO) throws JsonProcessingException {
+
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
+
+        Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), messageRequestDTO.getSenderId());
+        memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
+
+        checkAndSendDateChangeMessage(chatRoomId, messageRequestDTO.getSentAt());
+
+        ChatMessage chatMessage = ChatMessage.builder()
+                .chatRoom(chatRoom)
+                .member(sendMember)
+                .message(messageRequestDTO.getMessage())
+                .isImage(messageRequestDTO.getIsImage())
+                .sentAt(messageRequestDTO.getSentAt())
+                .displayType(setDisplayType(chatRoomId, messageRequestDTO.getSenderId(), messageRequestDTO.getSentAt()))
+                .build();
+
+        return chatMessage;
+    }
+
+    @Transactional
+    public void testSaveMsg(Long chatRoomId, ChatMessage message) throws JsonProcessingException {
+
+        String key = "chat:room:" + chatRoomId;
+        redisTemplate.opsForZSet().add(key, objectMapper.writeValueAsString(message), message.getSentAt().toEpochSecond(ZoneOffset.UTC));
+
+        ReceiveMessageResponseDto receiveMessageResponseDto = ReceiveMessageResponseDto.fromEntity(message);
+        receiveMessageResponseDto.setSenderProfileImage(s3Service.getPresignedUrl(message.getMember().getUser().getProfileImage()));
+        messagingTemplate.convertAndSend("/topic/chat" + chatRoomId, receiveMessageResponseDto);
+    }
+
+    // todo. system message
+    @Transactional
+    public ChatMessage testPrepareSaveSystemMsg(Long chatRoomId, String message) throws JsonProcessingException {
+
+        return ChatMessage.builder()
+                .member(null)
+                .senderType(SenderType.SYSTEM)
+                .message(message)
+                .isImage(false)
+                .sentAt(LocalDateTime.now())
+                .displayType(DisplayType.DEFAULT)
+                .build();
+    }
+
+    // todo. ai message
+
+    // todo. image chat message
+
 
     @Transactional
     public ReceiveMessageResponseDto saveChatMessage(Long chatRoomId, SendMessageRequestDTO dto) throws JsonProcessingException {
@@ -258,6 +312,7 @@ public class ChatService{
                         .message(redisMessage.getMessage())
                         .sentAt(redisMessage.getSentAt())
                         .isImage(redisMessage.getIsImage())
+                        .senderType(redisMessage.getSenderType())
                         .displayType(redisMessage.getDisplayType())
                         .build();
 
@@ -302,6 +357,7 @@ public class ChatService{
                         .message(redisMessage.getMessage())
                         .sentAt(redisMessage.getSentAt())
                         .isImage(redisMessage.getIsImage())
+                        .senderType(redisMessage.getSenderType())
                         .displayType(redisMessage.getDisplayType())
                         .build();
 
@@ -327,6 +383,7 @@ public class ChatService{
                         .message(msg.getIsImage() ? s3Service.getPresignedUrl(msg.getMessage()) : msg.getMessage())
                         .isImage(msg.getIsImage())
                         .sentAt(msg.getSentAt())
+                        .senderType(msg.getSenderType())
                         .displayType(msg.getDisplayType())
                         .build())
                 .toList();
