@@ -64,7 +64,7 @@ public class ChatService{
 
         checkAndSendDateChangeMessage(chatRoomId, messageRequestDTO.getSentAt());
 
-        ChatMessage chatMessage = ChatMessage.builder()
+        return ChatMessage.builder()
                 .chatRoom(chatRoom)
                 .member(sendMember)
                 .message(messageRequestDTO.getMessage())
@@ -72,8 +72,6 @@ public class ChatService{
                 .sentAt(messageRequestDTO.getSentAt())
                 .displayType(setDisplayType(chatRoomId, messageRequestDTO.getSenderId(), messageRequestDTO.getSentAt()))
                 .build();
-
-        return chatMessage;
     }
 
     @Transactional

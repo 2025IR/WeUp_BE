@@ -14,9 +14,7 @@ import org.springframework.messaging.MessageChannel;
 import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
-import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
@@ -42,7 +40,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     public Message<?> preSend(@NotNull Message<?> message, @NotNull MessageChannel channel) {
 
         StompHeaderAccessor accessor = StompHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-        String token = String.valueOf(Objects.requireNonNull(accessor.getNativeHeader("Authorization")).getFirst());
+        String token = String.valueOf(Objects.requireNonNull(Objects.requireNonNull(accessor).getNativeHeader("Authorization")).getFirst());
 
         if (token == null) {
             log.warn("Stomp Channel Interceptor 내부 - Authorization 헤더 없음");
