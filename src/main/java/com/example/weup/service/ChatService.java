@@ -114,7 +114,7 @@ public class ChatService{
 
         checkAndSendDateChangeMessage(chatRoomId, dto.getSentAt());
 
-        DisplayType displayType = setDisplayType(chatRoomId, dto.getSenderId(), dto.getSentAt());
+        DisplayType displayType = setDisplayType(chatRoomId, dto.getSenderId(), SenderType.MEMBER, dto.getSentAt());
 
         ChatMessage message = ChatMessage.builder()
                 .chatRoom(chatRoom)
@@ -142,37 +142,49 @@ public class ChatService{
                 .build();
     }
 
-    private DisplayType setDisplayType(Long chatRoomId, Long senderId, LocalDateTime sentAt) throws JsonProcessingException {
+    private DisplayType setDisplayType(Long chatRoomId, Long senderId, SenderType senderType, LocalDateTime sentAt) throws JsonProcessingException {
         String key = "chat:room:" + chatRoomId;
 
         String lastJson = redisTemplate.opsForList().size(key) > 0
                 ? redisTemplate.opsForList().index(key, -1)
                 : null;
 
+        ChatMessage lastMessage;
+
         if (lastJson != null) {
-            ChatMessage lastRedisMessage = objectMapper.readValue(lastJson, ChatMessage.class);
-
-            if (lastRedisMessage.getMember().getMemberId().equals(senderId)) {
-                if (lastRedisMessage.getSentAt().withSecond(0).withNano(0).equals(sentAt.withSecond(0).withNano(0))) {
-                    return DisplayType.SAME_TIME;
-                } else {
-                    return DisplayType.SAME_SENDER;
-                }
-            }
+            lastMessage = objectMapper.readValue(lastJson, ChatMessage.class);
         } else {
-            ChatMessage lastDBMessage = chatMessageRepository.findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(chatRoomId);
+            lastMessage = chatMessageRepository.findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(chatRoomId);
+        }
 
-            if (lastDBMessage != null && lastDBMessage.getMember().getMemberId().equals(senderId)) {
-                if (lastDBMessage.getSentAt().withSecond(0).withNano(0).equals(sentAt.withSecond(0).withNano(0))) {
-                    return DisplayType.SAME_TIME;
-                } else {
-                    return DisplayType.SAME_SENDER;
+        if (lastMessage != null) {
+            if (lastMessage.getMember() != null) {
+                if (lastMessage.getMember().getMemberId().equals(senderId)) {
+                    if (isSameMinute(lastMessage.getSentAt(), sentAt)) {
+                        return DisplayType.SAME_TIME;
+                    } else {
+                        return DisplayType.SAME_SENDER;
+                    }
+                }
+            } else if (lastMessage.getSenderType() != null) {
+                if (lastMessage.getSenderType().equals(senderType)) {
+                    if (isSameMinute(lastMessage.getSentAt(), sentAt)) {
+                        return DisplayType.SAME_TIME;
+                    } else {
+                        return DisplayType.SAME_SENDER;
+                    }
                 }
             }
         }
 
         return DisplayType.DEFAULT;
     }
+
+    private boolean isSameMinute(LocalDateTime time1, LocalDateTime time2) {
+        if (time1 == null || time2 == null) return false;
+        return time1.withSecond(0).withNano(0).equals(time2.withSecond(0).withNano(0));
+    }
+
 
     private void checkAndSendDateChangeMessage(Long chatRoomId, LocalDateTime currentMessageTime) throws JsonProcessingException {
 
