@@ -28,7 +28,7 @@ public class ChatController {
     @ResponseBody
     @PostMapping("/chat/create")
     public ResponseEntity<DataResponseDTO<String>> createChatRoom(@LoginUser Long userId,
-                                                                  @RequestBody CreateChatRoomDTO createChatRoomDto) {
+                                                                  @RequestBody CreateChatRoomDTO createChatRoomDto) throws JsonProcessingException {
 
         chatService.createChatRoom(userId, createChatRoomDto);
 
@@ -113,7 +113,7 @@ public class ChatController {
     }
 
     @ResponseBody
-    @DeleteMapping("/chat/leave/{chatRoomId}")
+    @PutMapping("/chat/leave/{chatRoomId}")
     public ResponseEntity<DataResponseDTO<String>> exitChatRoom(@LoginUser Long userId,
                                                                 @PathVariable Long chatRoomId) throws JsonProcessingException {
 

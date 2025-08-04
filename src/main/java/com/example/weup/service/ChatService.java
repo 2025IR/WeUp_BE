@@ -59,7 +59,7 @@ public class ChatService{
         return chatRoomRepository.save(chatRoom);
     }
 
-    public void createChatRoom(Long userId, CreateChatRoomDTO createChatRoomDto) {
+    public void createChatRoom(Long userId, CreateChatRoomDTO createChatRoomDto) throws JsonProcessingException {
 
         Project project = projectValidator.validateActiveProject(createChatRoomDto.getProjectId());
         Member creator = memberValidator.validateActiveMemberInProject(userId, project.getProjectId());
@@ -72,24 +72,12 @@ public class ChatService{
 
         chatRoomRepository.save(chatRoom);
 
-        ChatRoomMember creatorMember = ChatRoomMember.builder()
-                .member(creator)
-                .chatRoom(chatRoom)
-                .build();
-
-        chatRoomMemberRepository.save(creatorMember);
+        addChatRoomMember(project, chatRoom, creator.getMemberId());
 
         List<Long> chatRoomMemberIds = createChatRoomDto.getChatRoomMemberId();
         if (chatRoomMemberIds != null) {
             for (Long memberId : chatRoomMemberIds) {
-                Member member = memberValidator.validateActiveMemberInProject(memberId, project.getProjectId());
-
-                ChatRoomMember chatRoomMember = ChatRoomMember.builder()
-                        .member(member)
-                        .chatRoom(chatRoom)
-                        .build();
-
-                chatRoomMemberRepository.save(chatRoomMember);
+                addChatRoomMember(project, chatRoom, memberId);
             }
         }
     }
