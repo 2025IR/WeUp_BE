@@ -15,8 +15,6 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     void deleteByChatRoom(ChatRoom chatRoom);
 
-    //List<ChatMessage> findByUser(User user);
-
     ChatMessage findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(Long roomId);
 
     List<ChatMessage> findByMember(Member member);

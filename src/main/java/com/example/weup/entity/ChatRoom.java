@@ -24,7 +24,8 @@ public class ChatRoom {
     @Column(nullable = false)
     private String chatRoomName;
 
-    @OneToOne(fetch = FetchType.EAGER)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "project_id")
     private Project project;
 
     @Column(nullable = false)
