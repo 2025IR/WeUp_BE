@@ -4,10 +4,7 @@ import com.example.weup.GeneralException;
 import com.example.weup.constant.DisplayType;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.constant.SenderType;
-import com.example.weup.dto.request.CreateChatRoomDTO;
-import com.example.weup.dto.request.InviteChatRoomDTO;
-import com.example.weup.dto.request.SendImageMessageRequestDTO;
-import com.example.weup.dto.request.SendMessageRequestDTO;
+import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.ChatPageResponseDto;
 import com.example.weup.dto.response.GetChatRoomListDTO;
 import com.example.weup.dto.response.GetInvitableListDTO;
@@ -62,25 +59,29 @@ public class ChatService{
         return chatRoomRepository.save(chatRoom);
     }
 
-    public void createChatRoom(User user, CreateChatRoomDTO createChatRoomDto) {
+    public void createChatRoom(Long userId, CreateChatRoomDTO createChatRoomDto) throws JsonProcessingException {
 
         Project project = projectValidator.validateActiveProject(createChatRoomDto.getProjectId());
-        Member member = memberValidator.validateActiveMemberInProject(user.getUserId(), project.getProjectId());
+        Member creator = memberValidator.validateActiveMemberInProject(userId, project.getProjectId());
 
         ChatRoom chatRoom = ChatRoom.builder()
                 .chatRoomName(createChatRoomDto.getChatRoomName())
                 .project(project)
-                .basic(true)
-                .build();
-
-        ChatRoomMember chatRoomMember = ChatRoomMember.builder()
-                .member(member)
-                .chatRoom(chatRoom)
+                .basic(false)
                 .build();
 
         chatRoomRepository.save(chatRoom);
-        chatRoomMemberRepository.save(chatRoomMember);
+
+        addChatRoomMember(project, chatRoom, creator.getMemberId());
+
+        List<Long> chatRoomMemberIds = createChatRoomDto.getChatRoomMemberId();
+        if (chatRoomMemberIds != null) {
+            for (Long memberId : chatRoomMemberIds) {
+                addChatRoomMember(project, chatRoom, memberId);
+            }
+        }
     }
+
 
     public List<GetInvitableListDTO> getMemberNotInChatRoom(Long chatRoomId) {
 
@@ -131,20 +132,20 @@ public class ChatService{
     }
 
     @Transactional
-    public void editChatRoomName(Long chatRoomId, String chatRoomName) {
+    public void editChatRoomName(Long chatRoomId, EditChatRoomNameRequestDTO editChatRoomNameRequestDTO) {
 
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
 
-        chatRoom.editChatRoomName(chatRoomName);
+        chatRoom.editChatRoomName(editChatRoomNameRequestDTO.getChatRoomName());
         chatRoomRepository.save(chatRoom);
     }
 
     @Transactional
-    public List<GetChatRoomListDTO> getChatRoomList(User user, Long projectId) {
+    public List<GetChatRoomListDTO> getChatRoomList(Long userId, Long projectId) {
 
         Project project = projectValidator.validateActiveProject(projectId);
-        Member member = memberValidator.validateActiveMemberInProject(user.getUserId(), project.getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, project.getProjectId());
 
         return chatRoomRepository.findByProject(project).stream()
                 .map(chatRoom -> {
@@ -159,6 +160,7 @@ public class ChatService{
                             .chatRoomMemberId(targetChatRoomMember.getChatRoomMemberId())
                             .chatRoomName(chatRoom.getChatRoomName())
                             .chatRoomMemberNames(chatRoomMemberNames)
+                            .isBasic(chatRoom.isBasic())
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -364,7 +366,7 @@ public class ChatService{
 
                 Member chatMember = redisMessage.getMember() != null
                         ? memberRepository.findById(redisMessage.getMember().getMemberId())
-                            .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND))
+                        .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND))
                         : null;
 
                 ChatMessage chatMessage = ChatMessage.builder()
@@ -373,6 +375,7 @@ public class ChatService{
                         .message(redisMessage.getMessage())
                         .sentAt(redisMessage.getSentAt())
                         .isImage(redisMessage.getIsImage())
+                        .senderType(redisMessage.getSenderType())
                         .displayType(redisMessage.getDisplayType())
                         .build();
 
@@ -417,6 +420,7 @@ public class ChatService{
                         .message(redisMessage.getMessage())
                         .sentAt(redisMessage.getSentAt())
                         .isImage(redisMessage.getIsImage())
+                        .senderType(redisMessage.getSenderType())
                         .displayType(redisMessage.getDisplayType())
                         .build();
 
@@ -442,6 +446,7 @@ public class ChatService{
                         .message(msg.getIsImage() ? s3Service.getPresignedUrl(msg.getMessage()) : msg.getMessage())
                         .isImage(msg.getIsImage())
                         .sentAt(msg.getSentAt())
+                        .senderType(msg.getSenderType())
                         .displayType(msg.getDisplayType())
                         .build())
                 .toList();
@@ -458,11 +463,11 @@ public class ChatService{
     }
 
     @Transactional
-    public void leaveChatRoom(User user, Long chatRoomId) throws JsonProcessingException {
+    public void leaveChatRoom(Long userId, Long chatRoomId) throws JsonProcessingException {
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
 
-        Member member = memberValidator.validateActiveMemberInProject(user.getUserId(), chatRoom.getProject().getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, chatRoom.getProject().getProjectId());
 
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, member, true);
 
@@ -484,5 +489,4 @@ public class ChatService{
             log.info("chat room deleted -> roomId: {}", chatRoomId);
         }
     }
-
 }

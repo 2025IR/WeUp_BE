@@ -20,4 +20,6 @@ public class GetChatRoomListDTO {
     private String chatRoomName;
 
     private List<String> chatRoomMemberNames;
+
+    private Boolean isBasic;
 }

@@ -105,6 +105,8 @@ public class MemberService {
                 .build();
         memberRepository.save(member);
 
+        log.info("member invited : {}", member.getMemberId());
+
         chatService.addChatRoomMember(project, chatRoomRepository.findByProjectAndBasicTrue(project), member.getMemberId());
 
         return "초대가 완료되었습니다.";
