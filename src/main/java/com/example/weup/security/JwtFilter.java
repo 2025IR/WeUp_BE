@@ -32,7 +32,7 @@ public class JwtFilter extends OncePerRequestFilter {
 
     private static final List<String> WHITE_LIST = List.of(
             "/user/signIn", "/user/signup", "/user/reissuetoken", "/user/email", "/user/email/check",
-            "/error", "/ai", "/ai/**"
+            "/error", "/ai", "/ai/**", "/ws", "/ws/**"
     );
 
     @Override

@@ -11,6 +11,8 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 
+import java.util.Objects;
+
 @Component
 @Slf4j
 @RequiredArgsConstructor
@@ -22,6 +24,7 @@ public class StompEventListener {
     public void handlerWebSocketConnect(SessionConnectedEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = accessor.getSessionId();
+        System.out.println("sessionId:" + sessionId);
 
         Authentication authentication = (Authentication) accessor.getUser();
         log.info("New WebSocket Connect : sessionId - {}", sessionId);

@@ -15,7 +15,6 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
-import java.util.List;
 
 @Slf4j
 @Controller
@@ -25,58 +24,6 @@ public class ChatController {
     private final ChatService chatService;
 
     private final SimpMessagingTemplate messagingTemplate;
-
-    @ResponseBody
-    @PostMapping("/chat/create")
-    public ResponseEntity<DataResponseDTO<String>> createChatRoom(@LoginUser Long userId,
-                                                                  @RequestBody CreateChatRoomDTO createChatRoomDto) throws JsonProcessingException {
-
-        chatService.createChatRoom(userId, createChatRoomDto);
-
-        return ResponseEntity.ok(DataResponseDTO.of("채팅방 생성이 완료되었습니다."));
-    }
-
-    @ResponseBody
-    @PostMapping("/chat/list/member/{chatRoomId}")
-    public ResponseEntity<DataResponseDTO<List<GetInvitableListDTO>>> getMemberNotInChatRoom (@LoginUser Long userId,
-                                                                                              @PathVariable Long chatRoomId) {
-
-        List<GetInvitableListDTO> getInvitableList = chatService.getMemberNotInChatRoom(chatRoomId);
-
-        return ResponseEntity.ok(DataResponseDTO.of(getInvitableList, "채팅방 초대 가능한 멤버를 불러왔습니다."));
-    }
-
-    @ResponseBody
-    @PostMapping("/chat/invite/{chatRoomId}")
-    public ResponseEntity<DataResponseDTO<String>> inviteChatRoom(@LoginUser Long userId,
-                                                                  @PathVariable Long chatRoomId,
-                                                                  @RequestBody InviteChatRoomDTO inviteChatRoomDTO) throws JsonProcessingException {
-
-        chatService.inviteChatMember(chatRoomId, inviteChatRoomDTO);
-
-        return ResponseEntity.ok(DataResponseDTO.of("채팅방에 초대되었습니다."));
-    }
-
-    @ResponseBody
-    @PostMapping("/chat/edit/{chatRoomId}")
-    public ResponseEntity<DataResponseDTO<String>> editChatRoom(@LoginUser Long userId,
-                                                                @PathVariable Long chatRoomId,
-                                                                @RequestBody EditChatRoomNameRequestDTO editChatRoomNameRequestDTO) {
-
-        chatService.editChatRoomName(chatRoomId, editChatRoomNameRequestDTO);
-
-        return ResponseEntity.ok(DataResponseDTO.of("채팅방 이름이 수정되었습니다."));
-    }
-
-    @ResponseBody
-    @PostMapping("/chat/list/{projectId}")
-    public ResponseEntity<DataResponseDTO<List<GetChatRoomListDTO>>> listChatRoom(@LoginUser Long userId,
-                                                                             @PathVariable Long projectId) {
-
-        List<GetChatRoomListDTO> data = chatService.getChatRoomList(userId, projectId);
-
-        return ResponseEntity.ok(DataResponseDTO.of(data, "채팅방 리스트를 불러왔습니다."));
-    }
 
     @MessageMapping("/send/{chatRoomId}")
     public void sendMessage(@DestinationVariable Long chatRoomId, SendMessageRequestDTO messageDto) throws JsonProcessingException {
@@ -113,13 +60,4 @@ public class ChatController {
         return ResponseEntity.ok(DataResponseDTO.of(data, "채팅 내역 조회가 완료되었습니다."));
     }
 
-    @ResponseBody
-    @PutMapping("/chat/leave/{chatRoomId}")
-    public ResponseEntity<DataResponseDTO<String>> exitChatRoom(@LoginUser Long userId,
-                                                                @PathVariable Long chatRoomId) throws JsonProcessingException {
-
-        chatService.leaveChatRoom(userId, chatRoomId);
-
-        return ResponseEntity.ok(DataResponseDTO.of("채팅방에서 퇴장하였습니다."));
-    }
 }

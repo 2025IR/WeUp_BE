@@ -3,6 +3,7 @@ package com.example.weup.service;
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.CreateChatRoomDTO;
+import com.example.weup.dto.request.EditChatRoomNameRequestDTO;
 import com.example.weup.dto.request.InviteChatRoomDTO;
 import com.example.weup.dto.response.GetChatRoomListDTO;
 import com.example.weup.dto.response.GetInvitableListDTO;
@@ -59,24 +60,27 @@ public class ChatRoomService {
         return chatRoomRepository.save(chatRoom);
     }
 
-    public void createChatRoom(User user, CreateChatRoomDTO createChatRoomDto) {
+    public void createChatRoom(Long userId, CreateChatRoomDTO createChatRoomDto) throws JsonProcessingException {
 
         Project project = projectValidator.validateActiveProject(createChatRoomDto.getProjectId());
-        Member member = memberValidator.validateActiveMemberInProject(user.getUserId(), project.getProjectId());
+        Member creator = memberValidator.validateActiveMemberInProject(userId, project.getProjectId());
 
         ChatRoom chatRoom = ChatRoom.builder()
                 .chatRoomName(createChatRoomDto.getChatRoomName())
                 .project(project)
-                .basic(true)
-                .build();
-
-        ChatRoomMember chatRoomMember = ChatRoomMember.builder()
-                .member(member)
-                .chatRoom(chatRoom)
+                .basic(false)
                 .build();
 
         chatRoomRepository.save(chatRoom);
-        chatRoomMemberRepository.save(chatRoomMember);
+
+        addChatRoomMember(project, chatRoom, creator.getMemberId());
+
+        List<Long> chatRoomMemberIds = createChatRoomDto.getChatRoomMemberId();
+        if (chatRoomMemberIds != null) {
+            for (Long memberId : chatRoomMemberIds) {
+                addChatRoomMember(project, chatRoom, memberId);
+            }
+        }
     }
 
     public List<GetInvitableListDTO> getMemberNotInChatRoom(Long chatRoomId) {
@@ -128,20 +132,20 @@ public class ChatRoomService {
     }
 
     @Transactional
-    public void editChatRoomName(Long chatRoomId, String chatRoomName) {
+    public void editChatRoomName(Long chatRoomId, EditChatRoomNameRequestDTO editChatRoomNameRequestDTO) {
 
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
 
-        chatRoom.editChatRoomName(chatRoomName);
+        chatRoom.editChatRoomName(editChatRoomNameRequestDTO.getChatRoomName());
         chatRoomRepository.save(chatRoom);
     }
 
     @Transactional
-    public List<GetChatRoomListDTO> getChatRoomList(User user, Long projectId) {
+    public List<GetChatRoomListDTO> getChatRoomList(Long userId, Long projectId) {
 
         Project project = projectValidator.validateActiveProject(projectId);
-        Member member = memberValidator.validateActiveMemberInProject(user.getUserId(), project.getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, project.getProjectId());
 
         return chatRoomRepository.findByProject(project).stream()
                 .sorted(Comparator
@@ -166,12 +170,11 @@ public class ChatRoomService {
     }
 
     @Transactional
-    public void leaveChatRoom(User user, Long chatRoomId) throws JsonProcessingException {
-
+    public void leaveChatRoom(Long userId, Long chatRoomId) throws JsonProcessingException {
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
 
-        Member member = memberValidator.validateActiveMemberInProject(user.getUserId(), chatRoom.getProject().getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, chatRoom.getProject().getProjectId());
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, member, true);
 
         ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, member);
@@ -180,6 +183,7 @@ public class ChatRoomService {
         chatService.saveSystemMessage(chatRoomId, member.getUser().getName() + "님이 채팅방에서 퇴장했습니다.");
 
         List<ChatRoomMember> remainingMembers = chatRoomMemberRepository.findByChatRoom(chatRoom);
+
         if (remainingMembers.isEmpty()) {
             String key = "chat:room:" + chatRoomId;
 
