@@ -53,8 +53,9 @@ public class ChatService{
 
     private final MemberValidator memberValidator;
 
+    // basic chat message
     @Transactional
-    public ChatMessage testPrepareSaveMsg(Long chatRoomId, SendMessageRequestDTO messageRequestDTO) throws JsonProcessingException {
+    public void testSendBasicMsg(Long chatRoomId, SendMessageRequestDTO messageRequestDTO) throws JsonProcessingException {
 
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
@@ -62,9 +63,7 @@ public class ChatService{
         Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), messageRequestDTO.getSenderId());
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
 
-        checkAndSendDateChangeMessage(chatRoomId, messageRequestDTO.getSentAt());
-
-        return ChatMessage.builder()
+        ChatMessage basicMessage = ChatMessage.builder()
                 .chatRoom(chatRoom)
                 .member(sendMember)
                 .message(messageRequestDTO.getMessage())
@@ -72,10 +71,75 @@ public class ChatService{
                 .sentAt(messageRequestDTO.getSentAt())
                 .displayType(setDisplayType(chatRoomId, messageRequestDTO.getSenderId(), messageRequestDTO.getSentAt()))
                 .build();
+
+        testSaveMsg(chatRoomId, basicMessage);
     }
 
+    // image chat message
+    @Transactional
+    public void testSendImgMsg(Long chatRoomId, SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
+
+        if (sendImageMessageRequestDTO.getFile() == null || sendImageMessageRequestDTO.getFile().isEmpty()) {
+            throw new GeneralException(ErrorInfo.FILE_UPLOAD_FAILED);
+        }
+
+        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
+
+        Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), sendImageMessageRequestDTO.getSenderId());
+        memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
+
+        String storedFileName = s3Service.uploadSingleFile(sendImageMessageRequestDTO.getFile()).getStoredFileName();
+
+        ChatMessage imgMessage = ChatMessage.builder()
+                .member(sendMember)
+                .senderType(SenderType.MEMBER)
+                .message(s3Service.getPresignedUrl(storedFileName))
+                .isImage(true)
+                .sentAt(LocalDateTime.now())
+                .displayType(setDisplayType(chatRoomId, sendMember.getMemberId(), LocalDateTime.now()))
+                .build();
+
+        testSaveMsg(chatRoomId, imgMessage);
+    }
+
+    // system message
+    @Transactional
+    public void testSendSystemMsg(Long chatRoomId, String message) throws JsonProcessingException {
+
+        ChatMessage systemMessage = ChatMessage.builder()
+                .member(null)
+                .senderType(SenderType.SYSTEM)
+                .message(message)
+                .isImage(false)
+                .sentAt(LocalDateTime.now())
+                .displayType(DisplayType.DEFAULT)
+                .build();
+
+        testSaveMsg(chatRoomId, systemMessage);
+    }
+
+    // ai message
+    @Transactional
+    public void testSendAIMsg(Long chatRoomId, String message) throws JsonProcessingException {
+
+        ChatMessage aiMessage = ChatMessage.builder()
+                .member(null)
+                .senderType(SenderType.AI)
+                .message(message)
+                .isImage(false)
+                .sentAt(LocalDateTime.now())
+                .displayType(setDisplayType(chatRoomId, null, LocalDateTime.now()))
+                .build();
+
+        testSaveMsg(chatRoomId, aiMessage);
+    }
+
+    // send message
     @Transactional
     public void testSaveMsg(Long chatRoomId, ChatMessage message) throws JsonProcessingException {
+
+        checkAndSendDateChangeMessage(chatRoomId, message.getSentAt());
 
         String key = "chat:room:" + chatRoomId;
         redisTemplate.opsForZSet().add(key, objectMapper.writeValueAsString(message), message.getSentAt().toEpochSecond(ZoneOffset.UTC));
@@ -85,62 +149,64 @@ public class ChatService{
         messagingTemplate.convertAndSend("/topic/chat" + chatRoomId, receiveMessageResponseDto);
     }
 
-    // todo. system message
-    @Transactional
-    public ChatMessage testPrepareSaveSystemMsg(Long chatRoomId, String message) throws JsonProcessingException {
+    // flush message to db
+    private void testFlushMessagesToDb(String key) throws JsonProcessingException {
 
-        return ChatMessage.builder()
-                .member(null)
-                .senderType(SenderType.SYSTEM)
-                .message(message)
-                .isImage(false)
-                .sentAt(LocalDateTime.now())
-                .displayType(DisplayType.DEFAULT)
-                .build();
+        Set<String> messages = redisTemplate.opsForZSet().range(key, 0, -1);
+        if (messages == null || messages.isEmpty()) {
+            return;
+        }
+
+        List<ChatMessage> chatMessages = new ArrayList<>();
+        for (String message : messages) {
+            ChatMessage chatMessage = objectMapper.readValue(message, ChatMessage.class);
+            chatMessages.add(chatMessage);
+        }
+
+        chatMessageRepository.saveAll(chatMessages);
+        log.info("flush chat message to db -> success : data size - {}", chatMessages.size());
+
+        redisTemplate.delete(key);
+        log.info("flush chat message to db -> success : delete redis key - {}", key);
     }
 
-    // todo. ai message
-
-    // todo. image chat message
-
-
-    @Transactional
-    public ReceiveMessageResponseDto saveChatMessage(Long chatRoomId, SendMessageRequestDTO dto) throws JsonProcessingException {
-
-        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
-        Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), dto.getSenderId());
-        memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
-
-        checkAndSendDateChangeMessage(chatRoomId, dto.getSentAt());
-
-        DisplayType displayType = setDisplayType(chatRoomId, dto.getSenderId(), dto.getSentAt());
-
-        ChatMessage message = ChatMessage.builder()
-                .chatRoom(chatRoom)
-                .member(sendMember)
-                .message(dto.getMessage())
-                .sentAt(dto.getSentAt())
-                .isImage(dto.getIsImage())
-                .displayType(displayType)
-                .build();
-
-        String key = "chat:room:" + chatRoomId;
-        String jsonMessage = objectMapper.writeValueAsString(message);
-        redisTemplate.opsForList().rightPush(key, jsonMessage);
-        log.info("websocket send chatting -> db read success : room id - {}, sender id - {}", chatRoomId, dto.getSenderId());
-
-        return ReceiveMessageResponseDto.builder()
-                .senderId(dto.getSenderId())
-                .senderName(sendMember.getUser().getName())
-                .senderProfileImage(s3Service.getPresignedUrl(sendMember.getUser().getProfileImage()))
-                .message(dto.getMessage())
-                .sentAt(dto.getSentAt())
-                .senderType(SenderType.MEMBER)
-                .isImage(dto.getIsImage())
-                .displayType(displayType)
-                .build();
-    }
+//    @Transactional
+//    public ReceiveMessageResponseDto saveChatMessage(Long chatRoomId, SendMessageRequestDTO dto) throws JsonProcessingException {
+//
+//        ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
+//                .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
+//        Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), dto.getSenderId());
+//        memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
+//
+//        checkAndSendDateChangeMessage(chatRoomId, dto.getSentAt());
+//
+//        DisplayType displayType = setDisplayType(chatRoomId, dto.getSenderId(), dto.getSentAt());
+//
+//        ChatMessage message = ChatMessage.builder()
+//                .chatRoom(chatRoom)
+//                .member(sendMember)
+//                .message(dto.getMessage())
+//                .sentAt(dto.getSentAt())
+//                .isImage(dto.getIsImage())
+//                .displayType(displayType)
+//                .build();
+//
+//        String key = "chat:room:" + chatRoomId;
+//        String jsonMessage = objectMapper.writeValueAsString(message);
+//        redisTemplate.opsForList().rightPush(key, jsonMessage);
+//        log.info("websocket send chatting -> db read success : room id - {}, sender id - {}", chatRoomId, dto.getSenderId());
+//
+//        return ReceiveMessageResponseDto.builder()
+//                .senderId(dto.getSenderId())
+//                .senderName(sendMember.getUser().getName())
+//                .senderProfileImage(s3Service.getPresignedUrl(sendMember.getUser().getProfileImage()))
+//                .message(dto.getMessage())
+//                .sentAt(dto.getSentAt())
+//                .senderType(SenderType.MEMBER)
+//                .isImage(dto.getIsImage())
+//                .displayType(displayType)
+//                .build();
+//    }
 
     private DisplayType setDisplayType(Long chatRoomId, Long senderId, LocalDateTime sentAt) throws JsonProcessingException {
         String key = "chat:room:" + chatRoomId;
@@ -195,64 +261,64 @@ public class ChatService{
         }
 
         if (lastDate == null || !lastDate.equals(currentDate)) {
-            saveSystemMessage(chatRoomId, currentDate.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일")));
+            testSendSystemMsg(chatRoomId, currentDate.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일")));
         }
     }
 
-    @Transactional
-    public void saveSystemMessage(Long roomId, String message) throws JsonProcessingException {
-        ChatMessage chatMessage = ChatMessage.builder()
-                .member(null)
-                .senderType(SenderType.SYSTEM)
-                .message(message)
-                .isImage(false)
-                .sentAt(LocalDateTime.now())
-                .displayType(DisplayType.DEFAULT)
-                .build();
+//    @Transactional
+//    public void saveSystemMessage(Long roomId, String message) throws JsonProcessingException {
+//        ChatMessage chatMessage = ChatMessage.builder()
+//                .member(null)
+//                .senderType(SenderType.SYSTEM)
+//                .message(message)
+//                .isImage(false)
+//                .sentAt(LocalDateTime.now())
+//                .displayType(DisplayType.DEFAULT)
+//                .build();
+//
+//        String jsonMessage = objectMapper.writeValueAsString(chatMessage);
+//        String key = "chat:room:" + roomId;
+//        redisTemplate.opsForList().rightPush(key, jsonMessage);
+//
+//        messagingTemplate.convertAndSend("/topic/chat/" + roomId,
+//                ReceiveMessageResponseDto.builder()
+//                        .senderId(null)
+//                        .senderName("System")
+//                        .senderProfileImage(null)
+//                        .message(message)
+//                        .isImage(false)
+//                        .sentAt(chatMessage.getSentAt())
+//                        .displayType(DisplayType.DEFAULT)
+//                        .build());
+//    }
 
-        String jsonMessage = objectMapper.writeValueAsString(chatMessage);
-        String key = "chat:room:" + roomId;
-        redisTemplate.opsForList().rightPush(key, jsonMessage);
-
-        messagingTemplate.convertAndSend("/topic/chat/" + roomId,
-                ReceiveMessageResponseDto.builder()
-                        .senderId(null)
-                        .senderName("System")
-                        .senderProfileImage(null)
-                        .message(message)
-                        .isImage(false)
-                        .sentAt(chatMessage.getSentAt())
-                        .displayType(DisplayType.DEFAULT)
-                        .build());
-    }
-
-    @Transactional
-    public void handleImageMessage(SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
-
-        if (sendImageMessageRequestDTO.getFile() == null || sendImageMessageRequestDTO.getFile().isEmpty()) {
-            throw new GeneralException(ErrorInfo.FILE_UPLOAD_FAILED);
-        }
-
-        String storedFileName = s3Service.uploadSingleFile(sendImageMessageRequestDTO.getFile()).getStoredFileName();
-
-        SendMessageRequestDTO dto = SendMessageRequestDTO.builder()
-                .senderId(Long.parseLong(sendImageMessageRequestDTO.getUserId()))
-                .message(s3Service.getPresignedUrl(storedFileName))
-                .isImage(true)
-                .sentAt(LocalDateTime.now())
-                .build();
-
-        SendMessageRequestDTO saveDTO = SendMessageRequestDTO.builder()
-                .senderId(Long.parseLong(sendImageMessageRequestDTO.getUserId()))
-                .message(storedFileName)
-                .isImage(true)
-                .sentAt(LocalDateTime.now())
-                .build();
-
-        saveChatMessage(Long.parseLong(sendImageMessageRequestDTO.getRoomId()), saveDTO);
-
-        messagingTemplate.convertAndSend("/topic/chat/" + sendImageMessageRequestDTO.getRoomId(), dto);
-    }
+//    @Transactional
+//    public void handleImageMessage(Long chatRoomId, SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
+//
+//        if (sendImageMessageRequestDTO.getFile() == null || sendImageMessageRequestDTO.getFile().isEmpty()) {
+//            throw new GeneralException(ErrorInfo.FILE_UPLOAD_FAILED);
+//        }
+//
+//        String storedFileName = s3Service.uploadSingleFile(sendImageMessageRequestDTO.getFile()).getStoredFileName();
+//
+//        SendMessageRequestDTO dto = SendMessageRequestDTO.builder()
+//                .senderId(sendImageMessageRequestDTO.getSenderId())
+//                .message(s3Service.getPresignedUrl(storedFileName))
+//                .isImage(true)
+//                .sentAt(LocalDateTime.now())
+//                .build();
+//
+//        SendMessageRequestDTO saveDTO = SendMessageRequestDTO.builder()
+//                .senderId(sendImageMessageRequestDTO.getSenderId())
+//                .message(storedFileName)
+//                .isImage(true)
+//                .sentAt(LocalDateTime.now())
+//                .build();
+//
+//        saveChatMessage(chatRoomId, saveDTO);
+//
+//        messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, dto);
+//    }
 
     @Transactional
     @Scheduled(fixedDelay = 300000)
@@ -261,22 +327,22 @@ public class ChatService{
         LocalDateTime now = LocalDateTime.now();
         log.info("flush all rooms chatting -> start, time : {}", now);
 
-        List<Long> activeRoomIds = getAllActiveRoomIds();
+        Set<Long> activeRoomIds = getAllActiveRoomIds();
         log.info("flush all rooms chatting -> db read success : data size : {}", activeRoomIds.size());
 
         for (Long roomId : activeRoomIds) {
             log.info("flush all rooms chatting -> db read success : room id : {}", roomId);
             String key = "chat:room:" + roomId;
-            flushMessagesToDb(roomId, key);
+            testFlushMessagesToDb(key);
         }
     }
 
-    private List<Long> getAllActiveRoomIds() {
+    private Set<Long> getAllActiveRoomIds() {
 
         Set<String> keys = redisTemplate.keys("chat:room:*");
 
         if (Objects.requireNonNull(keys).isEmpty()) {
-            return Collections.emptyList();
+            return new HashSet<>();
         }
 
         return keys.stream()
@@ -284,46 +350,46 @@ public class ChatService{
                     String[] parts = key.split(":");
                     return Long.parseLong(parts[2]);
                 })
-                .collect(Collectors.toList());
+                .collect(Collectors.toSet());
     }
 
-    private void flushMessagesToDb(Long roomId, String key) throws JsonProcessingException {
-
-        List<String> messages = redisTemplate.opsForList().range(key, 0, -1);
-
-        if (messages != null && !messages.isEmpty()) {
-
-            List<ChatMessage> chatMessageList = new ArrayList<>();
-
-            ChatRoom chatRoom = chatValidator.validateChatRoom(roomId);
-            for (String json : messages) {
-                ChatMessage redisMessage = objectMapper.readValue(json, ChatMessage.class);
-
-                Member chatMember = redisMessage.getMember() != null
-                        ? memberRepository.findById(redisMessage.getMember().getMemberId())
-                            .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND))
-                        : null;
-
-                ChatMessage chatMessage = ChatMessage.builder()
-                        .chatRoom(chatRoom)
-                        .member(chatMember)
-                        .message(redisMessage.getMessage())
-                        .sentAt(redisMessage.getSentAt())
-                        .isImage(redisMessage.getIsImage())
-                        .senderType(redisMessage.getSenderType())
-                        .displayType(redisMessage.getDisplayType())
-                        .build();
-
-                chatMessageList.add(chatMessage);
-            }
-
-            chatMessageRepository.saveAll(chatMessageList);
-            log.info("flush chat message to db -> success : data size - {}", chatMessageList.size());
-
-            redisTemplate.delete(key);
-            log.info("flush chat message to db -> success : delete redis key - {}", key);
-        }
-    }
+//    private void flushMessagesToDb(Long roomId, String key) throws JsonProcessingException {
+//
+//        List<String> messages = redisTemplate.opsForList().range(key, 0, -1);
+//
+//        if (messages != null && !messages.isEmpty()) {
+//
+//            List<ChatMessage> chatMessageList = new ArrayList<>();
+//
+//            ChatRoom chatRoom = chatValidator.validateChatRoom(roomId);
+//            for (String json : messages) {
+//                ChatMessage redisMessage = objectMapper.readValue(json, ChatMessage.class);
+//
+//                Member chatMember = redisMessage.getMember() != null
+//                        ? memberRepository.findById(redisMessage.getMember().getMemberId())
+//                            .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND))
+//                        : null;
+//
+//                ChatMessage chatMessage = ChatMessage.builder()
+//                        .chatRoom(chatRoom)
+//                        .member(chatMember)
+//                        .message(redisMessage.getMessage())
+//                        .sentAt(redisMessage.getSentAt())
+//                        .isImage(redisMessage.getIsImage())
+//                        .senderType(redisMessage.getSenderType())
+//                        .displayType(redisMessage.getDisplayType())
+//                        .build();
+//
+//                chatMessageList.add(chatMessage);
+//            }
+//
+//            chatMessageRepository.saveAll(chatMessageList);
+//            log.info("flush chat message to db -> success : data size - {}", chatMessageList.size());
+//
+//            redisTemplate.delete(key);
+//            log.info("flush chat message to db -> success : delete redis key - {}", key);
+//        }
+//    }
 
     @Transactional(readOnly = true)
     public ChatPageResponseDto getChatMessages(Long roomId, int page, int size) throws JsonProcessingException {

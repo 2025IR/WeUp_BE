@@ -11,6 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.security.core.parameters.P;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -30,19 +31,17 @@ public class ChatController {
 
         log.info("요청자 : {}, websocket send chatting -> start", messageDto.getSenderId());
 
-        ReceiveMessageResponseDto receiveMessage = chatService.saveChatMessage(chatRoomId, messageDto);
+        chatService.testSendBasicMsg(chatRoomId, messageDto);
         log.info("요청자 : {}, websocket send chatting -> success", messageDto.getSenderId());
-
-        messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, receiveMessage);
     }
 
     @ResponseBody
-    @PostMapping("/send/image")  // chatRoomId 밖으로 빼기
-    public void sendImageMessage(@LoginUser Long userId,
+    @PostMapping("/send/image/{chatRoomId}")  // chatRoomId 밖으로 빼기
+    public void sendImageMessage(@LoginUser Long userId, @PathVariable Long chatRoomId,
                                  @ModelAttribute SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
 
         log.info("요청자 : {}, send image chatting -> start", userId);
-        chatService.handleImageMessage(sendImageMessageRequestDTO);
+        chatService.testSendImgMsg(chatRoomId, sendImageMessageRequestDTO);
 
         log.info("요청자 : {}, send image chatting -> success", userId);
     }

@@ -36,7 +36,6 @@ public class ReceiveMessageResponseDto {
         return ReceiveMessageResponseDto.builder()
                 .senderId(chatMessage.getMessageId())
                 .senderName(chatMessage.getMember().getUser().getName())
-                //.senderProfileImage(s3Service.getPresignedUrl(chatMessage.getMember().getUser().getProfileImage()))
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())
                 .isImage(chatMessage.getIsImage())

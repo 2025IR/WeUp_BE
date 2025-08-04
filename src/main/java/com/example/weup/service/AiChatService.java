@@ -63,8 +63,7 @@ public class AiChatService {
                 .message(aiChatRequestDTO.getUserInput())
                 .build();
 
-        ReceiveMessageResponseDto requestMessage = chatService.saveChatMessage(roomId, sendMessageRequestDto);
-        messagingTemplate.convertAndSend("/topic/chat/" + roomId, requestMessage);
+        chatService.testSendBasicMsg(roomId, sendMessageRequestDto);
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -87,13 +86,7 @@ public class AiChatService {
             }
             log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
 
-            SendMessageRequestDTO responseData = SendMessageRequestDTO.builder()
-                    .senderId(2L)
-                    .message(realMessage)
-                    .build();
-
-            ReceiveMessageResponseDto responseMessage = chatService.saveChatMessage(roomId, responseData);
-            messagingTemplate.convertAndSend("/topic/chat/" + roomId, responseMessage);
+            chatService.testSendAIMsg(roomId, realMessage);
 
         } catch (RestClientException e) {
             throw new RuntimeException("AI Chat 서버 요청 중 오류 발생 : " + e);
