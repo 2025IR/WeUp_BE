@@ -38,8 +38,6 @@ public class ChatService{
 
     private final MemberRepository memberRepository;
 
-    private final ChatRoomRepository chatRoomRepository;
-
     private final ChatMessageRepository chatMessageRepository;
 
     private final S3Service s3Service;
