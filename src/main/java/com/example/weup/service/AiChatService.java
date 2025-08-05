@@ -6,6 +6,7 @@ import com.example.weup.dto.request.AiChatRequestDTO;
 import com.example.weup.dto.request.AiRoleAssignRequestDTO;
 import com.example.weup.dto.request.AiTodoCreateRequestDTO;
 import com.example.weup.dto.request.SendMessageRequestDTO;
+import com.example.weup.constant.SenderType;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
 import com.example.weup.validate.ProjectValidator;
@@ -24,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -47,6 +49,10 @@ public class AiChatService {
 
     private final TodoRepository todoRepository;
 
+    private final TagRepository tagRepository;
+
+    private final BoardRepository boardRepository;
+
     private final ProjectValidator projectValidator;
 
     @Value("${ai.server.url}")
@@ -58,6 +64,9 @@ public class AiChatService {
                 .senderId(aiChatRequestDTO.getSenderId())
                 .message(aiChatRequestDTO.getUserInput())
                 .build();
+
+        Member sendMember = memberRepository.findById(aiChatRequestDTO.getSenderId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
         chatService.testSendBasicMsg(roomId, sendMessageRequestDto);
 
@@ -81,6 +90,13 @@ public class AiChatService {
                 throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
             }
             log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
+
+//            ReceiveMessageResponseDto savedAiMessage = chatService.saveChatMessage(roomId, responseData);
+//
+//            ReceiveMessageResponseDto responseMessage = savedAiMessage.copyBuilder()
+//                    .originalSenderName(sendMember.getUser().getName())
+//                    .originalMessage(aiChatRequestDTO.getUserInput())
+//                    .build();
 
             chatService.testSendAIMsg(roomId, realMessage);
 
@@ -125,4 +141,24 @@ public class AiChatService {
         log.info("AI Request Todo Create -> success : project id - {}, todo id - {}", project.getProjectId(), todo.getTodoId());
     }
 
+    @Transactional
+    public void aiCreateMinutes(AiMinutesCreateRequestDTO aiMinutesCreateRequestDTO) {
+
+        Project project = projectValidator.validateActiveProject(aiMinutesCreateRequestDTO.getProjectId());
+
+        Tag tag = tagRepository.findByTagName("회의록")
+                .orElseThrow(() -> new GeneralException(ErrorInfo.TAG_NOT_FOUND));
+
+        Board board = Board.builder()
+                .project(project)
+                .tag(tag)
+                .member(null)
+                .title(aiMinutesCreateRequestDTO.getTitle())
+                .contents(aiMinutesCreateRequestDTO.getContents())
+                .boardCreateTime(LocalDateTime.now())
+                .SenderType(SenderType.AI)
+                .build();
+
+        boardRepository.save(board);
+    }
 }

@@ -32,6 +32,10 @@ public class ReceiveMessageResponseDto {
 
     private DisplayType displayType;
 
+    private String originalSenderName;
+
+    private String originalMessage;
+
     public static ReceiveMessageResponseDto fromEntity(ChatMessage chatMessage) {
         return ReceiveMessageResponseDto.builder()
                 .senderId(chatMessage.getMessageId())
@@ -44,5 +48,17 @@ public class ReceiveMessageResponseDto {
                 .senderType(chatMessage.getSenderType())
                 .displayType(chatMessage.getDisplayType())
                 .build();
+    }
+
+    public ReceiveMessageResponseDtoBuilder copyBuilder() {
+        return builder()
+                .senderId(this.senderId)
+                .senderName(this.senderName)
+                .senderProfileImage(this.senderProfileImage)
+                .message(this.message)
+                .sentAt(this.sentAt)
+                .senderType(this.senderType)
+                .isImage(this.isImage)
+                .displayType(this.displayType);
     }
 }
