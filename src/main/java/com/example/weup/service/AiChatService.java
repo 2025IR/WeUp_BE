@@ -2,8 +2,8 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.constant.SenderType;
 import com.example.weup.dto.request.*;
+import com.example.weup.constant.SenderType;
 import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
@@ -38,8 +38,6 @@ public class AiChatService {
 
     private final ChatService chatService;
 
-    private final SimpMessagingTemplate messagingTemplate;
-
     private final ObjectMapper objectMapper;
 
     private final MemberRepository memberRepository;
@@ -56,10 +54,12 @@ public class AiChatService {
 
     private final ProjectValidator projectValidator;
 
+    private final SimpMessagingTemplate messagingTemplate;
+
     @Value("${ai.server.url}")
     private String aiServerUrl;
 
-    public void sendMessageToAi(Long roomId, AiChatRequestDTO aiChatRequestDTO) throws JsonProcessingException {
+    public void sendMessageToAi(Long chatRoomId, AiChatRequestDTO aiChatRequestDTO) throws JsonProcessingException {
 
         SendMessageRequestDTO sendMessageRequestDto = SendMessageRequestDTO.builder()
                 .senderId(aiChatRequestDTO.getSenderId())
@@ -69,8 +69,7 @@ public class AiChatService {
         Member sendMember = memberRepository.findById(aiChatRequestDTO.getSenderId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
-        ReceiveMessageResponseDto requestMessage = chatService.saveChatMessage(roomId, sendMessageRequestDto);
-        messagingTemplate.convertAndSend("/topic/chat/" + roomId, requestMessage);
+        chatService.sendBasicMessage(chatRoomId, sendMessageRequestDto);
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -93,19 +92,15 @@ public class AiChatService {
             }
             log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
 
-            SendMessageRequestDTO responseData = SendMessageRequestDTO.builder()
-                    .senderId(2L)
-                    .message(realMessage)
-                    .build();
-
-            ReceiveMessageResponseDto savedAiMessage = chatService.saveChatMessage(roomId, responseData);
+            ChatMessage aiMessage = chatService.sendAIMessage(chatRoomId, realMessage);
+            ReceiveMessageResponseDto savedAiMessage = ReceiveMessageResponseDto.fromEntity(aiMessage);
 
             ReceiveMessageResponseDto responseMessage = savedAiMessage.copyBuilder()
                     .originalSenderName(sendMember.getUser().getName())
                     .originalMessage(aiChatRequestDTO.getUserInput())
                     .build();
 
-            messagingTemplate.convertAndSend("/topic/chat/" + roomId, responseMessage);
+            messagingTemplate.convertAndSend("/topic/chat" + chatRoomId, responseMessage);
 
         } catch (RestClientException e) {
             throw new RuntimeException("AI Chat 서버 요청 중 오류 발생 : " + e);
@@ -163,7 +158,7 @@ public class AiChatService {
                 .title(aiMinutesCreateRequestDTO.getTitle())
                 .contents(aiMinutesCreateRequestDTO.getContents())
                 .boardCreateTime(LocalDateTime.now())
-                .SenderType(SenderType.AI)
+                .senderType(SenderType.AI)
                 .build();
 
         boardRepository.save(board);

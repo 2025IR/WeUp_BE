@@ -60,6 +60,7 @@ public class ChatRoomService {
         return chatRoomRepository.save(chatRoom);
     }
 
+    @Transactional
     public void createChatRoom(Long userId, CreateChatRoomDTO createChatRoomDto) throws JsonProcessingException {
 
         Project project = projectValidator.validateActiveProject(createChatRoomDto.getProjectId());
@@ -72,12 +73,16 @@ public class ChatRoomService {
                 .build();
 
         chatRoomRepository.save(chatRoom);
+        log.info("채팅방 생성 완료, Chat Room ID : {}", chatRoom.getChatRoomId());
 
         addChatRoomMember(project, chatRoom, creator.getMemberId());
 
         List<Long> chatRoomMemberIds = createChatRoomDto.getChatRoomMemberId();
-        if (chatRoomMemberIds != null) {
+        log.info("리스트에 복사함....");
+        if (chatRoomMemberIds != null && !createChatRoomDto.getChatRoomMemberId().isEmpty()) {
+            log.info("여기까지 접근하나?");
             for (Long memberId : chatRoomMemberIds) {
+                log.info("초대할 대상 Member ID : {}", memberId);
                 addChatRoomMember(project, chatRoom, memberId);
             }
         }
@@ -94,8 +99,21 @@ public class ChatRoomService {
                 .map(ChatRoomMember::getMember)
                 .collect(Collectors.toSet());
 
+        log.info("전체 프로젝트 멤버 : {} 명", allProjectMember.size());
+        allProjectMember.forEach(member -> log.info("All Project Member ID : {}", member.getMemberId()));
+
+        log.info("채팅방에 있는 멤버 : {} 명", memberInChatRoom.size());
+        memberInChatRoom.forEach(member -> log.info("Member In Chat Room Id : {}", member.getMemberId()));
+
         return allProjectMember.stream()
-                .filter(member -> !memberInChatRoom.contains(member))
+                .filter(member -> {
+                    boolean isNotInChatRoom = !memberInChatRoom.contains(member);
+                    if (!isNotInChatRoom) {
+                        log.info("Filtering out Member ID: {} (already in chat room)", member.getMemberId());
+                    }
+                    return isNotInChatRoom;
+                })
+                .peek(member -> log.info("Passed filter -> Member ID: {}", member.getMemberId()))
                 .map(member -> GetInvitableListDTO.builder()
                         .memberId(member.getMemberId())
                         .memberName(member.getUser().getName())
@@ -116,6 +134,7 @@ public class ChatRoomService {
         }
     }
 
+    @Transactional
     public void addChatRoomMember(Project project, ChatRoom chatRoom, Long memberId) throws JsonProcessingException {
 
         Member member = memberValidator.validateMember(project.getProjectId(), memberId);
@@ -126,9 +145,10 @@ public class ChatRoomService {
                 .chatRoom(chatRoom)
                 .build();
 
-        chatService.saveSystemMessage(chatRoom.getChatRoomId(), member.getUser().getName() + "님이 채팅방에 참여했습니다.");
-
         chatRoomMemberRepository.save(chatRoomMember);
+        log.info("채팅방 멤버 추가, Chat Room Member ID : {}, Chat Room ID : {}, Member ID : {}", chatRoomMember.getChatRoomMemberId(), chatRoom.getChatRoomId(), memberId);
+        chatService.sendSystemMessage(chatRoom.getChatRoomId(), member.getUser().getName() + "님이 채팅방에 참여했습니다.");
+        log.info("Add Chat Room Member 로직 끝");
     }
 
     @Transactional
@@ -145,7 +165,9 @@ public class ChatRoomService {
     public List<GetChatRoomListDTO> getChatRoomList(Long userId, Long projectId) {
 
         Project project = projectValidator.validateActiveProject(projectId);
+        log.info("111111");
         Member member = memberValidator.validateActiveMemberInProject(userId, project.getProjectId());
+        log.info("222222");
 
         return chatRoomRepository.findByProject(project).stream()
                 .sorted(Comparator
@@ -153,17 +175,20 @@ public class ChatRoomService {
                         .thenComparing(ChatRoom::getCreatedAt, Comparator.reverseOrder())
                 )
                 .map(chatRoom -> {
+                    log.info("333333, Chat Room ID : {}, member ID : {}", chatRoom.getChatRoomId(), member.getMemberId());
                     ChatRoomMember targetChatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, member);
 
                     List<String> chatRoomMemberNames = chatRoomMemberRepository.findByChatRoom(chatRoom).stream()
                             .map(chatRoomMember -> chatRoomMember.getMember().getUser().getName())
                             .collect(Collectors.toList());
 
+                    log.info("채팅방 리스트 불러오기 - Chat Room ID : {}", chatRoom.getChatRoomId());
                     return GetChatRoomListDTO.builder()
                             .chatRoomId(chatRoom.getChatRoomId())
                             .chatRoomMemberId(targetChatRoomMember.getChatRoomMemberId())
                             .chatRoomName(chatRoom.getChatRoomName())
                             .chatRoomMemberNames(chatRoomMemberNames)
+                            .isBasic(chatRoom.isBasic())
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -180,7 +205,7 @@ public class ChatRoomService {
         ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, member);
         chatRoomMemberRepository.delete(chatRoomMember);
 
-        chatService.saveSystemMessage(chatRoomId, member.getUser().getName() + "님이 채팅방에서 퇴장했습니다.");
+        chatService.sendSystemMessage(chatRoomId, member.getUser().getName() + "님이 채팅방에서 퇴장했습니다.");
 
         List<ChatRoomMember> remainingMembers = chatRoomMemberRepository.findByChatRoom(chatRoom);
 
