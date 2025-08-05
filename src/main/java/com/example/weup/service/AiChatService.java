@@ -2,11 +2,9 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.dto.request.AiChatRequestDTO;
-import com.example.weup.dto.request.AiRoleAssignRequestDTO;
-import com.example.weup.dto.request.AiTodoCreateRequestDTO;
-import com.example.weup.dto.request.SendMessageRequestDTO;
+import com.example.weup.dto.request.*;
 import com.example.weup.constant.SenderType;
+import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
 import com.example.weup.validate.ProjectValidator;
@@ -91,14 +89,13 @@ public class AiChatService {
             }
             log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
 
-//            ReceiveMessageResponseDto savedAiMessage = chatService.saveChatMessage(roomId, responseData);
-//
-//            ReceiveMessageResponseDto responseMessage = savedAiMessage.copyBuilder()
-//                    .originalSenderName(sendMember.getUser().getName())
-//                    .originalMessage(aiChatRequestDTO.getUserInput())
-//                    .build();
+            ChatMessage aiMessage = chatService.testSendAIMsg(roomId, realMessage);
+            ReceiveMessageResponseDto savedAiMessage = ReceiveMessageResponseDto.fromEntity(aiMessage);
 
-            chatService.testSendAIMsg(roomId, realMessage);
+            ReceiveMessageResponseDto responseMessage = savedAiMessage.copyBuilder()
+                    .originalSenderName(sendMember.getUser().getName())
+                    .originalMessage(aiChatRequestDTO.getUserInput())
+                    .build();
 
         } catch (RestClientException e) {
             throw new RuntimeException("AI Chat 서버 요청 중 오류 발생 : " + e);
@@ -156,7 +153,7 @@ public class AiChatService {
                 .title(aiMinutesCreateRequestDTO.getTitle())
                 .contents(aiMinutesCreateRequestDTO.getContents())
                 .boardCreateTime(LocalDateTime.now())
-                .SenderType(SenderType.AI)
+                .senderType(SenderType.AI)
                 .build();
 
         boardRepository.save(board);

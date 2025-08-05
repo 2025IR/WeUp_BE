@@ -125,7 +125,7 @@ public class ChatService{
 
     // ai message
     @Transactional
-    public void testSendAIMsg(Long chatRoomId, String message) throws JsonProcessingException {
+    public ChatMessage testSendAIMsg(Long chatRoomId, String message) throws JsonProcessingException {
 
         ChatMessage aiMessage = ChatMessage.builder()
                 .member(null)
@@ -137,7 +137,9 @@ public class ChatService{
                 .build();
 
         checkAndSendDateChangeMessage(chatRoomId, aiMessage.getSentAt());
-        testSaveMsg(chatRoomId, aiMessage);
+        //testSaveMsg(chatRoomId, aiMessage);
+
+        return aiMessage;
     }
 
     // send message
