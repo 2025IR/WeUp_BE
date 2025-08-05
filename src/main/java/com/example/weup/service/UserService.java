@@ -42,6 +42,7 @@ public class UserService {
     private final MailService mailService;
 
     private final S3Service s3Service;
+    private final ProjectService projectService;
 
     @Value("${user.default-profile-image}")
     private String defaultProfileImage;
@@ -166,7 +167,7 @@ public class UserService {
                 nextLeader.promoteToLeader();
                 leader.demoteFromLeader();
             } else {
-                // todo. 프로젝트 삭제 로직 추가
+                projectService.deleteProject(userId, project.getProjectId());
             }
         }
 
