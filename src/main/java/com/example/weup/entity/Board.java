@@ -1,6 +1,7 @@
 package com.example.weup.entity;
 
 
+import com.example.weup.constant.SenderType;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -21,7 +22,7 @@ public class Board {
     private Long boardId;
 
     @ManyToOne
-    @JoinColumn(name = "member_id", nullable = false)
+    @JoinColumn(name = "member_id")
     private Member member;
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -41,6 +42,10 @@ public class Board {
 
     @Column(name= "contents")
     private String contents;
+
+    @Column(name= "sender_type")
+    @Builder.Default
+    private SenderType senderType = SenderType.MEMBER;
 
     public void editBoard(String title, String contents, Tag tag) {
         this.title = title;

@@ -1,9 +1,17 @@
 package com.example.weup.constant;
 
-public enum SenderType {
+import lombok.Getter;
+import lombok.RequiredArgsConstructor;
 
-    MEMBER,
-    AI,
-    SYSTEM,
-    WITHDRAW
+@Getter
+@RequiredArgsConstructor
+public enum SenderType {
+    MEMBER("", ""),
+    AI("AI 비서", "64a81f23-0738-433b-86d8-44b3cd3bc553-smiley2.png"),
+    SYSTEM("", ""),
+    WITHDRAW("알 수 없음", "delete_user.jpg");
+
+    private final String name;
+    private final String profileImage;
 }
+
