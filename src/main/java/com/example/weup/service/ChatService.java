@@ -55,7 +55,7 @@ public class ChatService{
 
     // basic chat message
     @Transactional
-    public void testSendBasicMsg(Long chatRoomId, SendMessageRequestDTO messageRequestDTO) throws JsonProcessingException {
+    public void sendBasicMessage(Long chatRoomId, SendMessageRequestDTO messageRequestDTO) throws JsonProcessingException {
 
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
@@ -73,12 +73,12 @@ public class ChatService{
                 .build();
 
         checkAndSendDateChangeMessage(chatRoomId, basicMessage.getSentAt());
-        testSaveMsg(chatRoomId, basicMessage);
+        saveMessage(chatRoomId, basicMessage);
     }
 
     // image chat message
     @Transactional
-    public void testSendImgMsg(Long chatRoomId, SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
+    public void sendImageMessage(Long chatRoomId, SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
 
         if (sendImageMessageRequestDTO.getFile() == null || sendImageMessageRequestDTO.getFile().isEmpty()) {
             throw new GeneralException(ErrorInfo.FILE_UPLOAD_FAILED);
@@ -102,12 +102,12 @@ public class ChatService{
                 .build();
 
         checkAndSendDateChangeMessage(chatRoomId, imgMessage.getSentAt());
-        testSaveMsg(chatRoomId, imgMessage);
+        saveMessage(chatRoomId, imgMessage);
     }
 
     // system message
     @Transactional
-    public void testSendSystemMsg(Long chatRoomId, String message) throws JsonProcessingException {
+    public void sendSystemMessage(Long chatRoomId, String message) throws JsonProcessingException {
 
         log.info("Send System Message 부분으로 넘어옴");
         ChatMessage systemMessage = ChatMessage.builder()
@@ -120,12 +120,12 @@ public class ChatService{
                 .build();
 
         checkAndSendDateChangeMessage(chatRoomId, systemMessage.getSentAt());
-        testSaveMsg(chatRoomId, systemMessage);
+        saveMessage(chatRoomId, systemMessage);
     }
 
     // ai message
     @Transactional
-    public ChatMessage testSendAIMsg(Long chatRoomId, String message) throws JsonProcessingException {
+    public ChatMessage sendAIMessage(Long chatRoomId, String message) throws JsonProcessingException {
 
         ChatMessage aiMessage = ChatMessage.builder()
                 .member(null)
@@ -143,7 +143,7 @@ public class ChatService{
     }
 
     // send message
-    private void testSaveMsg(Long chatRoomId, ChatMessage message) throws JsonProcessingException {
+    private void saveMessage(Long chatRoomId, ChatMessage message) throws JsonProcessingException {
 
         log.info("Send Save Message 부분으로 넘어옴");
         String key = "chat:room:" + chatRoomId;
@@ -240,7 +240,7 @@ public class ChatService{
                     .displayType(DisplayType.DEFAULT)
                     .build();
 
-            testSaveMsg(chatRoomId, systemMessage);
+            saveMessage(chatRoomId, systemMessage);
         }
     }
 

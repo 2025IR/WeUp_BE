@@ -27,7 +27,7 @@ public class ChatController {
 
         log.info("요청자 : {}, websocket send chatting -> start", messageDto.getSenderId());
 
-        chatService.testSendBasicMsg(chatRoomId, messageDto);
+        chatService.sendBasicMessage(chatRoomId, messageDto);
         log.info("요청자 : {}, websocket send chatting -> success", messageDto.getSenderId());
     }
 
@@ -37,7 +37,7 @@ public class ChatController {
                                  @ModelAttribute SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
 
         log.info("요청자 : {}, send image chatting -> start", userId);
-        chatService.testSendImgMsg(chatRoomId, sendImageMessageRequestDTO);
+        chatService.sendImageMessage(chatRoomId, sendImageMessageRequestDTO);
 
         log.info("요청자 : {}, send image chatting -> success", userId);
     }

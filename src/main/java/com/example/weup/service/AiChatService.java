@@ -69,7 +69,7 @@ public class AiChatService {
         Member sendMember = memberRepository.findById(aiChatRequestDTO.getSenderId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
-        chatService.testSendBasicMsg(chatRoomId, sendMessageRequestDto);
+        chatService.sendBasicMessage(chatRoomId, sendMessageRequestDto);
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -92,7 +92,7 @@ public class AiChatService {
             }
             log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
 
-            ChatMessage aiMessage = chatService.testSendAIMsg(chatRoomId, realMessage);
+            ChatMessage aiMessage = chatService.sendAIMessage(chatRoomId, realMessage);
             ReceiveMessageResponseDto savedAiMessage = ReceiveMessageResponseDto.fromEntity(aiMessage);
 
             ReceiveMessageResponseDto responseMessage = savedAiMessage.copyBuilder()

@@ -147,7 +147,7 @@ public class ChatRoomService {
 
         chatRoomMemberRepository.save(chatRoomMember);
         log.info("채팅방 멤버 추가, Chat Room Member ID : {}, Chat Room ID : {}, Member ID : {}", chatRoomMember.getChatRoomMemberId(), chatRoom.getChatRoomId(), memberId);
-        chatService.testSendSystemMsg(chatRoom.getChatRoomId(), member.getUser().getName() + "님이 채팅방에 참여했습니다.");
+        chatService.sendSystemMessage(chatRoom.getChatRoomId(), member.getUser().getName() + "님이 채팅방에 참여했습니다.");
         log.info("Add Chat Room Member 로직 끝");
     }
 
@@ -205,7 +205,7 @@ public class ChatRoomService {
         ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, member);
         chatRoomMemberRepository.delete(chatRoomMember);
 
-        chatService.testSendSystemMsg(chatRoomId, member.getUser().getName() + "님이 채팅방에서 퇴장했습니다.");
+        chatService.sendSystemMessage(chatRoomId, member.getUser().getName() + "님이 채팅방에서 퇴장했습니다.");
 
         List<ChatRoomMember> remainingMembers = chatRoomMemberRepository.findByChatRoom(chatRoom);
 
