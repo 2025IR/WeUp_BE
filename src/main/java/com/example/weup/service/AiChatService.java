@@ -6,7 +6,6 @@ import com.example.weup.dto.request.AiChatRequestDTO;
 import com.example.weup.dto.request.AiRoleAssignRequestDTO;
 import com.example.weup.dto.request.AiTodoCreateRequestDTO;
 import com.example.weup.dto.request.SendMessageRequestDTO;
-import com.example.weup.dto.response.ReceiveMessageResponseDto;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
 import com.example.weup.validate.ProjectValidator;
@@ -20,7 +19,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
@@ -38,8 +36,6 @@ public class AiChatService {
     private final RestTemplate restTemplate;
 
     private final ChatService chatService;
-
-    private final SimpMessagingTemplate messagingTemplate;
 
     private final ObjectMapper objectMapper;
 

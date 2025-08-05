@@ -35,7 +35,9 @@ public class ReceiveMessageResponseDto {
     public static ReceiveMessageResponseDto fromEntity(ChatMessage chatMessage) {
         return ReceiveMessageResponseDto.builder()
                 .senderId(chatMessage.getMessageId())
-                .senderName(chatMessage.getMember().getUser().getName())
+                .senderName(chatMessage.getSenderType() == SenderType.MEMBER
+                        ? chatMessage.getMember().getUser().getName()
+                        : null)
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())
                 .isImage(chatMessage.getIsImage())
