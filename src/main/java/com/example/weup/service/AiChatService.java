@@ -18,6 +18,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
@@ -53,10 +54,12 @@ public class AiChatService {
 
     private final ProjectValidator projectValidator;
 
+    private final SimpMessagingTemplate messagingTemplate;
+
     @Value("${ai.server.url}")
     private String aiServerUrl;
 
-    public void sendMessageToAi(Long roomId, AiChatRequestDTO aiChatRequestDTO) throws JsonProcessingException {
+    public void sendMessageToAi(Long chatRoomId, AiChatRequestDTO aiChatRequestDTO) throws JsonProcessingException {
 
         SendMessageRequestDTO sendMessageRequestDto = SendMessageRequestDTO.builder()
                 .senderId(aiChatRequestDTO.getSenderId())
@@ -66,7 +69,7 @@ public class AiChatService {
         Member sendMember = memberRepository.findById(aiChatRequestDTO.getSenderId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
-        chatService.testSendBasicMsg(roomId, sendMessageRequestDto);
+        chatService.testSendBasicMsg(chatRoomId, sendMessageRequestDto);
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -89,13 +92,15 @@ public class AiChatService {
             }
             log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
 
-            ChatMessage aiMessage = chatService.testSendAIMsg(roomId, realMessage);
+            ChatMessage aiMessage = chatService.testSendAIMsg(chatRoomId, realMessage);
             ReceiveMessageResponseDto savedAiMessage = ReceiveMessageResponseDto.fromEntity(aiMessage);
 
             ReceiveMessageResponseDto responseMessage = savedAiMessage.copyBuilder()
                     .originalSenderName(sendMember.getUser().getName())
                     .originalMessage(aiChatRequestDTO.getUserInput())
                     .build();
+
+            messagingTemplate.convertAndSend("/topic/chat" + chatRoomId, responseMessage);
 
         } catch (RestClientException e) {
             throw new RuntimeException("AI Chat 서버 요청 중 오류 발생 : " + e);

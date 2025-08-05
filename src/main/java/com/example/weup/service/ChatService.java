@@ -206,7 +206,6 @@ public class ChatService{
 
         log.info("Check And Send Data Change Message 부분으로 넘어옴");
         String key = "chat:room:" + chatRoomId;
-        Long redisSize = redisTemplate.opsForZSet().size(key);
 
         LocalDate currentDate = currentMessageTime.toLocalDate();
         LocalDate lastMessageDate = null;
