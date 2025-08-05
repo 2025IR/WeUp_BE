@@ -78,9 +78,7 @@ public class ChatRoomService {
         addChatRoomMember(project, chatRoom, creator.getMemberId());
 
         List<Long> chatRoomMemberIds = createChatRoomDto.getChatRoomMemberId();
-        log.info("리스트에 복사함....");
         if (chatRoomMemberIds != null && !createChatRoomDto.getChatRoomMemberId().isEmpty()) {
-            log.info("여기까지 접근하나?");
             for (Long memberId : chatRoomMemberIds) {
                 log.info("초대할 대상 Member ID : {}", memberId);
                 addChatRoomMember(project, chatRoom, memberId);
@@ -165,24 +163,23 @@ public class ChatRoomService {
     public List<GetChatRoomListDTO> getChatRoomList(Long userId, Long projectId) {
 
         Project project = projectValidator.validateActiveProject(projectId);
-        log.info("111111");
         Member member = memberValidator.validateActiveMemberInProject(userId, project.getProjectId());
-        log.info("222222");
 
-        return chatRoomRepository.findByProject(project).stream()
+        List<ChatRoomMember> chatRoomMembers = chatRoomMemberRepository.findByMember(member);
+
+        return chatRoomMembers.stream()
+                .map(ChatRoomMember::getChatRoom)
                 .sorted(Comparator
                         .comparing(ChatRoom::isBasic, Comparator.reverseOrder())
                         .thenComparing(ChatRoom::getCreatedAt, Comparator.reverseOrder())
                 )
                 .map(chatRoom -> {
-                    log.info("333333, Chat Room ID : {}, member ID : {}", chatRoom.getChatRoomId(), member.getMemberId());
                     ChatRoomMember targetChatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, member);
 
                     List<String> chatRoomMemberNames = chatRoomMemberRepository.findByChatRoom(chatRoom).stream()
                             .map(chatRoomMember -> chatRoomMember.getMember().getUser().getName())
                             .collect(Collectors.toList());
 
-                    log.info("채팅방 리스트 불러오기 - Chat Room ID : {}", chatRoom.getChatRoomId());
                     return GetChatRoomListDTO.builder()
                             .chatRoomId(chatRoom.getChatRoomId())
                             .chatRoomMemberId(targetChatRoomMember.getChatRoomMemberId())

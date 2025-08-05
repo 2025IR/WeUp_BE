@@ -2,7 +2,6 @@ package com.example.weup.dto.response;
 
 import com.example.weup.constant.DisplayType;
 import com.example.weup.constant.SenderType;
-import com.example.weup.entity.ChatMessage;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
@@ -13,7 +12,7 @@ import java.time.LocalDateTime;
 @Builder
 @Getter
 @Setter
-public class ReceiveMessageResponseDto {
+public class ReceiveMessageResponseDTO {
 
     private Long senderId;
 
@@ -36,12 +35,8 @@ public class ReceiveMessageResponseDto {
 
     private String originalMessage;
 
-    public static ReceiveMessageResponseDto fromEntity(ChatMessage chatMessage) {
-        return ReceiveMessageResponseDto.builder()
-                .senderId(chatMessage.getMessageId())
-                .senderName(chatMessage.getSenderType() == SenderType.MEMBER
-                        ? chatMessage.getMember().getUser().getName()
-                        : null)
+    public static ReceiveMessageResponseDTO fromEntity(RedisMessageDTO chatMessage) {
+        return ReceiveMessageResponseDTO.builder()
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())
                 .isImage(chatMessage.getIsImage())
@@ -50,7 +45,7 @@ public class ReceiveMessageResponseDto {
                 .build();
     }
 
-    public ReceiveMessageResponseDtoBuilder copyBuilder() {
+    public ReceiveMessageResponseDTOBuilder copyBuilder() {
         return builder()
                 .senderId(this.senderId)
                 .senderName(this.senderName)

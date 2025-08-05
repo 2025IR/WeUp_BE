@@ -4,7 +4,8 @@ import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.*;
 import com.example.weup.constant.SenderType;
-import com.example.weup.dto.response.ReceiveMessageResponseDto;
+import com.example.weup.dto.response.ReceiveMessageResponseDTO;
+import com.example.weup.dto.response.RedisMessageDTO;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
 import com.example.weup.validate.ProjectValidator;
@@ -92,10 +93,11 @@ public class AiChatService {
             }
             log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
 
-            ChatMessage aiMessage = chatService.sendAIMessage(chatRoomId, realMessage);
-            ReceiveMessageResponseDto savedAiMessage = ReceiveMessageResponseDto.fromEntity(aiMessage);
+            RedisMessageDTO aiMessage = chatService.sendAIMessage(chatRoomId, realMessage);
+            ReceiveMessageResponseDTO savedAiMessage = ReceiveMessageResponseDTO.fromEntity(aiMessage);
+            chatService.setReceiveMessageField(savedAiMessage);  // 이거 자체를 ChatService에 넣게 되면 해당 메소드 접근제어자를 private으로 바꾸기
 
-            ReceiveMessageResponseDto responseMessage = savedAiMessage.copyBuilder()
+            ReceiveMessageResponseDTO responseMessage = savedAiMessage.copyBuilder()
                     .originalSenderName(sendMember.getUser().getName())
                     .originalMessage(aiChatRequestDTO.getUserInput())
                     .build();

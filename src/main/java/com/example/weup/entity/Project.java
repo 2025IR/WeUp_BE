@@ -1,6 +1,7 @@
 package com.example.weup.entity;
 
 import com.example.weup.dto.request.ProjectEditRequestDTO;
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -56,6 +57,7 @@ public class Project {
 
     @OneToMany(mappedBy = "project", cascade = CascadeType.REMOVE)
     @Builder.Default
+    @JsonManagedReference
     private List<Member> members = new ArrayList<>();
 
 

@@ -1,5 +1,6 @@
 package com.example.weup.entity;
 
+import com.fasterxml.jackson.annotation.JsonManagedReference;
 import jakarta.persistence.*;
 import lombok.*;
 import org.springframework.security.core.GrantedAuthority;
@@ -51,6 +52,7 @@ public class User implements UserDetails {
     private String refreshToken;
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private AccountSocial accountSocial;
 
     @Override
