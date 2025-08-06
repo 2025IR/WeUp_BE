@@ -77,7 +77,6 @@ public class ChatService{
                 .displayType(setDisplayType(chatRoomId, messageRequestDTO.getSenderId(), SenderType.MEMBER, messageRequestDTO.getSentAt()))
                 .build();
 
-        //checkAndSendDateChangeMessage(chatRoomId, basicMessage.getSentAt());
         saveMessage(chatRoomId, basicMessage);
     }
 

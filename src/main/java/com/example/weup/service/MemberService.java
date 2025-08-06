@@ -227,7 +227,7 @@ public class MemberService {
             ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, targetMember);
             if (chatRoomMember != null) {
                 chatRoomMemberRepository.delete(chatRoomMember);
-                chatService.sendSystemMessage(chatRoom.getChatRoomId(), chatRoomMember.getMember().getUser().getName() + "님이 채팅방에 참여했습니다.");
+                chatService.sendSystemMessage(chatRoom.getChatRoomId(), chatRoomMember.getMember().getUser().getName() + "님이 채팅방에서 퇴장했습니다.");
             }
         }
     }
