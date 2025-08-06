@@ -2,6 +2,7 @@ package com.example.weup.dto.response;
 
 import com.example.weup.constant.DisplayType;
 import com.example.weup.constant.SenderType;
+import com.example.weup.entity.ChatMessage;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
 
@@ -35,7 +36,17 @@ public class ReceiveMessageResponseDTO {
 
     private String originalMessage;
 
-    public static ReceiveMessageResponseDTO fromEntity(RedisMessageDTO chatMessage) {
+    public static ReceiveMessageResponseDTO fromRedisMessageDTO(RedisMessageDTO chatMessage) {
+        return ReceiveMessageResponseDTO.builder()
+                .message(chatMessage.getMessage())
+                .sentAt(chatMessage.getSentAt())
+                .isImage(chatMessage.getIsImage())
+                .senderType(chatMessage.getSenderType())
+                .displayType(chatMessage.getDisplayType())
+                .build();
+    }
+
+    public static ReceiveMessageResponseDTO fromChatMessageEntity(ChatMessage chatMessage) {
         return ReceiveMessageResponseDTO.builder()
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())

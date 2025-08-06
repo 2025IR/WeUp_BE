@@ -94,7 +94,7 @@ public class AiChatService {
             log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
 
             RedisMessageDTO aiMessage = chatService.sendAIMessage(chatRoomId, realMessage);
-            ReceiveMessageResponseDTO savedAiMessage = ReceiveMessageResponseDTO.fromEntity(aiMessage);
+            ReceiveMessageResponseDTO savedAiMessage = ReceiveMessageResponseDTO.fromRedisMessageDTO(aiMessage);
             chatService.setReceiveMessageField(savedAiMessage);  // 이거 자체를 ChatService에 넣게 되면 해당 메소드 접근제어자를 private으로 바꾸기
 
             ReceiveMessageResponseDTO responseMessage = savedAiMessage.copyBuilder()
