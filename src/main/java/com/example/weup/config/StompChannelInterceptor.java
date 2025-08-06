@@ -104,7 +104,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 if (destination == null) {
                     log.warn("SEND command receive with Null Destination from Session Id - {}", accessor.getSessionId());
                 }
-                else if (destination.startsWith("app/send") || destination.startsWith("/app/project") ||
+                else if (destination.startsWith("/app/send") || destination.startsWith("/app/project") ||
                         destination.startsWith("/app/todo") || destination.startsWith("/app/chat") || destination.startsWith("/app/schedule")) {
                     log.info("SEND Destination Validate -> Success : User - {}, Destination - {}", userId, destination);
                 }
