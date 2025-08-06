@@ -1,9 +1,11 @@
 package com.example.weup.dto.request;
 
-import lombok.Data;
+import lombok.Getter;
 
-@Data
+@Getter
 public class GetPageable {
+
     private int page;
+
     private int size;
 }

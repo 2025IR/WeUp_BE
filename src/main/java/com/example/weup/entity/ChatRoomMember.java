@@ -19,10 +19,6 @@ public class ChatRoomMember {
     @Column(nullable = false, updatable = false)
     private Long chatRoomMemberId;
 
-    @Column(nullable = false)
-    @Builder.Default
-    private boolean isWithdrawal = false;
-
     @ManyToOne
     @JoinColumn(name = "member_id")
     private Member member;

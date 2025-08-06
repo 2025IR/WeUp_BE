@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Builder
 @Getter
 @Setter
-public class ReceiveMessageResponseDto {
+public class ReceiveMessageResponseDTO {
 
     private Long senderId;
 
@@ -36,12 +36,8 @@ public class ReceiveMessageResponseDto {
 
     private String originalMessage;
 
-    public static ReceiveMessageResponseDto fromEntity(ChatMessage chatMessage) {
-        return ReceiveMessageResponseDto.builder()
-                .senderId(chatMessage.getMessageId())
-                .senderName(chatMessage.getSenderType() == SenderType.MEMBER
-                        ? chatMessage.getMember().getUser().getName()
-                        : null)
+    public static ReceiveMessageResponseDTO fromRedisMessageDTO(RedisMessageDTO chatMessage) {
+        return ReceiveMessageResponseDTO.builder()
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())
                 .isImage(chatMessage.getIsImage())
@@ -50,7 +46,17 @@ public class ReceiveMessageResponseDto {
                 .build();
     }
 
-    public ReceiveMessageResponseDtoBuilder copyBuilder() {
+    public static ReceiveMessageResponseDTO fromChatMessageEntity(ChatMessage chatMessage) {
+        return ReceiveMessageResponseDTO.builder()
+                .message(chatMessage.getMessage())
+                .sentAt(chatMessage.getSentAt())
+                .isImage(chatMessage.getIsImage())
+                .senderType(chatMessage.getSenderType())
+                .displayType(chatMessage.getDisplayType())
+                .build();
+    }
+
+    public ReceiveMessageResponseDTOBuilder copyBuilder() {
         return builder()
                 .senderId(this.senderId)
                 .senderName(this.senderName)

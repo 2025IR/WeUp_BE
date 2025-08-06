@@ -7,6 +7,7 @@ import com.example.weup.service.ChatService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.domain.Slice;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.handler.annotation.DestinationVariable;
 import org.springframework.messaging.handler.annotation.MessageMapping;
@@ -44,12 +45,12 @@ public class ChatController {
 
     @ResponseBody
     @PostMapping("/chat/messages/{chatRoomId}")
-    public ResponseEntity<DataResponseDTO<ChatPageResponseDto>> getChatMessages(@LoginUser Long userId,
-                                                                                @PathVariable Long chatRoomId,
-                                                                                @RequestBody GetPageable pageable) throws JsonProcessingException {
+    public ResponseEntity<DataResponseDTO<Slice<ReceiveMessageResponseDTO>>> getChatMessages(@LoginUser Long userId,
+                                                                  @PathVariable Long chatRoomId,
+                                                                  @RequestBody GetPageable pageable) throws JsonProcessingException {
 
         log.info("요청자 : {}, get chatting messages -> start", userId);
-        ChatPageResponseDto data = chatService.getChatMessages(chatRoomId, pageable.getPage(), pageable.getSize());
+        Slice<ReceiveMessageResponseDTO> data = chatService.getChatMessages(chatRoomId, pageable);
 
         log.info("요청자 : {}, get chatting messages -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of(data, "채팅 내역 조회가 완료되었습니다."));
