@@ -11,6 +11,4 @@ import java.util.List;
 public interface ChatRoomRepository extends JpaRepository<ChatRoom, Long> {
 
     List<ChatRoom> findByProject(Project project);
-
-    ChatRoom findByProjectAndBasicTrue(Project project);
 }

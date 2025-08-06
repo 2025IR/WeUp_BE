@@ -1,6 +1,5 @@
 package com.example.weup.entity;
 
-import com.fasterxml.jackson.annotation.JsonBackReference;
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -23,12 +22,11 @@ public class Member {
     private Long memberId;
 
     @ManyToOne
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "user_id", nullable = true)
     private User user;
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
-    @JsonBackReference
     private Project project;
 
     @Column(name = "available_time", length = 252)
@@ -58,16 +56,11 @@ public class Member {
         this.isMemberDeleted = true;
     }
 
+    public void restoreMember() {
+        this.isMemberDeleted = false;
+    }
+
     public void editSchedule(String availableTime) {
         this.availableTime = availableTime;
-    }
-
-    public void reJoin() {
-        this.isMemberDeleted = false;
-        this.lastAccessTime = LocalDateTime.now();
-    }
-
-    public void assignDeletedUser(User user) {
-        this.user = user;
     }
 }

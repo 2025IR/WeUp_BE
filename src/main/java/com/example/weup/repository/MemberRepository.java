@@ -13,6 +13,7 @@ import java.util.Optional;
 
 @Repository
 public interface MemberRepository extends JpaRepository<Member, Long> {
+    boolean existsByUserAndProject(User user, Project project);
 
     List<Member> findByProject_ProjectIdAndIsMemberDeletedFalse(Long projectId);
 
@@ -32,9 +33,9 @@ public interface MemberRepository extends JpaRepository<Member, Long> {
 
     List<Member> findByUser_UserIdAndIsLeaderTrue(Long userId);
 
+    Optional<Member> findFirstByProjectAndUser_UserIdNotOrderByMemberIdAsc(Project project, Long userId);
+
     List<Member> findByUser(User user);
 
     List<Member> findByProject(Project project);
-
-    List<Member> findAllByProjectAndUser_UserIdNotOrderByMemberIdAsc(Project project, Long userId);
 }

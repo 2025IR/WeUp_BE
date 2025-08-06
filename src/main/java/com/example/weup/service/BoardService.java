@@ -73,12 +73,13 @@ public class BoardService {
         Page<Board> boards = boardRepository.findByProjectIdAndFilters(projectId, boardListRequestDTO.getTag(), boardListRequestDTO.getSearch(), pageable);
 
         return boards.map(board -> {
+            User user = board.getMember().getUser();
             boolean hasFile = fileRepository.existsByBoard(board);
 
             return BoardListResponseDTO.builder()
                     .boardId(board.getBoardId())
-                    .name(getWriterName(board))
-                    .profileImage(getWriterProfileImage(board))
+                    .name(user.getName())
+                    .profileImage(s3Service.getPresignedUrl(user.getProfileImage()))
                     .title(board.getTitle())
                     .boardCreatedTime(board.getBoardCreateTime())
                     .tag(board.getTag().getTagName())
@@ -92,13 +93,13 @@ public class BoardService {
         Board board = boardRepository.findById(boardId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
 
-        memberValidator.validateActiveMemberInProject(userId, board.getProject().getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, board.getProject().getProjectId());
 
         List<FileResponseDTO> fileDTOs = fileService.getFileResponses(board);
 
         return BoardDetailResponseDTO.builder()
-                .name(getWriterName(board))
-                .profileImage(getWriterProfileImage(board))
+                .name(member.getUser().getName())
+                .profileImage(s3Service.getPresignedUrl(member.getUser().getProfileImage()))
                 .title(board.getTitle())
                 .contents(board.getContents())
                 .boardCreatedTime(board.getBoardCreateTime())
@@ -147,19 +148,4 @@ public class BoardService {
 
         boardRepository.delete(board);
     }
-
-    private String getWriterName(Board board) {
-        if (board.getMember() != null) {
-            return board.getMember().getUser().getName();
-        }
-        return board.getSenderType().getName();
-    }
-
-    private String getWriterProfileImage(Board board) {
-        if (board.getMember() != null) {
-            return s3Service.getPresignedUrl(board.getMember().getUser().getProfileImage());
-        }
-        return s3Service.getPresignedUrl(board.getSenderType().getProfileImage());
-    }
-
 }

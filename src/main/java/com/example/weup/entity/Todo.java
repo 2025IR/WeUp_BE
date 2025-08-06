@@ -42,19 +42,4 @@ public class Todo {
     @OneToMany(mappedBy = "todo", cascade = CascadeType.ALL, orphanRemoval = true)
     @Builder.Default
     private List<TodoMember> todoMembers = new ArrayList<>();
-
-    public void edit(String todoName, LocalDate startDate, LocalDate endDate) {
-        if (todoName != null) {
-            this.todoName = todoName;
-        }
-
-        if (startDate != null && endDate != null) {
-            this.startDate = startDate;
-            this.endDate = endDate;
-        }
-    }
-
-    public void changeStatus(Byte status) {
-        this.todoStatus = status;
-    }
 }

@@ -13,7 +13,7 @@ import java.util.List;
 @Getter
 public class ChatPageResponseDto {
 
-    private List<ReceiveMessageResponseDTO> messageList;
+    private List<ReceiveMessageResponseDto> messageList;
 
     private int page;
 
