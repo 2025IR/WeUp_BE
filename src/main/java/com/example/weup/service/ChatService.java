@@ -7,7 +7,6 @@ import com.example.weup.constant.SenderType;
 import com.example.weup.dto.request.GetPageable;
 import com.example.weup.dto.request.SendImageMessageRequestDTO;
 import com.example.weup.dto.request.SendMessageRequestDTO;
-import com.example.weup.dto.response.ChatPageResponseDto;
 import com.example.weup.dto.response.ReceiveMessageResponseDTO;
 import com.example.weup.dto.response.RedisMessageDTO;
 import com.example.weup.entity.*;
