@@ -29,6 +29,8 @@ public class MemberService {
 
     private final ChatRoomService chatRoomService;
 
+    private final ChatService chatService;
+
     private final MemberValidator memberValidator;
 
     private final UserRepository userRepository;
@@ -194,7 +196,7 @@ public class MemberService {
     }
 
     @Transactional
-    public void deleteMember(Long userId, DeleteMemberRequestDTO deleteMemberRequestDTO) {
+    public void deleteMember(Long userId, DeleteMemberRequestDTO deleteMemberRequestDTO) throws JsonProcessingException {
         memberValidator.validateActiveMemberInProject(userId, deleteMemberRequestDTO.getProjectId());
 
         User requestUser = userRepository.findById(userId)
@@ -225,6 +227,7 @@ public class MemberService {
             ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, targetMember);
             if (chatRoomMember != null) {
                 chatRoomMemberRepository.delete(chatRoomMember);
+                chatService.sendSystemMessage(chatRoom.getChatRoomId(), chatRoomMember.getMember().getUser().getName() + "님이 채팅방에 참여했습니다.");
             }
         }
     }
