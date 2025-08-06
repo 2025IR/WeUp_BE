@@ -2,11 +2,10 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
-import com.example.weup.dto.request.AiChatRequestDTO;
-import com.example.weup.dto.request.AiRoleAssignRequestDTO;
-import com.example.weup.dto.request.AiTodoCreateRequestDTO;
-import com.example.weup.dto.request.SendMessageRequestDto;
-import com.example.weup.dto.response.ReceiveMessageResponseDto;
+import com.example.weup.dto.request.*;
+import com.example.weup.constant.SenderType;
+import com.example.weup.dto.response.ReceiveMessageResponseDTO;
+import com.example.weup.dto.response.RedisMessageDTO;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
 import com.example.weup.validate.ProjectValidator;
@@ -26,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -39,8 +39,6 @@ public class AiChatService {
 
     private final ChatService chatService;
 
-    private final SimpMessagingTemplate messagingTemplate;
-
     private final ObjectMapper objectMapper;
 
     private final MemberRepository memberRepository;
@@ -51,20 +49,28 @@ public class AiChatService {
 
     private final TodoRepository todoRepository;
 
+    private final TagRepository tagRepository;
+
+    private final BoardRepository boardRepository;
+
     private final ProjectValidator projectValidator;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
 
-    public void sendMessageToAi(Long roomId, AiChatRequestDTO aiChatRequestDTO) throws JsonProcessingException {
+    public void sendMessageToAi(Long chatRoomId, AiChatRequestDTO aiChatRequestDTO) throws JsonProcessingException {
 
-        SendMessageRequestDto sendMessageRequestDto = SendMessageRequestDto.builder()
+        SendMessageRequestDTO sendMessageRequestDto = SendMessageRequestDTO.builder()
                 .senderId(aiChatRequestDTO.getSenderId())
                 .message(aiChatRequestDTO.getUserInput())
                 .build();
 
-        ReceiveMessageResponseDto requestMessage = chatService.saveChatMessage(roomId, sendMessageRequestDto);
-        messagingTemplate.convertAndSend("/topic/chat/" + roomId, requestMessage);
+        Member sendMember = memberRepository.findById(aiChatRequestDTO.getSenderId())
+                .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
+
+        chatService.sendBasicMessage(chatRoomId, sendMessageRequestDto);
 
         try {
             HttpHeaders headers = new HttpHeaders();
@@ -87,13 +93,16 @@ public class AiChatService {
             }
             log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
 
-            SendMessageRequestDto responseData = SendMessageRequestDto.builder()
-                    .senderId(1L)
-                    .message(realMessage)
+            RedisMessageDTO aiMessage = chatService.sendAIMessage(chatRoomId, realMessage);
+            ReceiveMessageResponseDTO savedAiMessage = ReceiveMessageResponseDTO.fromEntity(aiMessage);
+            chatService.setReceiveMessageField(savedAiMessage);  // 이거 자체를 ChatService에 넣게 되면 해당 메소드 접근제어자를 private으로 바꾸기
+
+            ReceiveMessageResponseDTO responseMessage = savedAiMessage.copyBuilder()
+                    .originalSenderName(sendMember.getUser().getName())
+                    .originalMessage(aiChatRequestDTO.getUserInput())
                     .build();
 
-            ReceiveMessageResponseDto responseMessage = chatService.saveChatMessage(roomId, responseData);
-            messagingTemplate.convertAndSend("/topic/chat/" + roomId, responseMessage);
+            messagingTemplate.convertAndSend("/topic/chat" + chatRoomId, responseMessage);
 
         } catch (RestClientException e) {
             throw new RuntimeException("AI Chat 서버 요청 중 오류 발생 : " + e);
@@ -136,4 +145,24 @@ public class AiChatService {
         log.info("AI Request Todo Create -> success : project id - {}, todo id - {}", project.getProjectId(), todo.getTodoId());
     }
 
+    @Transactional
+    public void aiCreateMinutes(AiMinutesCreateRequestDTO aiMinutesCreateRequestDTO) {
+
+        Project project = projectValidator.validateActiveProject(aiMinutesCreateRequestDTO.getProjectId());
+
+        Tag tag = tagRepository.findByTagName("회의록")
+                .orElseThrow(() -> new GeneralException(ErrorInfo.TAG_NOT_FOUND));
+
+        Board board = Board.builder()
+                .project(project)
+                .tag(tag)
+                .member(null)
+                .title(aiMinutesCreateRequestDTO.getTitle())
+                .contents(aiMinutesCreateRequestDTO.getContents())
+                .boardCreateTime(LocalDateTime.now())
+                .senderType(SenderType.AI)
+                .build();
+
+        boardRepository.save(board);
+    }
 }

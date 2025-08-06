@@ -4,10 +4,8 @@ import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.GetProfileResponseDTO;
-import com.example.weup.entity.AccountSocial;
-import com.example.weup.entity.Member;
-import com.example.weup.entity.Project;
-import com.example.weup.entity.User;
+import com.example.weup.entity.*;
+import com.example.weup.repository.ChatMessageRepository;
 import com.example.weup.repository.MemberRepository;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.security.JwtDto;
@@ -15,6 +13,7 @@ import com.example.weup.security.JwtUtil;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -32,19 +31,24 @@ public class UserService {
 
     private final MemberRepository memberRepository;
 
+    private final ChatMessageRepository chatMessageRepository;
+
     private final JwtUtil jwtUtil;
+
+    private final StringRedisTemplate redisTemplate;
 
     private final PasswordEncoder passwordEncoder;
 
     private final MailService mailService;
 
     private final S3Service s3Service;
+    private final ProjectService projectService;
 
     @Value("${user.default-profile-image}")
     private String defaultProfileImage;
 
     @Transactional
-    public void signUp(SignUpRequestDto signUpRequestDto) {
+    public void signUp(SignUpRequestDTO signUpRequestDto) {
         String email = signUpRequestDto.getEmail();
         if (!mailService.isEmailVerified(email)) {
             throw new GeneralException(ErrorInfo.EMAIL_NOT_VERIFIED);
@@ -94,10 +98,14 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
+        String storedToken = redisTemplate.opsForValue().get("refreshToken:" + userId);
+
+        if (storedToken == null || !storedToken.equals(refreshToken)) {
+            throw new GeneralException(ErrorInfo.INVALID_TOKEN);
+        }
+
         String newAccessToken = jwtUtil.createAccessToken(userId, user.getRole());
         String newRefreshToken = jwtUtil.createRefreshToken(userId);
-
-        user.renewalToken(newRefreshToken);
 
         return JwtDto.builder()
                 .accessToken(newAccessToken)
@@ -150,16 +158,17 @@ public class UserService {
             Project project = leader.getProject();
 
             Optional<Member> nextLeaderOpt = memberRepository
-                    .findFirstByProjectAndUser_UserIdNotOrderByMemberIdAsc(project, userId);
+                    .findAllByProjectAndUser_UserIdNotOrderByMemberIdAsc(project, userId).stream()
+                    .filter(m -> !m.isMemberDeleted())
+                    .findFirst();
 
             if (nextLeaderOpt.isPresent()) {
                 Member nextLeader = nextLeaderOpt.get();
                 nextLeader.promoteToLeader();
+                leader.demoteFromLeader();
             } else {
-                // todo. 프로젝트 삭제 로직 추가
+                projectService.deleteProject(userId, project.getProjectId());
             }
-
-            leader.demoteFromLeader();
         }
 
         List<Member> memberList = memberRepository.findAllByUser_UserId(userId);
@@ -171,16 +180,27 @@ public class UserService {
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void deleteExpiredUsers() {
-        LocalDateTime threshold = LocalDateTime.now().minusDays(90);
+        LocalDateTime threshold = LocalDateTime.now().minusDays(30);
         List<User> expiredUsers = userRepository.findAllByDeletedAtBefore(threshold);
 
         for (User user : expiredUsers) {
             List<Member> members = memberRepository.findByUser(user);
+
             for (Member member : members) {
-                member.setUser(null);
+                List<ChatMessage> messages = chatMessageRepository.findByMember(member);
+                for (ChatMessage message : messages) {
+                    message.changeSenderToWithdraw();
+                }
+                chatMessageRepository.saveAll(messages);
             }
-            memberRepository.saveAll(members);
-            userRepository.delete(user);
+
+            AccountSocial accountSocial = user.getAccountSocial();
+            if (accountSocial != null) {
+                String email = accountSocial.getEmail();
+                if (email != null && !email.startsWith("deleted_")) {
+                    accountSocial.markAsDeleted();
+                }
+            }
         }
     }
 
@@ -194,11 +214,6 @@ public class UserService {
         }
 
         user.restore();
-
-        List<Member> memberList = memberRepository.findAllByUser_UserId(restoreUserRequestDTO.getUserId());
-        for (Member member : memberList) {
-            member.restoreMember();
-        }
     }
 
     public void logout(Long userId, String refreshToken) {
@@ -206,9 +221,6 @@ public class UserService {
             throw new GeneralException(ErrorInfo.REFRESH_TOKEN_NOT_FOUND);
         }
 
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
-
-        user.clearRefreshToken();
+        redisTemplate.delete("refreshToken:" + userId);
     }
 }

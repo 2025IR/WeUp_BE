@@ -11,11 +11,15 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @Getter
-public class ChatPageResponseDto {
+public class GetChatRoomListDTO {
 
-    private List<ReceiveMessageResponseDTO> messageList;
+    private Long chatRoomId;
 
-    private int page;
+    private Long chatRoomMemberId;
 
-    private boolean isLastPage;
+    private String chatRoomName;
+
+    private List<String> chatRoomMemberNames;
+
+    private Boolean isBasic;
 }

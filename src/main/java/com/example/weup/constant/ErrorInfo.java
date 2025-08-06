@@ -27,9 +27,7 @@ public enum ErrorInfo {
 
     FILE_UPLOAD_FAILED(HttpStatus.INTERNAL_SERVER_ERROR, "이미지 파일 업로드에 실패했습니다."),
 
-    AlREADY_IN_PROJECT(HttpStatus.CONFLICT, "이미 프로젝트에 속해 있는 유저입니다."),
-
-    ROLE_ALREADY_GIVEN(HttpStatus.CONFLICT, "해당 멤버에게 이미 부여된 역할입니다."),
+    ALREADY_IN_PROJECT(HttpStatus.CONFLICT, "이미 프로젝트에 속해 있는 유저입니다."),
 
     ROLE_ALREADY_EXISTS(HttpStatus.CONFLICT, "해당 프로젝트에 이미 존재하는 역할입니다."),
 
@@ -49,6 +47,8 @@ public enum ErrorInfo {
 
     REFRESH_TOKEN_NOT_FOUND(HttpStatus.UNAUTHORIZED, "리프레시 토큰이 없습니다."),
 
+    INVALID_TOKEN(HttpStatus.FORBIDDEN, "토큰이 유효하지 않습니다."),
+
     TOKEN_EXPIRED(HttpStatus.FORBIDDEN, "토큰이 만료되었습니다."),
 
     NOT_IN_PROJECT(HttpStatus.FORBIDDEN, "해당 프로젝트에 접근 권한이 없습니다."),
@@ -67,7 +67,9 @@ public enum ErrorInfo {
 
     USER_IS_NOT_WITHDRAWN(HttpStatus.BAD_REQUEST, "탈퇴한 유저가 아닙니다."),
 
-    PROJECT_IS_NOT_DELETED(HttpStatus.BAD_REQUEST, "삭제되지 않은 프로젝트입니다.");
+    PROJECT_IS_NOT_DELETED(HttpStatus.BAD_REQUEST, "삭제되지 않은 프로젝트입니다."),
+
+    MEMBER_ALREADY_EXISTS_IN_CHAT_ROOM(HttpStatus.CONFLICT, "이미 채팅방에 존재하는 멤버입니다.");
 
     private final HttpStatus httpStatus;
 

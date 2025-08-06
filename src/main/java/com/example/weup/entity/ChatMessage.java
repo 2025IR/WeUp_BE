@@ -1,5 +1,7 @@
 package com.example.weup.entity;
 
+import com.example.weup.constant.DisplayType;
+import com.example.weup.constant.SenderType;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -19,14 +21,16 @@ public class ChatMessage {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "message_id", nullable = false, updatable = false)
+    @Column(nullable = false, updatable = false)
     private Long messageId;
 
     @ManyToOne
+    @JoinColumn(name = "chat_room_id")
     private ChatRoom chatRoom;
 
     @ManyToOne
-    private User user;
+    @JoinColumn(name = "sender_id")
+    private Member member;
 
     @Column
     private String message;
@@ -36,6 +40,19 @@ public class ChatMessage {
     @JsonProperty("isImage")
     private Boolean isImage = false;
 
-    @Column(name = "sent_at", nullable = false)
+    @Column(nullable = false)
     private LocalDateTime sentAt;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    private SenderType senderType = SenderType.MEMBER;
+
+    @Builder.Default
+    @Enumerated(EnumType.STRING)
+    private DisplayType displayType = DisplayType.DEFAULT;
+
+    public void changeSenderToWithdraw() {
+        this.member = null;
+        this.senderType = SenderType.WITHDRAW;
+    }
 }

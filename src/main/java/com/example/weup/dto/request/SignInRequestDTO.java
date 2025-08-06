@@ -3,7 +3,7 @@ package com.example.weup.dto.request;
 import lombok.Data;
 
 @Data
-public class SignInRequestDto {
+public class SignInRequestDTO {
     private String email;
     private String password;
 } 

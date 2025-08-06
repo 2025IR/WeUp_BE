@@ -5,17 +5,15 @@ import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.util.List;
-
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
 @Getter
-public class ChatPageResponseDto {
+public class GetInvitableListDTO {
 
-    private List<ReceiveMessageResponseDTO> messageList;
+    private Long memberId;
 
-    private int page;
+    private String memberName;
 
-    private boolean isLastPage;
+    private String profileImage;
 }
