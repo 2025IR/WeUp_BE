@@ -22,4 +22,15 @@ public class ChatMessageResponseDto {
     private Boolean isImage;
 
     private LocalDateTime sentAt;
+
+    public static ChatMessageResponseDto fromEntity(ChatMessage chatMessage) {
+        return ChatMessageResponseDto.builder()
+                .messageId(chatMessage.getMessageId())
+                .senderId(chatMessage.getUser().getUserId())
+                .senderName(chatMessage.getUser().getName())
+                .message(chatMessage.getMessage())
+                .sentAt(chatMessage.getSentAt())
+                .isImage(chatMessage.getIsImage())
+                .build();
+    }
 }

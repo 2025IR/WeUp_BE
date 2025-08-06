@@ -1,15 +1,17 @@
 package com.example.weup.security;
 
+import com.example.weup.GeneralException;
+import com.example.weup.constant.ErrorInfo;
+import com.example.weup.entity.User;
+import com.example.weup.repository.UserRepository;
 import io.jsonwebtoken.*;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 import javax.crypto.SecretKey;
 import java.util.Date;
-import java.util.concurrent.TimeUnit;
 
 @Slf4j
 @Component
@@ -18,9 +20,9 @@ public class JwtUtil {
 
     private final JwtProperties jwtProperties;
 
-    private final StringRedisTemplate redisTemplate;
-
     private final SecretKey secretKey;
+
+    private final UserRepository userRepository;
 
     public String createAccessToken(Long userId, String role) {
         Date now = new Date();
@@ -49,7 +51,10 @@ public class JwtUtil {
                 .signWith(secretKey, SignatureAlgorithm.HS256)
                 .compact();
 
-        redisTemplate.opsForValue().set("refreshToken:" + userId, refreshToken, jwtProperties.getRefreshTokenExpiration(), TimeUnit.MILLISECONDS);
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+        user.setRefreshToken(refreshToken);
+        userRepository.save(user);
 
         return refreshToken;
     }

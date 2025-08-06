@@ -21,7 +21,5 @@ public class DetailProjectResponseDTO {
 
     private boolean isRevealedNumber;
 
-    private Long memberId;
-
     private boolean isLeader;
 }

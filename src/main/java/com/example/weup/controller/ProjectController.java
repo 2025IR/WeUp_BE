@@ -7,10 +7,7 @@ import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
 import com.example.weup.dto.response.ResponseDTO;
-import com.example.weup.entity.ChatRoom;
-import com.example.weup.entity.Member;
 import com.example.weup.entity.Project;
-import com.example.weup.service.ChatRoomService;
 import com.example.weup.service.MemberService;
 import com.example.weup.service.ProjectService;
 import jakarta.validation.Valid;
@@ -32,17 +29,13 @@ public class ProjectController {
 
     private final MemberService memberService;
 
-    private final ChatRoomService chatRoomService;
-
     @PostMapping("/create")
     public ResponseEntity<ResponseDTO> createProject(@LoginUser Long userId,
                                                      @Valid @ModelAttribute ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
 
         log.info("요청자 : {}, create project -> start", userId);
         Project newProject = projectService.createProject(projectCreateRequestDTO);
-        Member newMember = memberService.addProjectCreater(userId, newProject);
-        ChatRoom newChatRoom = chatRoomService.createBasicChatRoom(newProject, projectCreateRequestDTO.getProjectName());
-        chatRoomService.addChatRoomMember(newProject, newChatRoom, newMember.getMemberId());
+        memberService.addProjectCreater(userId, newProject);
 
         log.info("요청자 : {}, create project -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of("프로젝트가 성공적으로 생성되었습니다."));

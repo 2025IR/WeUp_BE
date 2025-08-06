@@ -11,8 +11,8 @@ import org.springframework.web.multipart.MultipartFile;
 @Builder
 @Data
 public class SendImageMessageRequestDTO {
-
-    private Long senderId;
-
+    private String projectId;
+    private String roomId;
+    private String userId;
     private MultipartFile file;
 }

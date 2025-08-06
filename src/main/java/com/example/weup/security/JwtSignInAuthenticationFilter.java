@@ -1,10 +1,10 @@
 package com.example.weup.security;
 
+import com.example.weup.dto.request.SignInRequestDto;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.extern.slf4j.Slf4j;
-import com.example.weup.dto.request.SignInRequestDTO;
 import org.springframework.security.authentication.*;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.AuthenticationException;
@@ -32,7 +32,7 @@ public class JwtSignInAuthenticationFilter extends UsernamePasswordAuthenticatio
     public Authentication attemptAuthentication(HttpServletRequest request, HttpServletResponse response) throws AuthenticationException {
 
         try {
-            SignInRequestDTO requestDto = objectMapper.readValue(request.getInputStream(), SignInRequestDTO.class);
+            SignInRequestDto requestDto = objectMapper.readValue(request.getInputStream(), SignInRequestDto.class);
             UsernamePasswordAuthenticationToken authenticationToken = new UsernamePasswordAuthenticationToken(requestDto.getEmail(), requestDto.getPassword());
 
             return getAuthenticationManager().authenticate(authenticationToken);
