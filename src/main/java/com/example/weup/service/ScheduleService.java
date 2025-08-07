@@ -1,5 +1,6 @@
 package com.example.weup.service;
 
+import com.example.weup.dto.request.EditScheduleRequestDTO;
 import com.example.weup.dto.response.GetScheduleResponseDTO;
 import com.example.weup.entity.Member;
 import com.example.weup.repository.MemberRepository;
@@ -35,9 +36,9 @@ public class ScheduleService {
 
         getMember.stream().map(
                 member -> GetScheduleResponseDTO.builder()
+                        .memberId(member.getMemberId())
                         .name(member.getUser().getName())
                         .availableTime(member.getAvailableTime())
-                        .isMine(Objects.equals(member.getUser().getUserId(), userId))
                         .build())
                 .forEach(responseDTOList::add);
 
@@ -46,11 +47,10 @@ public class ScheduleService {
     }
 
     @Transactional
-    public void editSchedule(Long userId, Long projectId, String availableTime) {
+    public void editSchedule(Long userId, Long projectId, EditScheduleRequestDTO scheduleRequestDTO) {
 
-        projectValidator.validateActiveProject(projectId);
         Member member = memberValidator.validateActiveMemberInProject(userId, projectId);
-        member.editSchedule(availableTime);
+        member.editSchedule(scheduleRequestDTO.getAvailableTime());
 
         memberRepository.save(member);
         log.info("edit schedule -> db save success : member id - {}", member.getMemberId());

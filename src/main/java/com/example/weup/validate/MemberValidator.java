@@ -18,7 +18,10 @@ import org.springframework.stereotype.Component;
 public class MemberValidator {
 
     private final MemberRepository memberRepository;
+
     private final ChatRoomMemberRepository chatRoomMemberRepository;
+
+    private final ProjectValidator projectValidator;
 
     public Member validateActiveMemberInProject(Long userId, Long projectId) {
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
@@ -51,16 +54,11 @@ public class MemberValidator {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
     }
 
-    public Member validateMember(Long projectId, Long memberId) {
-
-        log.info("project id -> {}, member id -> {}", projectId, memberId);
-
+    public Member validateMemberAndProject(Long memberId) {
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
-        if (!member.getProject().getProjectId().equals(projectId)) {
-            throw new GeneralException(ErrorInfo.NOT_IN_PROJECT);
-        }
+        projectValidator.validateActiveProject(member.getProject().getProjectId());
 
         if (isDeletedMember(member.getMemberId())) {
             throw new GeneralException(ErrorInfo.DELETED_MEMBER);
@@ -70,17 +68,15 @@ public class MemberValidator {
     }
 
     public void isMemberAlreadyInChatRoom(ChatRoom chatRoom, Member member, boolean targetResult) {
-
         if (targetResult) {
             if (!chatRoomMemberRepository.existsByChatRoomAndMember(chatRoom, member)) {
                 throw new GeneralException(ErrorInfo.MEMBER_NOT_FOUND);
             }
-        }
-
-        if (!targetResult) {
+        } else {
             if (chatRoomMemberRepository.existsByChatRoomAndMember(chatRoom, member)) {
                 throw new GeneralException(ErrorInfo.MEMBER_ALREADY_EXISTS_IN_CHAT_ROOM);
             }
         }
     }
+
 }
