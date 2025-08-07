@@ -50,7 +50,7 @@ public class MemberController {
 
     @PutMapping("/delete")
     public ResponseEntity<DataResponseDTO<String>> deleteMember(@LoginUser Long userId,
-                                                                @RequestBody DeleteMemberRequestDTO deleteMemberRequestDTO) {
+                                                                @RequestBody DeleteMemberRequestDTO deleteMemberRequestDTO) throws JsonProcessingException {
 
         memberService.deleteMember(userId, deleteMemberRequestDTO);
 

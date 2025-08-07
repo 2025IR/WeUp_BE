@@ -33,7 +33,7 @@ public class ChatController {
     }
 
     @ResponseBody
-    @PostMapping("/send/image/{chatRoomId}")  // chatRoomId 밖으로 빼기
+    @PostMapping("/chat/send/image/{chatRoomId}")  // chatRoomId 밖으로 빼기
     public void sendImageMessage(@LoginUser Long userId, @PathVariable Long chatRoomId,
                                  @ModelAttribute SendImageMessageRequestDTO sendImageMessageRequestDTO) throws IOException {
 
