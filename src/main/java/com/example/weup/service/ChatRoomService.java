@@ -90,9 +90,9 @@ public class ChatRoomService {
 
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
-        Project project = projectValidator.validateActiveProject(chatRoom.getProject().getProjectId());
+        projectValidator.validateActiveProject(chatRoom.getProject().getProjectId());
 
-        List<Member> allProjectMember = memberRepository.findByProject(project);
+        List<Member> allProjectMember = memberRepository.findByProject_ProjectIdAndIsMemberDeletedFalse(chatRoom.getProject().getProjectId());
         Set<Member> memberInChatRoom = chatRoomMemberRepository.findByChatRoom(chatRoom).stream()
                 .map(ChatRoomMember::getMember)
                 .collect(Collectors.toSet());

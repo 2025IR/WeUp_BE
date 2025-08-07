@@ -350,6 +350,8 @@ public class ChatService{
                 .sentAt(message.getSentAt())
                 .senderType(message.getSenderType())
                 .displayType(message.getDisplayType())
+                .originalMessage(message.getOriginalMessage())
+                .originalSenderName(message.getOriginalSenderName())
                 .build();
     }
 
