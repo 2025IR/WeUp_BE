@@ -3,8 +3,9 @@ package com.example.weup.repository;
 import com.example.weup.entity.ChatMessage;
 import com.example.weup.entity.ChatRoom;
 import com.example.weup.entity.Member;
-import org.springframework.data.domain.PageRequest;
+import io.lettuce.core.dynamic.annotation.Param;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
 import java.util.List;
@@ -12,7 +13,9 @@ import java.util.List;
 @Repository
 public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> {
 
-    List<ChatMessage> findByChatRoom_ChatRoomId(Long chatRoomId, PageRequest pageRequest);
+    @Query(value = "SELECT * FROM chat_message WHERE chat_room_id = :chatRoomId" +
+            " ORDER BY sent_at DESC LIMIT :limit OFFSET :offset", nativeQuery = true)
+    List<ChatMessage> findMessagesByChatRoomIdWithOffset(@Param("chatRoomId") Long chatRoomId, @Param("limit") int limit, @Param("offset") int offset);
 
     void deleteByChatRoom(ChatRoom chatRoom);
 
