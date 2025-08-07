@@ -44,6 +44,8 @@ public class ReceiveMessageResponseDTO {
                 .isImage(chatMessage.getIsImage())
                 .senderType(chatMessage.getSenderType())
                 .displayType(chatMessage.getDisplayType())
+                .originalMessage(chatMessage.getOriginalMessage())
+                .originalSenderName(chatMessage.getOriginalSenderName())
                 .build();
     }
 
@@ -55,6 +57,8 @@ public class ReceiveMessageResponseDTO {
                 .isImage(chatMessage.getIsImage())
                 .senderType(chatMessage.getSenderType())
                 .displayType(chatMessage.getDisplayType())
+                .originalMessage(chatMessage.getOriginalMessage())
+                .originalSenderName(chatMessage.getOriginalSenderName())
                 .build();
     }
 }
