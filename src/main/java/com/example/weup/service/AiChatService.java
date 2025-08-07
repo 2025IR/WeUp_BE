@@ -93,16 +93,7 @@ public class AiChatService {
             }
             log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
 
-            RedisMessageDTO aiMessage = chatService.sendAIMessage(chatRoomId, realMessage);
-            ReceiveMessageResponseDTO savedAiMessage = ReceiveMessageResponseDTO.fromRedisMessageDTO(aiMessage);
-            chatService.setReceiveMessageField(savedAiMessage);  // 이거 자체를 ChatService에 넣게 되면 해당 메소드 접근제어자를 private으로 바꾸기
-
-            ReceiveMessageResponseDTO responseMessage = savedAiMessage.copyBuilder()
-                    .originalSenderName(sendMember.getUser().getName())
-                    .originalMessage(aiChatRequestDTO.getUserInput())
-                    .build();
-
-            messagingTemplate.convertAndSend("/topic/chat" + chatRoomId, responseMessage);
+            chatService.sendAIMessage(chatRoomId, realMessage, aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
 
         } catch (RestClientException e) {
             throw new RuntimeException("AI Chat 서버 요청 중 오류 발생 : " + e);

@@ -38,6 +38,7 @@ public class ReceiveMessageResponseDTO {
 
     public static ReceiveMessageResponseDTO fromRedisMessageDTO(RedisMessageDTO chatMessage) {
         return ReceiveMessageResponseDTO.builder()
+                .senderId(chatMessage.getSenderType()==SenderType.MEMBER ? chatMessage.getMemberId() : null)
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())
                 .isImage(chatMessage.getIsImage())
@@ -48,23 +49,12 @@ public class ReceiveMessageResponseDTO {
 
     public static ReceiveMessageResponseDTO fromChatMessageEntity(ChatMessage chatMessage) {
         return ReceiveMessageResponseDTO.builder()
+                .senderId(chatMessage.getSenderType()==SenderType.MEMBER ? chatMessage.getMember().getMemberId() : null)
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())
                 .isImage(chatMessage.getIsImage())
                 .senderType(chatMessage.getSenderType())
                 .displayType(chatMessage.getDisplayType())
                 .build();
-    }
-
-    public ReceiveMessageResponseDTOBuilder copyBuilder() {
-        return builder()
-                .senderId(this.senderId)
-                .senderName(this.senderName)
-                .senderProfileImage(this.senderProfileImage)
-                .message(this.message)
-                .sentAt(this.sentAt)
-                .senderType(this.senderType)
-                .isImage(this.isImage)
-                .displayType(this.displayType);
     }
 }

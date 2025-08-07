@@ -66,6 +66,8 @@ public class ChatService{
         Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), messageRequestDTO.getSenderId());
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
 
+        checkAndSendDateChangeMessage(chatRoomId, LocalDateTime.now());
+
         RedisMessageDTO basicMessage = RedisMessageDTO.builder()
                 .chatRoomId(chatRoomId)
                 .memberId(sendMember.getMemberId())
@@ -75,7 +77,6 @@ public class ChatService{
                 .displayType(setDisplayType(chatRoomId, messageRequestDTO.getSenderId(), SenderType.MEMBER, messageRequestDTO.getSentAt()))
                 .build();
 
-        checkAndSendDateChangeMessage(chatRoomId, basicMessage.getSentAt());
         saveMessage(chatRoomId, basicMessage);
     }
 
@@ -92,18 +93,19 @@ public class ChatService{
         Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), sendImageMessageRequestDTO.getSenderId());
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
 
+        checkAndSendDateChangeMessage(chatRoomId, LocalDateTime.now());
+
         String storedFileName = s3Service.uploadSingleFile(sendImageMessageRequestDTO.getFile()).getStoredFileName();
 
         RedisMessageDTO imgMessage = RedisMessageDTO.builder()
                 .chatRoomId(chatRoomId)
                 .memberId(sendMember.getMemberId())
-                .message(s3Service.getPresignedUrl(storedFileName))
+                .message(storedFileName)
                 .isImage(true)
                 .sentAt(LocalDateTime.now())
                 .displayType(setDisplayType(chatRoomId, sendMember.getMemberId(), SenderType.MEMBER, LocalDateTime.now()))
                 .build();
 
-        checkAndSendDateChangeMessage(chatRoomId, imgMessage.getSentAt());
         saveMessage(chatRoomId, imgMessage);
     }
 
@@ -113,6 +115,8 @@ public class ChatService{
 
         log.info("Send System Message 부분으로 넘어옴");
         chatValidator.validateChatRoom(chatRoomId);
+
+        checkAndSendDateChangeMessage(chatRoomId, LocalDateTime.now());
 
         RedisMessageDTO systemMessage = RedisMessageDTO.builder()
                 .chatRoomId(chatRoomId)
@@ -124,15 +128,16 @@ public class ChatService{
                 .displayType(DisplayType.DEFAULT)
                 .build();
 
-        checkAndSendDateChangeMessage(chatRoomId, systemMessage.getSentAt());
         saveMessage(chatRoomId, systemMessage);
     }
 
     // ai message
     @Transactional
-    public RedisMessageDTO sendAIMessage(Long chatRoomId, String message) throws JsonProcessingException {
+    public void sendAIMessage(Long chatRoomId, String message, String originalUserMessage, String originalSenderName) throws JsonProcessingException {
 
         chatValidator.validateChatRoom(chatRoomId);
+
+        checkAndSendDateChangeMessage(chatRoomId, LocalDateTime.now());
 
         RedisMessageDTO aiMessage = RedisMessageDTO.builder()
                 .chatRoomId(chatRoomId)
@@ -142,12 +147,11 @@ public class ChatService{
                 .sentAt(LocalDateTime.now())
                 .senderType(SenderType.AI)
                 .displayType(setDisplayType(chatRoomId, null, SenderType.AI, LocalDateTime.now()))
+                .originalMessage(originalUserMessage)
+                .originalSenderName(originalSenderName)
                 .build();
 
-        checkAndSendDateChangeMessage(chatRoomId, aiMessage.getSentAt());
-        //testSaveMsg(chatRoomId, aiMessage);
-
-        return aiMessage;
+        saveMessage(chatRoomId, aiMessage);
     }
 
     // send message
@@ -160,7 +164,7 @@ public class ChatService{
         ReceiveMessageResponseDTO receiveMessageResponseDto = ReceiveMessageResponseDTO.fromRedisMessageDTO(message);
         setReceiveMessageField(receiveMessageResponseDto);
 
-        messagingTemplate.convertAndSend("/topic/chat" + chatRoomId, receiveMessageResponseDto);
+        messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, receiveMessageResponseDto);
     }
 
     private DisplayType setDisplayType(Long chatRoomId, Long senderId, SenderType senderType, LocalDateTime sentAt) throws JsonProcessingException {
@@ -168,8 +172,9 @@ public class ChatService{
         ChatMessage lastMessage;
         String key = "chat:room:" + chatRoomId;
 
-        String lastJson = redisTemplate.opsForZSet().size(key) > 0
-                ? Objects.requireNonNull(redisTemplate.opsForZSet().range(key, -1, -1)).toString()
+        Set<String> lastSet = redisTemplate.opsForZSet().range(key, -1, -1);
+        String lastJson = (lastSet != null && !lastSet.isEmpty())
+                ? lastSet.iterator().next()
                 : null;
 
         if (lastJson != null) {
@@ -235,7 +240,7 @@ public class ChatService{
                     .memberId(null)
                     .message(currentDate.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일")))
                     .isImage(false)
-                    .sentAt(LocalDateTime.now())
+                    .sentAt(currentMessageTime)
                     .senderType(SenderType.SYSTEM)
                     .displayType(DisplayType.DEFAULT)
                     .build();
@@ -244,30 +249,30 @@ public class ChatService{
         }
     }
 
-    public ReceiveMessageResponseDTO setReceiveMessageField(ReceiveMessageResponseDTO messageDTO) {
+    private ReceiveMessageResponseDTO setReceiveMessageField(ReceiveMessageResponseDTO messageDTO) {
 
         if (messageDTO.getSenderType() == SenderType.MEMBER) {
             Member member = memberRepository.findById(messageDTO.getSenderId())
                     .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
-            messageDTO.setSenderId(member.getMemberId());
             messageDTO.setSenderName(member.getUser().getName());
             messageDTO.setSenderProfileImage(s3Service.getPresignedUrl(member.getUser().getProfileImage()));
+
+            if (messageDTO.isImage()) {messageDTO.setMessage(s3Service.getPresignedUrl(messageDTO.getMessage()));}
 
         } else if (messageDTO.getSenderType() == SenderType.AI) {
             messageDTO.setSenderId(null);
             messageDTO.setSenderName(SenderType.AI.getName());
-            messageDTO.setSenderProfileImage(SenderType.AI.getProfileImage());
+            messageDTO.setSenderProfileImage(s3Service.getPresignedUrl(SenderType.AI.getProfileImage()));
 
         } else if (messageDTO.getSenderType() == SenderType.SYSTEM) {
             messageDTO.setSenderId(null);
             messageDTO.setSenderName(SenderType.SYSTEM.getName());
-            messageDTO.setSenderProfileImage(SenderType.SYSTEM.getProfileImage());
 
         } else if (messageDTO.getSenderType() == SenderType.WITHDRAW) {
             messageDTO.setSenderId(null);
             messageDTO.setSenderName(SenderType.WITHDRAW.getName());
-            messageDTO.setSenderProfileImage(SenderType.WITHDRAW.getProfileImage());
+            messageDTO.setSenderProfileImage(s3Service.getPresignedUrl(SenderType.WITHDRAW.getProfileImage()));
 
         } else {
             throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
@@ -401,7 +406,7 @@ public class ChatService{
             combinedMessages.addAll(chatMessageRepository.findByChatRoom_ChatRoomId(chatRoomId, pageRequest));
         }
 
-        combinedMessages.sort(Comparator.comparing(ChatMessage::getSentAt).reversed());
+        combinedMessages.sort(Comparator.comparing(ChatMessage::getSentAt));
 
         boolean hasNext = combinedMessages.size() > offset + pageable.getSize();
         int end = Math.min(offset + pageable.getSize(), combinedMessages.size());
@@ -416,58 +421,4 @@ public class ChatService{
 
         return new SliceImpl<>(pagedMessages, PageRequest.of(pageable.getPage(), pageable.getSize()), hasNext);
     }
-
-//    @Transactional(readOnly = true)
-//    public ChatPageResponseDto getChatMessages(Long chatRoomId, int page, int size) throws JsonProcessingException {
-//
-//        String key = "chat:room:" + chatRoomId;
-//        Set<String> redisMessages = redisTemplate.opsForZSet().range(key, 0, -1);
-//
-//        List<ChatMessage> chatMessages = chatMessageRepository.findByChatRoom_ChatRoomId(chatRoomId);
-//        log.info("get chat message -> db read success : data size - {}", chatMessages.size());
-//
-//        if (redisMessages != null) {
-//            log.info("get redis chat message -> redis db read success : data size - {}", redisMessages.size());
-//
-//            for (String json : redisMessages) {
-//                RedisMessageDTO redisMessage = objectMapper.readValue(json, RedisMessageDTO.class);
-//
-//                ChatMessage chatMessage = translateChatMessage(redisMessage);
-//                chatMessages.add(chatMessage);
-//            }
-//        }
-//
-//        chatMessages.sort(Comparator.comparing(ChatMessage::getSentAt).reversed());
-//
-//        int totalSize = chatMessages.size();
-//        int start = page * size;
-//        int end = Math.min(start + size, totalSize);
-//        boolean isLastPage = end >= totalSize;
-//
-//        List<ReceiveMessageResponseDTO> messages = chatMessages.subList(start, end).stream()
-//                .map(msg -> ReceiveMessageResponseDTO.builder()
-//                        .senderId(msg.getMember() != null ? msg.getMember().getMemberId() : null)
-//                        .senderName(msg.getMember() != null ? msg.getMember().getUser().getName() : null)
-//                        .senderProfileImage(msg.getMember() != null
-//                                ? s3Service.getPresignedUrl(msg.getMember().getUser().getProfileImage())
-//                                : null)
-//                        .message(msg.getIsImage() ? s3Service.getPresignedUrl(msg.getMessage()) : msg.getMessage())
-//                        .isImage(msg.getIsImage())
-//                        .sentAt(msg.getSentAt())
-//                        .senderType(msg.getSenderType())
-//                        .displayType(msg.getDisplayType())
-//                        .build())
-//                .toList();
-//
-//        List<ReceiveMessageResponseDTO> reverseMessages = new ArrayList<>(messages);
-//        Collections.reverse(reverseMessages);
-//
-//        log.info("get chat message -> success : db size - {}", reverseMessages.size());
-//        return ChatPageResponseDto.builder()
-//                .messageList(reverseMessages)
-//                .page(page)
-//                .isLastPage(isLastPage)
-//                .build();
-//    }
-
 }

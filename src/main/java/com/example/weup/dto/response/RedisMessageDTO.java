@@ -30,4 +30,8 @@ public class RedisMessageDTO {
 
     @Builder.Default
     private DisplayType displayType = DisplayType.DEFAULT;
+
+    private String originalSenderName;
+
+    private String originalMessage;
 }

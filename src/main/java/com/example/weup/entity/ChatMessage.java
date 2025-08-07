@@ -51,6 +51,10 @@ public class ChatMessage {
     @Enumerated(EnumType.STRING)
     private DisplayType displayType = DisplayType.DEFAULT;
 
+    private String originalMessage;
+
+    private String originalSenderName;
+
     public void changeSenderToWithdraw() {
         this.member = null;
         this.senderType = SenderType.WITHDRAW;
