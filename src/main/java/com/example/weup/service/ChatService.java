@@ -20,7 +20,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Slice;
 import org.springframework.data.domain.SliceImpl;
-import org.springframework.data.domain.Sort;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
@@ -364,62 +363,77 @@ public class ChatService{
 
         String redisKey = "chat:room:" + chatRoomId;
         int offset = pageable.getPage() * pageable.getSize();
+        int end = offset + pageable.getSize();
         int fetchLimit = pageable.getSize() + 1;
 
         Long redisCount = zSetOperations.size(redisKey);
         if (redisCount == null) redisCount = 0L;
+        log.info("초기 설정 값 확인");
+        log.info("redisKey : {}, offset : {}, end : {}, redisCount : {}", redisKey, offset, end, redisCount);
 
         List<ChatMessage> combinedMessages = new ArrayList<>();
 
         if (offset + fetchLimit <= redisCount) {
-            Set<String> redisMessagesJson = zSetOperations.reverseRange(redisKey, offset, fetchLimit); // 0~20 (21개 가져옴)
+            log.info("첫 번째 케이스, Redis에서만 데이터를 가져옴");
+            Set<String> redisMessagesJson = zSetOperations.reverseRange(redisKey, offset, end); // 0~20 (21개 가져옴)
 
             if (redisMessagesJson != null && !redisMessagesJson.isEmpty()) {
+                log.info("첫 번째 케이스 - Redis Messages Json 개수 확인 : {}", redisMessagesJson.size());
                 for (String json : redisMessagesJson) {
                     combinedMessages.add(translateRedisDtoIntoChatMessage(objectMapper.readValue(json, RedisMessageDTO.class)));
                 }
             }
         }
         else if (offset < redisCount) {
-            Set<String> redisMessagesJson = zSetOperations.reverseRange(redisKey, offset, fetchLimit - 1);
+            log.info("두 번째 케이스, Redis, MySQL에서 데이터를 가져옴");
+            Set<String> redisMessagesJson = zSetOperations.reverseRange(redisKey, offset, end - 1);
 
             if (redisMessagesJson != null && !redisMessagesJson.isEmpty()) {
+                log.info("두 번째 케이스 - Redis Messages Json 개수 확인 : {}", redisMessagesJson.size());
                 for (String json : redisMessagesJson) {
                     combinedMessages.add(translateRedisDtoIntoChatMessage(objectMapper.readValue(json, RedisMessageDTO.class)));
                 }
             }
 
             int remainingLimit = fetchLimit - combinedMessages.size();
-            if (remainingLimit > 0) {
-                Sort sort = Sort.by(Sort.Direction.DESC, "sentAt");
-                PageRequest pageRequest = PageRequest.of(0, remainingLimit, sort);
+            log.info("두 번째 케이스, MySQL에서 가져와야 하는 값 개수 확인 : {}", remainingLimit);
 
-                List<ChatMessage> dbMessages = chatMessageRepository.findByChatRoom_ChatRoomId(chatRoomId, pageRequest);
+            if (remainingLimit > 0) {
+                List<ChatMessage> dbMessages = chatMessageRepository.findMessagesByChatRoomIdWithOffset(chatRoomId, remainingLimit, 0);
+                log.info("두 번째 케이스, 실제로 MySQL에서 가져온 메시지 개수 확인 : {}", dbMessages.size());
                 combinedMessages.addAll(dbMessages);
             }
         }
         else {  // redisCount <= offset
-            long offsetForMysql = offset - redisCount;
-            int pageForMysql = (int) (offsetForMysql / (pageable.getSize()));
+            log.info("세 번째 케이스, MySQL에서만 데이터를 가져옴");
+            int offsetForMysql = (int) (offset - redisCount);
+            log.info("세 번째 케이스, 실제로 MySQL에서 가져와야 하는 offset 값 확인");
+            log.info("offset for mysql : {}", offsetForMysql);
 
-            Sort sort = Sort.by(Sort.Direction.DESC, "sentAt");
-            PageRequest pageRequest = PageRequest.of(pageForMysql, fetchLimit, sort);
-
-            combinedMessages.addAll(chatMessageRepository.findByChatRoom_ChatRoomId(chatRoomId, pageRequest));
+            combinedMessages.addAll(chatMessageRepository.findMessagesByChatRoomIdWithOffset(chatRoomId, fetchLimit, offsetForMysql));
         }
 
-        combinedMessages.sort(Comparator.comparing(ChatMessage::getSentAt));
+        log.info("분기 종료 후 실제로 들고온 데이터 개수 확인 : {}", combinedMessages.size());
+        combinedMessages.sort(Comparator.comparing(ChatMessage::getSentAt).reversed());
 
-        boolean hasNext = combinedMessages.size() > offset + pageable.getSize();
-        int end = Math.min(offset + pageable.getSize(), combinedMessages.size());
+        boolean hasNext = combinedMessages.size() > pageable.getSize();
+        end = Math.min(pageable.getSize(), combinedMessages.size());
+        log.info("정리해야 하는 값 확인, hasNext : {}, end : {}", hasNext, end);
 
         List<ReceiveMessageResponseDTO> pagedMessages = new ArrayList<>();
-        if (offset < combinedMessages.size()) {
-            pagedMessages = combinedMessages.subList(offset, end).stream()
+        if (!combinedMessages.isEmpty()) {
+            pagedMessages = combinedMessages.subList(0, end).stream()
                     .map(ReceiveMessageResponseDTO::fromChatMessageEntity)
                     .map(this::setReceiveMessageField)
+                    .sorted(Comparator.comparing(ReceiveMessageResponseDTO::getSentAt))
                     .toList();
         }
+
+        log.info("\n\n\n마지막 확인");
+        for (ReceiveMessageResponseDTO receiveMessageDTO : pagedMessages) {
+            log.info("chat message 내역 확인 : {}", receiveMessageDTO.getMessage());
+        }
+        log.info("\n\n\n");
 
         return new SliceImpl<>(pagedMessages, PageRequest.of(pageable.getPage(), pageable.getSize()), hasNext);
     }

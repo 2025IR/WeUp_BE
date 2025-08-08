@@ -43,7 +43,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
         String token = String.valueOf(Objects.requireNonNull(Objects.requireNonNull(accessor).getNativeHeader("Authorization")).getFirst());
 
         if (token == null) {
-            log.warn("Stomp Channel Interceptor 내부 - Authorization 헤더 없음");
+            log.warn("Stomp Channel Interceptor 내부 - token 없음");
             throw new GeneralException(ErrorInfo.UNAUTHORIZED);
         }
 
