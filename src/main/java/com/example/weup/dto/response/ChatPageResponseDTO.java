@@ -11,7 +11,7 @@ import java.util.List;
 @AllArgsConstructor
 @Builder
 @Getter
-public class ChatPageResponseDto {
+public class ChatPageResponseDTO {
 
     private List<ReceiveMessageResponseDTO> messageList;
 

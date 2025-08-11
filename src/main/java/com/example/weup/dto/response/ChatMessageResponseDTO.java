@@ -1,6 +1,5 @@
 package com.example.weup.dto.response;
 
-import com.example.weup.entity.ChatMessage;
 import lombok.*;
 
 import java.time.LocalDateTime;
@@ -9,7 +8,7 @@ import java.time.LocalDateTime;
 @AllArgsConstructor
 @Builder
 @Getter
-public class ChatMessageResponseDto {
+public class ChatMessageResponseDTO {
 
     private Long messageId;
 
