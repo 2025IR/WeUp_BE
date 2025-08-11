@@ -42,7 +42,8 @@ public class ProjectController {
         Project newProject = projectService.createProject(projectCreateRequestDTO);
         Member newMember = memberService.addProjectCreater(userId, newProject);
         ChatRoom newChatRoom = chatRoomService.createBasicChatRoom(newProject, projectCreateRequestDTO.getProjectName());
-        chatRoomService.addChatRoomMember(newProject, newChatRoom, newMember.getMemberId());
+
+        chatRoomService.addChatRoomMember(newChatRoom, newMember.getMemberId());
 
         log.info("요청자 : {}, create project -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of("프로젝트가 성공적으로 생성되었습니다."));

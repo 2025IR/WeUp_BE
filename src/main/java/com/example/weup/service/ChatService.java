@@ -62,7 +62,7 @@ public class ChatService{
 
         ChatRoom chatRoom = chatValidator.validateChatRoom(chatRoomId);
 
-        Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), messageRequestDTO.getSenderId());
+        Member sendMember = memberValidator.validateMemberAndProject(messageRequestDTO.getSenderId());
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
 
         checkAndSendDateChangeMessage(chatRoomId, LocalDateTime.now());
@@ -89,11 +89,10 @@ public class ChatService{
 
         ChatRoom chatRoom = chatValidator.validateChatRoom(chatRoomId);
 
-        Member sendMember = memberValidator.validateMember(chatRoom.getProject().getProjectId(), sendImageMessageRequestDTO.getSenderId());
+        Member sendMember = memberValidator.validateMemberAndProject(sendImageMessageRequestDTO.getSenderId());
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
 
         checkAndSendDateChangeMessage(chatRoomId, LocalDateTime.now());
-
         String storedFileName = s3Service.uploadSingleFile(sendImageMessageRequestDTO.getFile()).getStoredFileName();
 
         RedisMessageDTO imgMessage = RedisMessageDTO.builder()
@@ -257,7 +256,7 @@ public class ChatService{
             messageDTO.setSenderName(member.getUser().getName());
             messageDTO.setSenderProfileImage(s3Service.getPresignedUrl(member.getUser().getProfileImage()));
 
-            if (messageDTO.isImage()) {messageDTO.setMessage(s3Service.getPresignedUrl(messageDTO.getMessage()));}
+            if (messageDTO.isImage()) messageDTO.setMessage(s3Service.getPresignedUrl(messageDTO.getMessage()));
 
         } else if (messageDTO.getSenderType() == SenderType.AI) {
             messageDTO.setSenderId(null);
@@ -273,9 +272,7 @@ public class ChatService{
             messageDTO.setSenderName(SenderType.WITHDRAW.getName());
             messageDTO.setSenderProfileImage(s3Service.getPresignedUrl(SenderType.WITHDRAW.getProfileImage()));
 
-        } else {
-            throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
-        }
+        } else throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
 
         return messageDTO;
     }

@@ -75,13 +75,13 @@ public class ChatRoomService {
         chatRoomRepository.save(chatRoom);
         log.info("채팅방 생성 완료, Chat Room ID : {}", chatRoom.getChatRoomId());
 
-        addChatRoomMember(project, chatRoom, creator.getMemberId());
+        addChatRoomMember(chatRoom, creator.getMemberId());
 
         List<Long> chatRoomMemberIds = createChatRoomDto.getChatRoomMemberId();
         if (chatRoomMemberIds != null && !createChatRoomDto.getChatRoomMemberId().isEmpty()) {
             for (Long memberId : chatRoomMemberIds) {
                 log.info("초대할 대상 Member ID : {}", memberId);
-                addChatRoomMember(project, chatRoom, memberId);
+                addChatRoomMember(chatRoom, memberId);
             }
         }
     }
@@ -125,17 +125,16 @@ public class ChatRoomService {
 
         ChatRoom chatRoom = chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
-        Project project = projectValidator.validateActiveProject(chatRoom.getProject().getProjectId());
 
         for (Long memberId : inviteChatRoomDTO.getInviteMemberIds()) {
-            addChatRoomMember(project, chatRoom, memberId);
+            addChatRoomMember(chatRoom, memberId);
         }
     }
 
     @Transactional
-    public void addChatRoomMember(Project project, ChatRoom chatRoom, Long memberId) throws JsonProcessingException {
+    public void addChatRoomMember(ChatRoom chatRoom, Long memberId) throws JsonProcessingException {
 
-        Member member = memberValidator.validateMember(project.getProjectId(), memberId);
+        Member member = memberValidator.validateMemberAndProject(memberId);
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, member, false);
 
         ChatRoomMember chatRoomMember = ChatRoomMember.builder()
