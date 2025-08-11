@@ -33,7 +33,7 @@ public class Member {
 
     @Column(name = "available_time", length = 252)
     @Builder.Default
-    private String availableTime = "0";
+    private String availableTime = "0".repeat(252);
 
     @Column(name = "is_member_deleted", nullable = false)
     @Builder.Default

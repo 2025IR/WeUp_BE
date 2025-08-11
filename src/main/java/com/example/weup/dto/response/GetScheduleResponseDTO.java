@@ -11,9 +11,10 @@ import lombok.NoArgsConstructor;
 @Builder
 public class GetScheduleResponseDTO {
 
+    private Long memberId;
+
     private String name;
 
     private String availableTime;
 
-    private Boolean isMine;
 }
