@@ -15,6 +15,8 @@ import java.time.LocalDateTime;
 @Setter
 public class ReceiveMessageResponseDTO {
 
+    private String uuid;
+
     private Long senderId;
 
     private String senderName;
@@ -36,8 +38,11 @@ public class ReceiveMessageResponseDTO {
 
     private String originalMessage;
 
+    private int unreadCount;
+
     public static ReceiveMessageResponseDTO fromRedisMessageDTO(RedisMessageDTO chatMessage) {
         return ReceiveMessageResponseDTO.builder()
+                .uuid(chatMessage.getUuid())
                 .senderId(chatMessage.getSenderType()==SenderType.MEMBER ? chatMessage.getMemberId() : null)
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())

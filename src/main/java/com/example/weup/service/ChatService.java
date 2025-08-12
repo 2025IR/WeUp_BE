@@ -56,6 +56,8 @@ public class ChatService{
 
     private final MemberValidator memberValidator;
 
+    private final ChatRoomMemberRepository chatRoomMemberRepository;
+
     // basic chat message
     @Transactional
     public void sendBasicMessage(Long chatRoomId, SendMessageRequestDTO messageRequestDTO) throws JsonProcessingException {
@@ -69,6 +71,7 @@ public class ChatService{
 
         RedisMessageDTO basicMessage = RedisMessageDTO.builder()
                 .chatRoomId(chatRoomId)
+                .uuid(UUID.randomUUID().toString())
                 .memberId(sendMember.getMemberId())
                 .message(messageRequestDTO.getMessage())
                 .isImage(messageRequestDTO.getIsImage())
@@ -97,6 +100,7 @@ public class ChatService{
 
         RedisMessageDTO imgMessage = RedisMessageDTO.builder()
                 .chatRoomId(chatRoomId)
+                .uuid(UUID.randomUUID().toString())
                 .memberId(sendMember.getMemberId())
                 .message(storedFileName)
                 .isImage(true)
@@ -111,13 +115,14 @@ public class ChatService{
     @Transactional
     public void sendSystemMessage(Long chatRoomId, String message) throws JsonProcessingException {
 
-        log.info("Send System Message 부분으로 넘어옴");
+        log.debug("Send System Message 부분으로 넘어옴");
         chatValidator.validateChatRoom(chatRoomId);
 
         checkAndSendDateChangeMessage(chatRoomId, LocalDateTime.now());
 
         RedisMessageDTO systemMessage = RedisMessageDTO.builder()
                 .chatRoomId(chatRoomId)
+                .uuid(UUID.randomUUID().toString())
                 .memberId(null)
                 .message(message)
                 .isImage(false)
@@ -139,6 +144,7 @@ public class ChatService{
 
         RedisMessageDTO aiMessage = RedisMessageDTO.builder()
                 .chatRoomId(chatRoomId)
+                .uuid(UUID.randomUUID().toString())
                 .memberId(null)
                 .message(message)
                 .isImage(false)
@@ -155,12 +161,22 @@ public class ChatService{
     // send message
     private void saveMessage(Long chatRoomId, RedisMessageDTO message) throws JsonProcessingException {
 
-        log.info("Send Save Message 부분으로 넘어옴");
-        String key = "chat:room:" + chatRoomId;
-        redisTemplate.opsForZSet().add(key, objectMapper.writeValueAsString(message), message.getSentAt().toEpochSecond(ZoneOffset.UTC));
+        log.debug("Send Save Message 부분으로 넘어옴");
+        String saveMessageKey = "chat:room:" + chatRoomId;
+        redisTemplate.opsForZSet().add(saveMessageKey, objectMapper.writeValueAsString(message), message.getSentAt().toEpochSecond(ZoneOffset.UTC));
 
         ReceiveMessageResponseDTO receiveMessageResponseDto = ReceiveMessageResponseDTO.fromRedisMessageDTO(message);
         setReceiveMessageField(receiveMessageResponseDto);
+
+        String readMessageKey = "chat:room:" + receiveMessageResponseDto.getUuid();
+        // todo. 세션 정보 가져와서 읽은 사람 추가 로직 필요함. (아마 함수로 뺴야 할 듯)
+        redisTemplate.opsForSet().add(readMessageKey, objectMapper.writeValueAsString(receiveMessageResponseDto.getSenderId()));
+
+        int totalMemberCount = chatRoomMemberRepository.countByChatRoom_ChatRoomId(chatRoomId);
+        Long readCount = redisTemplate.opsForSet().size(readMessageKey);
+        if (readCount == null) readCount = 0L;
+        int unreadCount = (int) (totalMemberCount - readCount);
+        receiveMessageResponseDto.setUnreadCount(unreadCount);
 
         messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, receiveMessageResponseDto);
     }
@@ -235,6 +251,7 @@ public class ChatService{
         if (lastMessageDate == null || !lastMessageDate.equals(currentDate)) {
             RedisMessageDTO systemMessage = RedisMessageDTO.builder()
                     .chatRoomId(chatRoomId)
+                    .uuid(UUID.randomUUID().toString())
                     .memberId(null)
                     .message(currentDate.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일")))
                     .isImage(false)
@@ -336,6 +353,7 @@ public class ChatService{
 
         ChatRoom chatRoom = chatValidator.validateChatRoom(message.getChatRoomId());
 
+        // uuid ?
         return ChatMessage.builder()
                 .chatRoom(chatRoom)
                 .member(message.getMemberId() != null

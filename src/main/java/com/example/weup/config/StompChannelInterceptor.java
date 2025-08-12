@@ -5,6 +5,7 @@ import com.example.weup.constant.ErrorInfo;
 import com.example.weup.entity.User;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.security.JwtUtil;
+import com.example.weup.service.SessionService;
 import com.example.weup.validate.MemberValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -28,6 +29,8 @@ import java.util.regex.Pattern;
 public class StompChannelInterceptor implements ChannelInterceptor {
 
     private final JwtUtil jwtUtil;
+
+    private final SessionService sessionService;
 
     private final UserRepository userRepository;
 
@@ -78,6 +81,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                     log.info("Personal notification Subscribe -> Success : User - {}", userId);
                 }
                 else if (destination.startsWith("/topic/project")) {
+                    // todo. 왜 이렇게 해 뒀을까.....
                     Long targetEntityId = null;
                     Matcher chatRoomMatcher = CHATROOM_TOPIC_PATTERN.matcher(destination);
                     Matcher projectMatcher = PROJECT_TOPIC_PATTERN.matcher(destination);
@@ -91,11 +95,16 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
                     if (targetEntityId != null) {
                         memberValidator.validateActiveMemberInProject(userId, targetEntityId);
-                        // TODO. 지금은 projectId = chatRoomId 라서 이게 통하는데 나중에 확장하면 바꿔야 함.
                         log.info("Topic Subscribe -> Success : User - {}, Destination - {}", userId, destination);
                     }
                     else {
                         log.warn("Topic Subscribe -> Failure : User - {}, Destination - {}", userId, destination);
+                    }
+                }
+                else if (destination.startsWith("/topic/chatroom")) {
+                    Matcher chatRoomMatcher = CHATROOM_TOPIC_PATTERN.matcher(destination);
+                    if (chatRoomMatcher.matches()) {
+                        Long chatRoomId = Long.parseLong(chatRoomMatcher.group(1));
                     }
                 }
                 break;
