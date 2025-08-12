@@ -2,6 +2,7 @@ package com.example.weup.controller;
 
 import com.example.weup.HandlerMethodArgumentResolver.annotation.LoginUser;
 import com.example.weup.dto.request.ProjectCreateRequestDTO;
+import com.example.weup.dto.request.ProjectDescriptionUpdateRequestDTO;
 import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
@@ -17,6 +18,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.handler.annotation.DestinationVariable;
+import org.springframework.messaging.handler.annotation.MessageMapping;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
@@ -80,16 +83,16 @@ public class ProjectController {
         return ResponseEntity.ok(DataResponseDTO.of("프로젝트 정보 수정이 완료되었습니다."));
     }
 
-    @PutMapping("/edit/description/{projectId}")
-    public ResponseEntity<DataResponseDTO<String>> editProjectDescription(@LoginUser Long userId, @PathVariable Long projectId,
-                                                              @RequestParam String description) {
-
-        log.info("요청자 : {}, edit project description -> start", userId);
-        projectService.editProjectDescription(userId, projectId, description);
-
-        log.info("요청자 : {}, edit project description -> success", userId);
-        return ResponseEntity.ok(DataResponseDTO.of("프로젝트 설명 수정이 완료되었습니다."));
-    }
+//    @PutMapping("/edit/description/{projectId}")
+//    public ResponseEntity<DataResponseDTO<String>> editProjectDescription(@LoginUser Long userId, @PathVariable Long projectId,
+//                                                              @RequestParam String description) {
+//
+//        log.info("요청자 : {}, edit project description -> start", userId);
+//        projectService.editProjectDescription(userId, projectId, description);
+//
+//        log.info("요청자 : {}, edit project description -> success", userId);
+//        return ResponseEntity.ok(DataResponseDTO.of("프로젝트 설명 수정이 완료되었습니다."));
+//    }
 
     @PutMapping("/delete/{projectId}")
     public ResponseEntity<DataResponseDTO<String>> deleteProject(@LoginUser Long userId, @PathVariable Long projectId) {
@@ -111,4 +114,25 @@ public class ProjectController {
         return ResponseEntity.ok(DataResponseDTO.of("프로젝트가 복구되었습니다."));
     }
 
+    @MessageMapping("/project/{projectId}/edit/start")
+    public void editProjectDescriptionStart(@DestinationVariable Long projectId, Long userId) {
+        projectService.startEditProjectDescription(userId, projectId);
+    }
+
+    @MessageMapping("/project/{projectId}/edit/update")
+    public void broadcastProjectDescriptionUpdate(@DestinationVariable Long projectId, ProjectDescriptionUpdateRequestDTO projectDescriptionUpdateRequestDTO) {
+        projectService.broadcastProjectDescriptionUpdate(projectDescriptionUpdateRequestDTO, projectId);
+    }
+
+    @PutMapping("/edit/description/{projectId}")
+    public ResponseEntity<DataResponseDTO<String>> editProjectDescription(@LoginUser Long userId,
+                                                        @PathVariable Long projectId,
+                                                        @RequestParam String description) {
+
+        log.info("요청자 : {}, edit project description -> start", userId);
+        projectService.editProjectDescription(userId, projectId, description);
+        log.info("요청자 : {}, edit project description -> success", userId);
+
+        return ResponseEntity.ok(DataResponseDTO.of("프로젝트 설명 수정이 완료되었습니다."));
+    }
 }

@@ -69,6 +69,8 @@ public enum ErrorInfo {
 
     PROJECT_IS_NOT_DELETED(HttpStatus.BAD_REQUEST, "삭제되지 않은 프로젝트입니다."),
 
+    IS_EDITING_NOW(HttpStatus.CONFLICT, "다른 사용자가 수정 중입니다."),
+
     MEMBER_ALREADY_EXISTS_IN_CHAT_ROOM(HttpStatus.CONFLICT, "이미 채팅방에 존재하는 멤버입니다.");
 
     private final HttpStatus httpStatus;
