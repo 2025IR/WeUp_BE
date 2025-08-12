@@ -8,11 +8,13 @@ import com.example.weup.validate.MemberValidator;
 import com.example.weup.validate.ProjectValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -24,6 +26,8 @@ public class ScheduleService {
     private final MemberValidator memberValidator;
 
     private final ProjectValidator projectValidator;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     public List<GetScheduleResponseDTO> getSchedule(Long userId, Long projectId) {
 
@@ -52,6 +56,13 @@ public class ScheduleService {
         member.editSchedule(scheduleRequestDTO.getAvailableTime());
 
         memberRepository.save(member);
+
+        messagingTemplate.convertAndSend(
+                "/topic/schedule/" + projectId,
+                Map.of("memberId", member.getMemberId(),
+                        "availableTime", scheduleRequestDTO.getAvailableTime())
+        );
+
         log.info("edit schedule -> db save success : member id - {}", member.getMemberId());
     }
 
