@@ -26,7 +26,7 @@ public class StompEventListener {
         Authentication authentication = (Authentication) accessor.getUser();
         log.info("New WebSocket Connect : sessionId - {}", sessionId);
 
-        if(authentication != null && authentication.isAuthenticated()){
+        if (authentication != null && authentication.isAuthenticated()){
             User user = (User) authentication.getPrincipal();
             String userId = String.valueOf(user.getUserId());
 
@@ -41,6 +41,15 @@ public class StompEventListener {
     public void handlerWebSocketDisconnect(SessionDisconnectEvent event) {
         StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
         String sessionId = accessor.getSessionId();
+
+        String userIdStr = sessionService.getUserIdBySession(sessionId);
+        if (userIdStr == null) {
+            log.warn("WebSocket Disconnect : No userId for sessionId - {}", sessionId);
+            sessionService.removeSession(sessionId);
+            return;
+        }
+
+
 
         log.info("WebSocket Disconnect : sessionId - {}", sessionId);
         sessionService.removeSession(sessionId);

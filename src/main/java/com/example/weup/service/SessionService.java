@@ -21,7 +21,7 @@ public class SessionService {
     private static final String USER_TO_SESSIONS_KEY = "ws:user:%s:sessions";
     private static final String CHATROOM_ACTIVE_MEMBERS_KEY = "chatroom:%s:active:members";
     private static final String CHATROOM_CONNECT_MEMBERS_KEY = "chatroom:%s:connect:members";
-    private static final String LAST_READ_AT_KEY = "chatroom:%s:lastReatAt:%s";
+    private static final String LAST_READ_AT_KEY = "chatroom:%s:lastReadAt:%s";
 
     // session connect
     public void saveSession(String sessionId, String userId) {

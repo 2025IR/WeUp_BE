@@ -6,6 +6,7 @@ import com.example.weup.entity.User;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.security.JwtUtil;
 import com.example.weup.service.SessionService;
+import com.example.weup.validate.ChatValidator;
 import com.example.weup.validate.MemberValidator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -36,8 +37,11 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
     private final MemberValidator memberValidator;
 
+    private final ChatValidator chatValidator;
+
     private static final Pattern PROJECT_TOPIC_PATTERN = Pattern.compile("^/topic/project/(\\d+)(/.*)?$");
     private static final Pattern CHATROOM_TOPIC_PATTERN = Pattern.compile("^/topic/chatroom/(\\d+)$");
+
 
     @Override
     public Message<?> preSend(@NotNull Message<?> message, @NotNull MessageChannel channel) {
@@ -49,14 +53,12 @@ public class StompChannelInterceptor implements ChannelInterceptor {
             log.warn("Stomp Channel Interceptor 내부 - token 없음");
             throw new GeneralException(ErrorInfo.UNAUTHORIZED);
         }
-
         if (jwtUtil.isExpired(token)) {
             log.warn("Stomp Channel Interceptor 내부 - JWT 만료");
             throw new GeneralException(ErrorInfo.UNAUTHORIZED);
         }
 
         Long userId = jwtUtil.getUserId(token);
-
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
 
@@ -81,30 +83,39 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                     log.info("Personal notification Subscribe -> Success : User - {}", userId);
                 }
                 else if (destination.startsWith("/topic/project")) {
-                    // todo. 왜 이렇게 해 뒀을까.....
                     Long targetEntityId = null;
-                    Matcher chatRoomMatcher = CHATROOM_TOPIC_PATTERN.matcher(destination);
                     Matcher projectMatcher = PROJECT_TOPIC_PATTERN.matcher(destination);
 
-                    if (chatRoomMatcher.matches()) {
-                        targetEntityId = Long.parseLong(chatRoomMatcher.group(1));
-                    }
-                    else if (projectMatcher.matches()) {
+                    if (projectMatcher.matches()) {
                         targetEntityId = Long.parseLong(projectMatcher.group(1));
                     }
 
                     if (targetEntityId != null) {
                         memberValidator.validateActiveMemberInProject(userId, targetEntityId);
-                        log.info("Topic Subscribe -> Success : User - {}, Destination - {}", userId, destination);
+                        log.info("Topic(Project) Subscribe -> Success : User - {}, Destination - {}", userId, destination);
                     }
                     else {
-                        log.warn("Topic Subscribe -> Failure : User - {}, Destination - {}", userId, destination);
+                        log.warn("Topic(Project) Subscribe -> Failure : User - {}, Destination - {}", userId, destination);
                     }
                 }
                 else if (destination.startsWith("/topic/chatroom")) {
+                    Long chatRoomId = null;
                     Matcher chatRoomMatcher = CHATROOM_TOPIC_PATTERN.matcher(destination);
                     if (chatRoomMatcher.matches()) {
-                        Long chatRoomId = Long.parseLong(chatRoomMatcher.group(1));
+                        chatRoomId = Long.parseLong(chatRoomMatcher.group(1));
+                        chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
+                    }
+
+                    if (destination.split("/")[3].equals("active")) {
+                        log.info("Topic(Chatroom Active) Subscribe -> Success : User - {}, Destination - {}", userId, destination);
+                        sessionService.addActiveMemberToChatRoom(chatRoomId, userId);
+                    }
+                    else if (destination.split("/")[3].equals("connect")) {
+                        log.info("Topic(Chatroom Connect) Subscribe -> Success : User - {}, Destination - {}", userId, destination);
+                        sessionService.addConnectMemberToChatRoom(chatRoomId, userId);
+                    }
+                    else {
+                        log.info("Topic(Chatroom) Subscribe -> Failure : User - {}, Destination - {}", userId, destination);
                     }
                 }
                 break;
