@@ -12,6 +12,7 @@ import com.example.weup.validate.MemberValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -47,6 +48,8 @@ public class MemberService {
     private final ChatRoomRepository chatRoomRepository;
 
     private final ChatRoomMemberRepository chatRoomMemberRepository;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public Member addProjectCreater(Long userId, Project project) {
@@ -186,7 +189,10 @@ public class MemberService {
                 .message(NotificationType.LEADER_DELEGATED.format(newLeaderMember.getUser().getName()))
                 .build();
 
-
+        messagingTemplate.convertAndSend(
+                "/topic/user/" + newLeaderMember.getUser().getUserId(),
+                Map.of("editedBy", )
+        );
 
     }
 
