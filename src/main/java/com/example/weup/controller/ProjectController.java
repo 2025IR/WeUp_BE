@@ -115,13 +115,13 @@ public class ProjectController {
     }
 
     @MessageMapping("/project/{projectId}/edit/start")
-    public void editProjectDescriptionStart(@DestinationVariable Long projectId, Long userId) {
+    public void editProjectDescriptionStart(@DestinationVariable Long projectId, @LoginUser Long userId) {
         projectService.startEditProjectDescription(userId, projectId);
     }
 
     @MessageMapping("/project/{projectId}/edit/update")
-    public void broadcastProjectDescriptionUpdate(@DestinationVariable Long projectId, ProjectDescriptionUpdateRequestDTO projectDescriptionUpdateRequestDTO) {
-        projectService.broadcastProjectDescriptionUpdate(projectDescriptionUpdateRequestDTO, projectId);
+    public void broadcastProjectDescriptionUpdate(@DestinationVariable Long projectId, @LoginUser Long userId, String description) {
+        projectService.broadcastProjectDescriptionUpdate(userId, description, projectId);
     }
 
     @PutMapping("/edit/description/{projectId}")

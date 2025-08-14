@@ -257,25 +257,27 @@ public class ProjectService {
         messagingTemplate.convertAndSend(
                 "/topic/project/" + projectId,
                 Map.of("type", "EDIT_LOCK",
-                        "lockedBy", member.getUser().getName())
+                        "lockedBy", member.getUser().getName(),
+                        "memberId", member.getMemberId())
         );
     }
 
-    public void broadcastProjectDescriptionUpdate(ProjectDescriptionUpdateRequestDTO projectDescriptionUpdateRequestDTO, Long projectId) {
-        Member member = memberValidator.validateActiveMemberInProject(projectDescriptionUpdateRequestDTO.getUserId(), projectId);
+    public void broadcastProjectDescriptionUpdate(Long userId, String description, Long projectId) {
+        Member member = memberValidator.validateActiveMemberInProject(userId, projectId);
 
         messagingTemplate.convertAndSend(
                 "/topic/project/" + projectId,
                 Map.of("type", "EDIT_UPDATE",
-                        "description", projectDescriptionUpdateRequestDTO.getDescription(),
-                        "editedBy", member.getUser().getName())
+                        "description", description,
+                        "editedBy", member.getUser().getName(),
+                        "memberId", member.getMemberId())
         );
     }
 
     @Transactional
     public void editProjectDescription(Long userId, Long projectId, String description) {
         Project project = projectValidator.validateActiveProject(projectId);
-        memberValidator.validateActiveMemberInProject(userId, projectId);
+        Member member = memberValidator.validateActiveMemberInProject(userId, projectId);
 
         project.editProjectDescription(description);
         projectRepository.save(project);
@@ -284,7 +286,8 @@ public class ProjectService {
 
         messagingTemplate.convertAndSend(
                 "/topic/project/" + projectId,
-                Map.of("type", "EDIT_UNLOCK")
+                Map.of("type", "EDIT_UNLOCK",
+                        "memberId", member.getMemberId())
         );
     }
 }
