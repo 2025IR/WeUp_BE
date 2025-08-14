@@ -184,14 +184,19 @@ public class MemberService {
         memberRepository.save(formerLeaderMember);
         memberRepository.save(newLeaderMember);
 
+        User user = newLeaderMember.getUser();
+
         Notification notification = Notification.builder()
-                .user(newLeaderMember.getUser())
-                .message(NotificationType.LEADER_DELEGATED.format(newLeaderMember.getUser().getName()))
+                .user(user)
+                .message(NotificationType.LEADER_DELEGATED.format(user.getName()))
                 .build();
 
         messagingTemplate.convertAndSend(
-                "/topic/user/" + newLeaderMember.getUser().getUserId(),
-                Map.of("editedBy", )
+                "/topic/user/" + user.getUserId(),
+                Map.of("notificationId", notification.getNotificationId(),
+                        "message", notification.getMessage(),
+                        "isRead", notification.isRead(),
+                        "createdAt", notification.getNotificationCreatedAt())
         );
 
     }
