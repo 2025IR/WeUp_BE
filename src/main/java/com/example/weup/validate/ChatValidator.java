@@ -5,7 +5,6 @@ import com.example.weup.constant.ErrorInfo;
 import com.example.weup.entity.ChatRoom;
 import com.example.weup.entity.Member;
 import com.example.weup.repository.ChatRoomRepository;
-import com.example.weup.repository.MemberRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 

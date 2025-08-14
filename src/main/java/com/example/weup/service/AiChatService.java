@@ -67,9 +67,11 @@ public class AiChatService {
                 .message(aiChatRequestDTO.getUserInput())
                 .build();
 
+        log.debug("ai chat service - memberId:{}", aiChatRequestDTO.getSenderId());
         Member sendMember = memberRepository.findById(aiChatRequestDTO.getSenderId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
+        log.debug("chat service - send basic message로 이동");
         chatService.sendBasicMessage(chatRoomId, sendMessageRequestDto);
 
         try {
@@ -78,15 +80,19 @@ public class AiChatService {
 
             Map<String, Object> jsonBody = new HashMap<>();
             jsonBody.put("user_input", aiChatRequestDTO.getUserInput());
-            jsonBody.put("project_id", aiChatRequestDTO.getProjectId());
+            jsonBody.put("project_id", String.valueOf(aiChatRequestDTO.getProjectId()));
+            jsonBody.put("mode", "auto");
 
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(jsonBody, headers);
 
             log.info("send message to ai -> POST Request To AI Flask Server start : url - {}", aiServerUrl);
+            log.debug("send message to ai -> request data check : {}", requestEntity.toString());
             ResponseEntity<String> response = restTemplate.postForEntity(aiServerUrl, requestEntity, String.class);
 
             JsonNode root = objectMapper.readTree(response.getBody());
-            String realMessage = root.get("response").asText();
+            log.debug("send message to ai -> response data check, root : {}", root.toString());
+            String realMessage = root.get("output").asText();
+            log.debug("send message to ai -> response data check, realMessage : {}", realMessage);
 
             if (Objects.equals(realMessage, "")) {
                 throw new GeneralException(ErrorInfo.INTERNAL_ERROR);

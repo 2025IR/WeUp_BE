@@ -57,6 +57,7 @@ public class ChatService{
     private final MemberValidator memberValidator;
 
     private final ChatRoomMemberRepository chatRoomMemberRepository;
+    private final SessionService sessionService;
 
     // basic chat message
     @Transactional
@@ -64,8 +65,11 @@ public class ChatService{
 
         ChatRoom chatRoom = chatValidator.validateChatRoom(chatRoomId);
 
+        log.debug("member validator - validate member and project 진입");
         Member sendMember = memberValidator.validateMemberAndProject(messageRequestDTO.getSenderId());
+        log.debug("member validator - is member already in chat room 진입");
         memberValidator.isMemberAlreadyInChatRoom(chatRoom, sendMember, true);
+        log.debug("member validator 탈출");
 
         checkAndSendDateChangeMessage(chatRoomId, LocalDateTime.now());
 
@@ -168,17 +172,25 @@ public class ChatService{
         ReceiveMessageResponseDTO receiveMessageResponseDto = ReceiveMessageResponseDTO.fromRedisMessageDTO(message);
         setReceiveMessageField(receiveMessageResponseDto);
 
-        String readMessageKey = "chat:room:" + receiveMessageResponseDto.getUuid();
-        // todo. 세션 정보 가져와서 읽은 사람 추가 로직 필요함. (아마 함수로 뺴야 할 듯)
-        redisTemplate.opsForSet().add(readMessageKey, objectMapper.writeValueAsString(receiveMessageResponseDto.getSenderId()));
+        String readMessageKey = "chat:read:" + receiveMessageResponseDto.getUuid();
+        addReadMember(readMessageKey, String.valueOf(receiveMessageResponseDto.getSenderId()));
+
+//        Set<String> activeMembers = sessionService.getActiveChatRoomMembers(chatRoomId);
+//        for (String memberId : activeMembers) {
+//            addReadMember(readMessageKey, memberId);
+//        }
 
         int totalMemberCount = chatRoomMemberRepository.countByChatRoom_ChatRoomId(chatRoomId);
-        Long readCount = redisTemplate.opsForSet().size(readMessageKey);
-        if (readCount == null) readCount = 0L;
+        long readCount = sessionService.getActiveMembersCountInChatRoom(chatRoomId);
         int unreadCount = (int) (totalMemberCount - readCount);
         receiveMessageResponseDto.setUnreadCount(unreadCount);
 
         messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, receiveMessageResponseDto);
+    }
+
+    // read member 추가
+    private void addReadMember(String redisKey, String memberId) {
+        redisTemplate.opsForSet().add(redisKey, String.valueOf(memberId));
     }
 
     private DisplayType setDisplayType(Long chatRoomId, Long senderId, SenderType senderType, LocalDateTime sentAt) throws JsonProcessingException {
@@ -294,22 +306,22 @@ public class ChatService{
         return messageDTO;
     }
 
-    @Transactional
-    @Scheduled(fixedDelay = 300000)
-    public void flushAllRooms() throws JsonProcessingException {
-
-        LocalDateTime now = LocalDateTime.now();
-        log.info("flush all rooms chatting -> start, time : {}", now);
-
-        Set<Long> activeRoomIds = getAllActiveRoomIds();
-        log.info("flush all rooms chatting -> db read success : data size : {}", activeRoomIds.size());
-
-        for (Long roomId : activeRoomIds) {
-            log.info("flush all rooms chatting -> db read success : room id : {}", roomId);
-            String key = "chat:room:" + roomId;
-            flushMessagesToDb(key);
-        }
-    }
+//    @Transactional
+//    @Scheduled(fixedDelay = 300000)
+//    public void flushAllRooms() throws JsonProcessingException {
+//
+//        LocalDateTime now = LocalDateTime.now();
+//        log.info("flush all rooms chatting -> start, time : {}", now);
+//
+//        Set<Long> activeRoomIds = getAllActiveRoomIds();
+//        log.info("flush all rooms chatting -> db read success : data size : {}", activeRoomIds.size());
+//
+//        for (Long roomId : activeRoomIds) {
+//            log.info("flush all rooms chatting -> db read success : room id : {}", roomId);
+//            String key = "chat:room:" + roomId;
+//            flushMessagesToDb(key);
+//        }
+//    }
 
     private Set<Long> getAllActiveRoomIds() {
 
