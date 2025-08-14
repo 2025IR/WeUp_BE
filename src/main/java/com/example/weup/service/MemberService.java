@@ -2,6 +2,7 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.constant.NotificationType;
 import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.MemberInfoResponseDTO;
 import com.example.weup.dto.response.RoleListResponseDTO;
@@ -179,6 +180,14 @@ public class MemberService {
 
         memberRepository.save(formerLeaderMember);
         memberRepository.save(newLeaderMember);
+
+        Notification notification = Notification.builder()
+                .user(newLeaderMember.getUser())
+                .message(NotificationType.LEADER_DELEGATED.format(newLeaderMember.getUser().getName()))
+                .build();
+
+
+
     }
 
     @Transactional
