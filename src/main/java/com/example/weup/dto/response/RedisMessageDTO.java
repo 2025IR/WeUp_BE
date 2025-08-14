@@ -17,6 +17,8 @@ public class RedisMessageDTO {
 
     private Long chatRoomId;
 
+    private String uuid;
+
     private Long memberId;
 
     private String message;
