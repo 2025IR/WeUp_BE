@@ -1,5 +1,6 @@
 package com.example.weup.service;
 
+import com.example.weup.constant.NotificationType;
 import com.example.weup.dto.request.ProjectCreateRequestDTO;
 import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
@@ -34,6 +35,7 @@ public class ProjectService {
     private final ProjectRepository projectRepository;
     private final MemberRepository memberRepository;
     private final S3Service s3Service;
+    private final NotificationService notificationService;
     private final ChatRoomRepository chatRoomRepository;
     private final MemberValidator memberValidator;
     private final ProjectValidator projectValidator;
@@ -142,6 +144,11 @@ public class ProjectService {
 
         projectRepository.save(project);
         log.info("edit project information -> db save success : project id - {}", project.getProjectId());
+
+        if (!project.isStatus()) {
+            String msg = NotificationType.PROJECT_ENDED.format(project.getProjectName());
+            notificationService.broadcastProjectNotification(project, msg, null);
+        }
     }
 
     @Transactional
