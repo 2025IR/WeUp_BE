@@ -5,8 +5,7 @@ import com.example.weup.constant.ErrorInfo;
 import com.example.weup.entity.User;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.security.JwtUtil;
-import com.example.weup.service.ChatService;
-import com.example.weup.service.SessionService;
+ import com.example.weup.service.SessionService;
 import com.example.weup.validate.ChatValidator;
 import com.example.weup.validate.MemberValidator;
 import lombok.RequiredArgsConstructor;
@@ -18,10 +17,12 @@ import org.springframework.messaging.simp.stomp.StompCommand;
 import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
 import org.springframework.messaging.support.ChannelInterceptor;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.parameters.P;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
+import java.util.Arrays;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -42,7 +43,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     private final ChatValidator chatValidator;
 
     private static final Pattern PROJECT_TOPIC_PATTERN = Pattern.compile("^/topic/project/(\\d+)(/.*)?$");
-    private static final Pattern CHATROOM_TOPIC_PATTERN = Pattern.compile("^/topic/chatroom/(\\d+)$");
+    private static final Pattern CHATROOM_TOPIC_PATTERN = Pattern.compile("^/topic/chat/(\\d+)$");
 
     @Override
     public Message<?> preSend(@NotNull Message<?> message, @NotNull MessageChannel channel) {
@@ -102,21 +103,24 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                     }
                 }
                 // 채팅방 알림 진입
-                else if (destination.startsWith("/topic/chatroom")) {
+                else if (destination.startsWith("/topic/chat")) {
                     Long chatRoomId = null;
                     Matcher chatRoomMatcher = CHATROOM_TOPIC_PATTERN.matcher(destination);
                     if (chatRoomMatcher.matches()) {
+                        log.debug("여기 걸림?");
                         chatRoomId = Long.parseLong(chatRoomMatcher.group(1));
                         chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
                     }
 
                     if (destination.split("/")[3].equals("active")) {
-                        log.info("Topic(Chatroom Active) Subscribe -> Success : User - {}, Destination - {}", userId, destination);
+                        chatRoomId = Long.valueOf(destination.split("/")[4]);
+                        log.info("Topic(Chatroom Active) Subscribe -> Success : User - {}, Destination - {}, chat room id - {}", userId, destination, chatRoomId);
                         sessionService.addActiveMemberToChatRoom(chatRoomId, userId);
-                        sessionService.processChatRoomEntry(chatRoomId, userId);
                     }
                     else if (destination.split("/")[3].equals("connect")) {
-                        log.info("Topic(Chatroom Connect) Subscribe -> Success : User - {}, Destination - {}", userId, destination);
+                        chatRoomId = Long.valueOf(destination.split("/")[4]);
+                        log.debug("split 확인 해보자 : {}", Arrays.toString(destination.split("/")));
+                        log.info("Topic(Chatroom Connect) Subscribe -> Success : User - {}, Destination - {}, chat room id - {}", userId, destination, chatRoomId);
                         sessionService.addConnectMemberToChatRoom(chatRoomId, userId);
                     }
                     else {
@@ -154,16 +158,17 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                         sessionService.saveLastReadAt(chatRoomId, userId, Instant.now());
                     }
                 }
-                else if (destination.startsWith("/topic/chatroom/connect")) {
-                    Long chatRoomId = null;
-                    Matcher chatMatcher = CHATROOM_TOPIC_PATTERN.matcher(destination);
-
-                    if (chatMatcher.matches()) {
-                        chatRoomId = Long.parseLong(chatMatcher.group(1));
-                        log.info("Topic(Chatroom Connect) Unsubscribe -> Success : User - {}, Destination - {}", userId, destination);
-                        sessionService.removeConnectMemberFromChatRoom(chatRoomId, userId);
-                    }
-                }
+                // todo. 잘 되는지 테스트 해볼 것..
+//                else if (destination.startsWith("/topic/chatroom/connect")) {
+//                    Long chatRoomId = null;
+//                    Matcher chatMatcher = CHATROOM_TOPIC_PATTERN.matcher(destination);
+//
+//                    if (chatMatcher.matches()) {
+//                        chatRoomId = Long.parseLong(chatMatcher.group(1));
+//                        log.info("Topic(Chatroom Connect) Unsubscribe -> Success : User - {}, Destination - {}", userId, destination);
+//                        sessionService.removeConnectMemberFromChatRoom(chatRoomId, userId);
+//                    }
+//                }
                 break;
 
             case DISCONNECT:

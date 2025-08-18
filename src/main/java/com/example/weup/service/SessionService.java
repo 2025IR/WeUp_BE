@@ -1,10 +1,14 @@
 package com.example.weup.service;
 
+import com.example.weup.dto.response.EnterChatRoomResponseDTO;
+import com.example.weup.dto.response.RedisMessageDTO;
 import com.example.weup.entity.Member;
 import com.example.weup.repository.ChatMessageRepository;
 import com.example.weup.validate.ChatValidator;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
@@ -15,6 +19,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class SessionService {
@@ -25,7 +30,7 @@ public class SessionService {
 
     private final ChatMessageRepository chatMessageRepository;
 
-    private static final String SESSION_TO_USER_KEY = "ws:session";
+    private static final String SESSION_TO_USER_KEY = "ws:session:";
     private static final String CHATROOM_ACTIVE_MEMBERS_KEY = "chatroom:%s:active:members";
     private static final String CHATROOM_CONNECT_MEMBERS_KEY = "chatroom:%s:connect:members";
     private static final String LAST_READ_AT_KEY = "chatroom:%s:lastReadAt:%s";
@@ -73,7 +78,9 @@ public class SessionService {
 
     // 채팅방 connect member 추가
     public void addConnectMemberToChatRoom(Long chatRoomId, Long userId) {
+        log.debug("\n session service - add connect member to chat room IN");
         Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
+        log.debug("chat validator OUT");
         redisTemplate.opsForSet().add(String.format(CHATROOM_CONNECT_MEMBERS_KEY, chatRoomId), String.valueOf(member.getMemberId()));
     }
 
@@ -106,38 +113,22 @@ public class SessionService {
         return Instant.ofEpochMilli(Long.parseLong(lastReadAtStr));
     }
 
-    public void processChatRoomEntry(Long chatRoomId, Long userId) {
-        Instant lastReadAt = getLastReadAt(chatRoomId, userId);
-        Instant startInstant = (lastReadAt == null) ? Instant.EPOCH : lastReadAt;
-
-        Set<String> messageIds = getMessagesSentAfter(chatRoomId, startInstant);
-
-        if (!messageIds.isEmpty()) {
-            for (String messageId : messageIds) {
-                String readMessageKey = "chat:" + messageId + ":readUsers";
-                redisTemplate.opsForSet().add(readMessageKey, String.valueOf(userId));
-            }
-        }
-
-        saveLastReadAt(chatRoomId, userId, Instant.now());
-    }
-
-    private Set<String> getMessagesSentAfter(Long chatRoomId, Instant lastReadAt) {
-        Set<String> messageIds = new HashSet<>();
-        String messageKey = "chat:room:" + chatRoomId;
-        long minScore = lastReadAt.toEpochMilli();
-
-        Set<String> redisMessageIds = redisTemplate.opsForZSet().rangeByScore(messageKey, minScore, Double.POSITIVE_INFINITY);
-        if (redisMessageIds != null) {
-            messageIds.addAll(redisMessageIds);
-        }
-
-        LocalDateTime lastReadLocalDateTime = LocalDateTime.ofInstant(lastReadAt, ZoneId.systemDefault());
-        List<Long> mysqlMessageIds = chatMessageRepository.findMessageIdByChatRoom_ChatRoomIdAndSentAtAfter(chatRoomId, lastReadLocalDateTime);
-        if (mysqlMessageIds != null) {
-            messageIds.addAll(mysqlMessageIds.stream().map(String::valueOf).collect(Collectors.toSet()));
-        }
-
-        return messageIds;
-    }
+//    private Set<String> getMessagesSentAfter(Long chatRoomId, Instant lastReadAt) {
+//        Set<String> messageIds = new HashSet<>();
+//        String messageKey = "chat:room:" + chatRoomId;
+//        long minScore = lastReadAt.toEpochMilli();
+//
+//        Set<String> redisMessageIds = redisTemplate.opsForZSet().rangeByScore(messageKey, minScore, Double.POSITIVE_INFINITY);
+//        if (redisMessageIds != null) {
+//            messageIds.addAll(redisMessageIds);
+//        }
+//
+//        LocalDateTime lastReadLocalDateTime = LocalDateTime.ofInstant(lastReadAt, ZoneId.systemDefault());
+//        //List<Long> mysqlMessageIds = chatMessageRepository.findMessageIdByChatRoom_ChatRoomIdAndSentAtAfter(chatRoomId, lastReadLocalDateTime);
+//        if (mysqlMessageIds != null) {
+//            messageIds.addAll(mysqlMessageIds.stream().map(String::valueOf).collect(Collectors.toSet()));
+//        }
+//
+//        return messageIds;
+//    }
 }

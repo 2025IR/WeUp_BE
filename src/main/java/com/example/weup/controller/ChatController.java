@@ -15,6 +15,7 @@ import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.security.Principal;
 
 @Slf4j
 @Controller
@@ -54,6 +55,17 @@ public class ChatController {
 
         log.info("요청자 : {}, get chatting messages -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of(data, "채팅 내역 조회가 완료되었습니다."));
+    }
+
+    @MessageMapping("/topic/chat/active/{chatRoomId}")
+    public void eventChatRoomEntry(@DestinationVariable("chatRoomId") Long chatRoomId, Principal principal) throws JsonProcessingException {
+
+        log.debug("event chat room entry, principal get name : {}", principal.getName());
+        Long userId = Long.valueOf(principal.getName());
+        log.debug("event chat room entry, user id : {}", userId);
+
+        chatService.processChatRoomEntry(chatRoomId, userId);
+        chatService.enterChatRoomEvent(chatRoomId, userId);
     }
 
 }

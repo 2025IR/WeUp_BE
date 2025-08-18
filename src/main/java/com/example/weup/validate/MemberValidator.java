@@ -24,6 +24,7 @@ public class MemberValidator {
     private final ProjectValidator projectValidator;
 
     public Member validateActiveMemberInProject(Long userId, Long projectId) {
+        log.debug("member validator - validate active member in project : {}", projectId);
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
@@ -31,6 +32,7 @@ public class MemberValidator {
             throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
+        log.debug("member validator -> end");
         return member;
     }
 

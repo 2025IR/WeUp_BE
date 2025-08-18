@@ -2,14 +2,12 @@ package com.example.weup.dto.response;
 
 import com.example.weup.constant.DisplayType;
 import com.example.weup.constant.SenderType;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.*;
 
 import java.time.LocalDateTime;
 
 @Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder

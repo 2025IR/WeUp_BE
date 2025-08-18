@@ -7,6 +7,7 @@ import com.example.weup.constant.SenderType;
 import com.example.weup.dto.request.GetPageable;
 import com.example.weup.dto.request.SendImageMessageRequestDTO;
 import com.example.weup.dto.request.SendMessageRequestDTO;
+import com.example.weup.dto.response.EnterChatRoomResponseDTO;
 import com.example.weup.dto.response.ReceiveMessageResponseDTO;
 import com.example.weup.dto.response.ReceiveMessageToConnectResponseDTO;
 import com.example.weup.dto.response.RedisMessageDTO;
@@ -86,6 +87,7 @@ public class ChatService{
                 .build();
 
         saveMessage(chatRoomId, basicMessage);
+        log.debug("send basic message -> end, member id : {}", sendMember.getMemberId());
     }
 
     // image chat message
@@ -115,6 +117,7 @@ public class ChatService{
                 .build();
 
         saveMessage(chatRoomId, imgMessage);
+        log.debug("send image message -> end, member id : {}", sendMember.getMemberId());
     }
 
     // system message
@@ -138,6 +141,7 @@ public class ChatService{
                 .build();
 
         saveMessage(chatRoomId, systemMessage);
+        log.debug("send system message -> end");
     }
 
     // ai message
@@ -162,12 +166,13 @@ public class ChatService{
                 .build();
 
         saveMessage(chatRoomId, aiMessage);
+        log.debug("send ai message -> end, message : {}", message);
     }
 
     // send message
     private void saveMessage(Long chatRoomId, RedisMessageDTO message) throws JsonProcessingException {
 
-        log.debug("Send Save Message 부분으로 넘어옴");
+        log.debug("\n Send Save Message IN");
         String saveMessageKey = "chat:room:" + chatRoomId;
         redisTemplate.opsForZSet().add(saveMessageKey, objectMapper.writeValueAsString(message), message.getSentAt().toEpochSecond(ZoneOffset.UTC));
 
@@ -182,24 +187,29 @@ public class ChatService{
         int unreadCount = (int) (totalMemberCount - readCount);
         receiveMessageResponseDto.setUnreadCount(unreadCount);
 
-        messagingTemplate.convertAndSend("/topic/chat/active" + chatRoomId, receiveMessageResponseDto);
+        messagingTemplate.convertAndSend("/topic/chat/active/" + chatRoomId, receiveMessageResponseDto);
+        log.debug("active member 에게 메시지 전송, destination : /topic/chat/active/" + chatRoomId);
 
         ReceiveMessageToConnectResponseDTO connectResponseDTO = ReceiveMessageToConnectResponseDTO.builder()
                 .message(receiveMessageResponseDto.getMessage())
                 .sentAt(receiveMessageResponseDto.getSentAt())
                 .build();
 
-        messagingTemplate.convertAndSend("/topic/chat/connect" + chatRoomId, connectResponseDTO);
-        // 이거 보내면 알아서 안 읽은 알림 수 +1 해주기
+        messagingTemplate.convertAndSend("/topic/chat/connect/" + chatRoomId, connectResponseDTO);
+        log.debug("connect member 에게 메시지 전송, destination : /topic/chat/connect/" + chatRoomId);
 
         Set<String> connectMembers = sessionService.getConnectChatRoomMembers(chatRoomId);
+        log.debug("\n read members 추가 시작");
         for (String memberId : connectMembers) {
             saveReadUser(readMessageKey, memberId);
         }
+
+        log.debug("save message -> end");
     }
 
     private void saveReadUser(String saveKey, String memberId) throws JsonProcessingException {
-        redisTemplate.opsForSet().add(saveKey, objectMapper.writeValueAsString(memberId));
+        redisTemplate.opsForSet().add(saveKey, memberId);
+        log.debug("read members 추가, read member key : {}, member id : {}", saveKey, memberId);
     }
 
     private DisplayType setDisplayType(Long chatRoomId, Long senderId, SenderType senderType, LocalDateTime sentAt) throws JsonProcessingException {
@@ -248,7 +258,7 @@ public class ChatService{
 
     private void checkAndSendDateChangeMessage(Long chatRoomId, LocalDateTime currentMessageTime) throws JsonProcessingException {
 
-        log.info("Check And Send Data Change Message 부분으로 넘어옴");
+        log.info("\n Check And Send Data Change Message IN");
         String key = "chat:room:" + chatRoomId;
 
         LocalDate currentDate = currentMessageTime.toLocalDate();
@@ -283,6 +293,8 @@ public class ChatService{
 
             saveMessage(chatRoomId, systemMessage);
         }
+
+        log.debug("check and send date change message -> end");
     }
 
     private void setReceiveMessageField(ReceiveMessageResponseDTO messageDTO) {
@@ -363,21 +375,31 @@ public class ChatService{
         }
 
         List<ChatMessage> savedMessages = chatMessageRepository.saveAll(chatMessagesToSave);
-        log.info("flush chat message to db -> success : data size - {}", savedMessages.size());
+        log.debug("flush chat message to db -> success : data size - {}", savedMessages.size());
 
         List<ReadMembers> readMembersToSave = new ArrayList<>();
         List<String> redisKeysToDelete = new ArrayList<>();
 
         for (ChatMessage savedMessage : savedMessages) {
             String uuid = savedMessage.getUuid();
-            if (uuid == null) continue;
-            // todo. 에러 타입 추가하기
+            if (uuid == null) {
+                log.debug("db flush 중 UUID 없는 이상한 Message 발견, message id - {}", savedMessage.getMessageId());
+                continue;
+            }
 
             String readUsersKey = "chat:" + uuid + ":readUsers";
+            log.debug("db flush 중 read users key 값 확인 - {}", readUsersKey);
+
+            if (savedMessage.getSenderType() == SenderType.SYSTEM) {
+                redisKeysToDelete.add(readUsersKey);
+                continue;
+            }
+
             Set<String> readUserIds = redisTemplate.opsForSet().members(readUsersKey);
 
             if (readUserIds != null && !readUserIds.isEmpty()) {
                 for (String memberIdStr : readUserIds) {
+                    log.debug("db flush, read user flush 중 member id 확인 - {}", memberIdStr);
                     Long memberId = Long.parseLong(memberIdStr);
                     Member member = memberRepository.findById(memberId)
                             .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
@@ -394,11 +416,11 @@ public class ChatService{
         }
 
         readMembersRepository.saveAll(readMembersToSave);
-        log.info("flush message read members to db -> success : data size - {}", readMembersToSave.size());
+        log.debug("flush message read members to db -> success : data size - {}", readMembersToSave.size());
 
         redisKeysToDelete.add(key);
         redisTemplate.delete(redisKeysToDelete);
-        log.info("flush chat data from redis -> success : deleted keys - {}", redisKeysToDelete);
+        log.debug("flush chat data from redis -> success : deleted keys - {}", redisKeysToDelete);
     }
 
     private ChatMessage translateRedisDtoIntoChatMessage(RedisMessageDTO message) {
@@ -430,7 +452,7 @@ public class ChatService{
             throw new GeneralException(ErrorInfo.BAD_REQUEST);  // 나중에 에러 타입 수정
         }
 
-        if (redisTemplate.hasKey("chat:" + messageDTO.getUuid() + ":readUsers")) {
+        if (Boolean.TRUE.equals(redisTemplate.hasKey("chat:" + messageDTO.getUuid() + ":readUsers"))) {
             int totalMembersCount = chatRoomMemberRepository.countByChatRoom_ChatRoomId(chatMessage.getChatRoom().getChatRoomId());
             Set<String> readUsers = redisTemplate.opsForSet().members("chat:" + messageDTO.getUuid() + ":readUsers");
             long readCount = readUsers != null ? readUsers.size() : 0;
@@ -529,5 +551,88 @@ public class ChatService{
         log.info("\n\n\n");
 
         return new SliceImpl<>(pagedMessages, PageRequest.of(pageable.getPage(), pageable.getSize()), hasNext);
+    }
+
+    public ChatMessage getLatestMessage(Long chatRoomId) throws JsonProcessingException {
+
+        log.debug("\n get latest mesaage IN");
+        String redisKey = "chat:room:" + chatRoomId;
+        ZSetOperations<String, String> zSetOperations = redisTemplate.opsForZSet();
+
+        Set<String> latestMessageJson = zSetOperations.reverseRange(redisKey, 0, 0);
+
+        if (latestMessageJson != null && !latestMessageJson.isEmpty()) {
+            String json = latestMessageJson.stream().findFirst().get();
+            RedisMessageDTO redisMessage = objectMapper.readValue(json, RedisMessageDTO.class);
+            log.debug("마지막 메시지 확인, uuid : {}, message : {}", redisMessage.getUuid(), redisMessage.getMessage());
+            return translateRedisDtoIntoChatMessage(redisMessage);
+        }
+        else {
+            log.debug("redis에 아무것도 없어서 mysql에서 가져옴");
+            return chatMessageRepository.findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(chatRoomId);
+        }
+    }
+
+    public void enterChatRoomEvent(Long chatRoomId, Long userId) {
+
+        log.debug("\n enter chat room event IN");
+        Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
+        Instant lastReadAt = sessionService.getLastReadAt(chatRoomId, userId);
+
+        EnterChatRoomResponseDTO enterChatRoomDTO = EnterChatRoomResponseDTO.builder()
+                .memberId(member.getMemberId())
+                .lastReadTime(lastReadAt)
+                .build();
+
+        messagingTemplate.convertAndSend("/topic/chat/active" + chatRoomId, enterChatRoomDTO);
+        log.debug("enter chat room event -> end");
+    }
+
+    public void processChatRoomEntry(Long chatRoomId, Long userId) throws JsonProcessingException {
+        Instant lastReadAt = sessionService.getLastReadAt(chatRoomId, userId);
+        Instant startInstant = (lastReadAt == null) ? Instant.EPOCH : lastReadAt;
+
+        updateReadRedisMessageUser(chatRoomId, userId, startInstant);
+        updateReadDBMessageUser(chatRoomId, userId, startInstant);
+
+        sessionService.saveLastReadAt(chatRoomId, userId, Instant.now());
+    }
+
+    private void updateReadRedisMessageUser(Long chatRoomId, Long userId, Instant lastReadAt) throws JsonProcessingException {
+        String messageKey = "chat:room:" + chatRoomId;
+        long minScore = lastReadAt.toEpochMilli();
+
+        Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
+
+        Set<String> redisMessages = redisTemplate.opsForZSet().rangeByScore(messageKey, minScore, Double.POSITIVE_INFINITY);
+        if (redisMessages == null || redisMessages.isEmpty()) {
+            return;
+        }
+
+        for (String redisMessage : redisMessages) {
+            RedisMessageDTO messageDTO = objectMapper.readValue(redisMessage, RedisMessageDTO.class);
+            String readUsersKey = "chat:" + messageDTO.getUuid() + "readUsers";
+
+            redisTemplate.opsForSet().add(readUsersKey, String.valueOf(member.getMemberId()));
+        }
+    }
+
+    private void updateReadDBMessageUser(Long chatRoomId, Long userId, Instant startInstant) throws JsonProcessingException {
+        LocalDateTime lastReadLocalDateTime = LocalDateTime.ofInstant(startInstant, ZoneId.systemDefault());
+        Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
+
+        List<ChatMessage> mysqlMessages = chatMessageRepository.findChatMessageByChatRoom_ChatRoomIdAndSentAtAfter(chatRoomId, lastReadLocalDateTime);
+        if (mysqlMessages == null || mysqlMessages.isEmpty()) {
+            return;
+        }
+
+        for (ChatMessage chatMessage : mysqlMessages) {
+            ReadMembers readMembers = ReadMembers.builder()
+                    .chatMessage(chatMessage)
+                    .member(member)
+                    .build();
+
+            readMembersRepository.save(readMembers);
+        }
     }
 }

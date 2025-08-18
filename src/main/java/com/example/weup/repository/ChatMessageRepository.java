@@ -24,7 +24,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
 
     List<ChatMessage> findByMember(Member member);
 
-    List<Long> findMessageIdByChatRoom_ChatRoomIdAndSentAtAfter(Long chatRoomId, LocalDateTime sentAt);
+    @Query("SELECT m FROM ChatMessage m WHERE m.chatRoom.chatRoomId = :chatRoomId AND m.sentAt > :sentAt")
+    List<ChatMessage> findChatMessageByChatRoom_ChatRoomIdAndSentAtAfter(@Param("chatRoomId") Long chatRoomId, @Param("sentAt") LocalDateTime sentAt);
 
     long countByChatRoom_ChatRoomIdAndSentAtAfter(Long chatRoomId, LocalDateTime lastDateTime);
 }
