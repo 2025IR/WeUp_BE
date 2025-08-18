@@ -182,7 +182,7 @@ public class MemberService {
         memberRepository.save(newLeaderMember);
 
         notificationService.sendPersonalNotification(newLeaderMember.getUser(),
-                NotificationType.LEADER_DELEGATED.format(newLeaderMember.getUser().getName()));
+                NotificationType.LEADER_DELEGATED.format(project.getProjectName(),newLeaderMember.getUser().getName()));
     }
 
     @Transactional
@@ -221,7 +221,7 @@ public class MemberService {
             }
         }
 
-        String msg = NotificationType.MEMBER_INVITED.format(targetMember.getUser().getName(), project.getProjectName());
+        String msg = NotificationType.MEMBER_DELETED.format(targetMember.getUser().getName(), project.getProjectName());
         notificationService.sendPersonalNotification(targetMember.getUser(), msg);
         notificationService.broadcastProjectNotification(project, msg, List.of(targetMember.getUser().getUserId()));
 
