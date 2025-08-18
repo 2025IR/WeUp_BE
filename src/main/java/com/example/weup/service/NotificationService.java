@@ -45,6 +45,14 @@ public class NotificationService {
         return result;
     }
 
+    @Transactional
+    public int getUnreadNotificationCount(Long userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
+
+        return notificationRepository.countByUserAndIsReadFalse(user);
+    }
+
     @Scheduled(cron = "0 0 0 * * *")
     @Transactional
     public void deleteOldNotifications() {

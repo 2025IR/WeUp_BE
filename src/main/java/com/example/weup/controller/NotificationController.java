@@ -11,6 +11,8 @@ import org.springframework.data.web.PageableDefault;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.Map;
+
 @RestController
 @RequiredArgsConstructor
 @RequestMapping("/notification")
@@ -23,6 +25,12 @@ public class NotificationController {
             @LoginUser Long userId, @PageableDefault(size = 20) Pageable pageable) {
 
         Page<NotificationResponseDTO> result = notificationService.getNotifications(userId, pageable);
-        return ResponseEntity.ok(DataResponseDTO.of(result, ""));
+        return ResponseEntity.ok(DataResponseDTO.of(result, "알림 목록 조회가 완료되었습니다."));
+    }
+
+    @GetMapping("/unread")
+    public ResponseEntity<DataResponseDTO<Map<String, Integer>>> getUnreadNotificationCount(@LoginUser Long userId) {
+        int unreadCount = notificationService.getUnreadNotificationCount(userId);
+        return ResponseEntity.ok(DataResponseDTO.of(Map.of("unread", unreadCount), "읽지 않은 알림 수 조회가 완료되었습니다."));
     }
 }
