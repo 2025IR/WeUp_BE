@@ -8,6 +8,7 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Repository
@@ -22,4 +23,8 @@ public interface ChatMessageRepository extends JpaRepository<ChatMessage, Long> 
     ChatMessage findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(Long roomId);
 
     List<ChatMessage> findByMember(Member member);
+
+    List<Long> findMessageIdByChatRoom_ChatRoomIdAndSentAtAfter(Long chatRoomId, LocalDateTime sentAt);
+
+    long countByChatRoom_ChatRoomIdAndSentAtAfter(Long chatRoomId, LocalDateTime lastDateTime);
 }

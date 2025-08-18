@@ -18,9 +18,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -48,6 +52,7 @@ public class ChatRoomService {
     private final ChatMessageRepository chatMessageRepository;
 
     private final StringRedisTemplate redisTemplate;
+    private final SessionService sessionService;
 
     public ChatRoom createBasicChatRoom(Project project, String projectName) {
 
@@ -179,15 +184,37 @@ public class ChatRoomService {
                             .map(chatRoomMember -> chatRoomMember.getMember().getUser().getName())
                             .collect(Collectors.toList());
 
+                    long unreadMessageCount = getUnreadMessageCount(chatRoom.getChatRoomId(), userId);
+
                     return GetChatRoomListDTO.builder()
                             .chatRoomId(chatRoom.getChatRoomId())
                             .chatRoomMemberId(targetChatRoomMember.getChatRoomMemberId())
                             .chatRoomName(chatRoom.getChatRoomName())
                             .chatRoomMemberNames(chatRoomMemberNames)
                             .isBasic(chatRoom.isBasic())
+                            .unreadMessageCount(unreadMessageCount)
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    private long getUnreadMessageCount(Long chatRoomId, Long userId) {
+        Instant lastReadTime = sessionService.getLastReadAt(chatRoomId, userId);
+        long redisUnreadCount = 0L;
+        long mysqlUnreadCount = 0L;
+
+        ZSetOperations<String, String> zSetOperations = redisTemplate.opsForZSet();
+        String redisKey = "chat:room:" + chatRoomId;
+
+        Long redisCount = zSetOperations.count(redisKey, lastReadTime.toEpochMilli(), Double.POSITIVE_INFINITY);
+        if (redisCount != null) {
+            redisUnreadCount = redisCount;
+        }
+
+        LocalDateTime lastDateTime = LocalDateTime.ofInstant(lastReadTime, ZoneId.systemDefault());
+        mysqlUnreadCount = chatMessageRepository.countByChatRoom_ChatRoomIdAndSentAtAfter(chatRoomId, lastDateTime);
+
+        return redisUnreadCount + mysqlUnreadCount;
     }
 
     @Transactional

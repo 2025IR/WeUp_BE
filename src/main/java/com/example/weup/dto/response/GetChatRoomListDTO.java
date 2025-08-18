@@ -22,4 +22,6 @@ public class GetChatRoomListDTO {
     private List<String> chatRoomMemberNames;
 
     private Boolean isBasic;
+
+    private long unreadMessageCount;
 }

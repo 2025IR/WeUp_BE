@@ -5,6 +5,7 @@ import com.example.weup.constant.ErrorInfo;
 import com.example.weup.entity.User;
 import com.example.weup.repository.UserRepository;
 import com.example.weup.security.JwtUtil;
+import com.example.weup.service.ChatService;
 import com.example.weup.service.SessionService;
 import com.example.weup.validate.ChatValidator;
 import com.example.weup.validate.MemberValidator;
@@ -20,6 +21,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,7 +43,6 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
     private static final Pattern PROJECT_TOPIC_PATTERN = Pattern.compile("^/topic/project/(\\d+)(/.*)?$");
     private static final Pattern CHATROOM_TOPIC_PATTERN = Pattern.compile("^/topic/chatroom/(\\d+)$");
-
 
     @Override
     public Message<?> preSend(@NotNull Message<?> message, @NotNull MessageChannel channel) {
@@ -79,9 +80,11 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                     throw new GeneralException(ErrorInfo.BAD_REQUEST);
                 }
 
+                // 개인 알림 진입
                 if (destination.startsWith("/user/queue/notification")) {
                     log.info("Personal notification Subscribe -> Success : User - {}", userId);
                 }
+                // 프로젝트 알림 진입
                 else if (destination.startsWith("/topic/project")) {
                     Long targetEntityId = null;
                     Matcher projectMatcher = PROJECT_TOPIC_PATTERN.matcher(destination);
@@ -98,6 +101,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                         log.warn("Topic(Project) Subscribe -> Failure : User - {}, Destination - {}", userId, destination);
                     }
                 }
+                // 채팅방 알림 진입
                 else if (destination.startsWith("/topic/chatroom")) {
                     Long chatRoomId = null;
                     Matcher chatRoomMatcher = CHATROOM_TOPIC_PATTERN.matcher(destination);
@@ -109,6 +113,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                     if (destination.split("/")[3].equals("active")) {
                         log.info("Topic(Chatroom Active) Subscribe -> Success : User - {}, Destination - {}", userId, destination);
                         sessionService.addActiveMemberToChatRoom(chatRoomId, userId);
+                        sessionService.processChatRoomEntry(chatRoomId, userId);
                     }
                     else if (destination.split("/")[3].equals("connect")) {
                         log.info("Topic(Chatroom Connect) Subscribe -> Success : User - {}, Destination - {}", userId, destination);
@@ -124,12 +129,40 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 if (destination == null) {
                     log.warn("SEND command receive with Null Destination from Session Id - {}", accessor.getSessionId());
                 }
+                // todo. 백엔드가 보내는 알림은 거치지 않는지 확인
                 else if (destination.startsWith("/app/send") || destination.startsWith("/app/project") ||
                         destination.startsWith("/app/todo") || destination.startsWith("/app/chat") || destination.startsWith("/app/schedule")) {
                     log.info("SEND Destination Validate -> Success : User - {}, Destination - {}", userId, destination);
                 }
                 else {
                     log.warn("SEND Destination Validate-> Failure : User - {}, Destination - {}", userId, destination);
+                }
+                break;
+
+            case UNSUBSCRIBE:
+                if (destination == null) {
+                    log.warn("UNSUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
+                }
+                else if (destination.startsWith("/topic/chatroom/active")) {
+                    Long chatRoomId = null;
+                    Matcher chatMatcher = CHATROOM_TOPIC_PATTERN.matcher(destination);
+
+                    if (chatMatcher.matches()) {
+                        chatRoomId = Long.parseLong(chatMatcher.group(1));
+                        log.info("Topic(Chatroom Active) Unsubscribe -> Success : User - {}, Destination - {}", userId, destination);
+                        sessionService.removeActiveMemberFromChatRoom(chatRoomId, userId);
+                        sessionService.saveLastReadAt(chatRoomId, userId, Instant.now());
+                    }
+                }
+                else if (destination.startsWith("/topic/chatroom/connect")) {
+                    Long chatRoomId = null;
+                    Matcher chatMatcher = CHATROOM_TOPIC_PATTERN.matcher(destination);
+
+                    if (chatMatcher.matches()) {
+                        chatRoomId = Long.parseLong(chatMatcher.group(1));
+                        log.info("Topic(Chatroom Connect) Unsubscribe -> Success : User - {}, Destination - {}", userId, destination);
+                        sessionService.removeConnectMemberFromChatRoom(chatRoomId, userId);
+                    }
                 }
                 break;
 

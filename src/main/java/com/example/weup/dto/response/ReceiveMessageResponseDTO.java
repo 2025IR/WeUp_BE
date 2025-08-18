@@ -56,6 +56,7 @@ public class ReceiveMessageResponseDTO {
 
     public static ReceiveMessageResponseDTO fromChatMessageEntity(ChatMessage chatMessage) {
         return ReceiveMessageResponseDTO.builder()
+                .uuid(chatMessage.getUuid())
                 .senderId(chatMessage.getSenderType()==SenderType.MEMBER ? chatMessage.getMember().getMemberId() : null)
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())
