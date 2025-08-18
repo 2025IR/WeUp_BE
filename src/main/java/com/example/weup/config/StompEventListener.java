@@ -44,14 +44,13 @@ public class StompEventListener {
 
         String userIdStr = sessionService.getUserIdBySession(sessionId);
         if (userIdStr == null) {
-            log.warn("WebSocket Disconnect : No userId for sessionId - {}", sessionId);
+            log.warn("WebSocket Disconnect -> Warning : No userId for sessionId - {}", sessionId);
             sessionService.removeSession(sessionId);
             return;
         }
 
-
-
-        log.info("WebSocket Disconnect : sessionId - {}", sessionId);
+        // todo. 예기치 않은 종료가 될 때... active, connect에 있는 user 전부 지워주는 로직 필요한가?
+        log.info("WebSocket Disconnect -> Success : sessionId - {}", sessionId);
         sessionService.removeSession(sessionId);
     }
 }

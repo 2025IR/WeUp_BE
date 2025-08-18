@@ -55,8 +55,6 @@ public class AiChatService {
 
     private final ProjectValidator projectValidator;
 
-    private final SimpMessagingTemplate messagingTemplate;
-
     @Value("${ai.server.url}")
     private String aiServerUrl;
 

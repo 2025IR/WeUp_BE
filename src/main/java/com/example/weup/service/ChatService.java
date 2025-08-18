@@ -8,6 +8,7 @@ import com.example.weup.dto.request.GetPageable;
 import com.example.weup.dto.request.SendImageMessageRequestDTO;
 import com.example.weup.dto.request.SendMessageRequestDTO;
 import com.example.weup.dto.response.ReceiveMessageResponseDTO;
+import com.example.weup.dto.response.ReceiveMessageToConnectResponseDTO;
 import com.example.weup.dto.response.RedisMessageDTO;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
@@ -28,9 +29,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.io.IOException;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.ZoneOffset;
+import java.time.*;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -40,23 +39,27 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class ChatService{
 
+    private final S3Service s3Service;
+
+    private final SessionService sessionService;
+
     private final MemberRepository memberRepository;
+
+    private final ReadMembersRepository readMembersRepository;
 
     private final ChatMessageRepository chatMessageRepository;
 
-    private final S3Service s3Service;
-
-    private final StringRedisTemplate redisTemplate;
+    private final ChatRoomMemberRepository chatRoomMemberRepository;
 
     private final ObjectMapper objectMapper;
+
+    private final StringRedisTemplate redisTemplate;
 
     private final SimpMessagingTemplate messagingTemplate;
 
     private final ChatValidator chatValidator;
 
     private final MemberValidator memberValidator;
-
-    private final ChatRoomMemberRepository chatRoomMemberRepository;
 
     // basic chat message
     @Transactional
@@ -168,17 +171,32 @@ public class ChatService{
         ReceiveMessageResponseDTO receiveMessageResponseDto = ReceiveMessageResponseDTO.fromRedisMessageDTO(message);
         setReceiveMessageField(receiveMessageResponseDto);
 
-        String readMessageKey = "chat:room:" + receiveMessageResponseDto.getUuid();
-        // todo. 세션 정보 가져와서 읽은 사람 추가 로직 필요함. (아마 함수로 뺴야 할 듯)
+        String readMessageKey = "chat:" + receiveMessageResponseDto.getUuid() + ":readUsers";
         redisTemplate.opsForSet().add(readMessageKey, objectMapper.writeValueAsString(receiveMessageResponseDto.getSenderId()));
 
         int totalMemberCount = chatRoomMemberRepository.countByChatRoom_ChatRoomId(chatRoomId);
-        Long readCount = redisTemplate.opsForSet().size(readMessageKey);
-        if (readCount == null) readCount = 0L;
+        long readCount = sessionService.getConnectMembersCountInChatRoom(chatRoomId);
         int unreadCount = (int) (totalMemberCount - readCount);
         receiveMessageResponseDto.setUnreadCount(unreadCount);
 
-        messagingTemplate.convertAndSend("/topic/chat/" + chatRoomId, receiveMessageResponseDto);
+        messagingTemplate.convertAndSend("/topic/chat/active" + chatRoomId, receiveMessageResponseDto);
+
+        ReceiveMessageToConnectResponseDTO connectResponseDTO = ReceiveMessageToConnectResponseDTO.builder()
+                .message(receiveMessageResponseDto.getMessage())
+                .sentAt(receiveMessageResponseDto.getSentAt())
+                .build();
+
+        messagingTemplate.convertAndSend("/topic/chat/connect" + chatRoomId, connectResponseDTO);
+        // 이거 보내면 알아서 안 읽은 알림 수 +1 해주기
+
+        Set<String> connectMembers = sessionService.getConnectChatRoomMembers(chatRoomId);
+        for (String memberId : connectMembers) {
+            saveReadUser(readMessageKey, memberId);
+        }
+    }
+
+    private void saveReadUser(String saveKey, String memberId) throws JsonProcessingException {
+        redisTemplate.opsForSet().add(saveKey, objectMapper.writeValueAsString(memberId));
     }
 
     private DisplayType setDisplayType(Long chatRoomId, Long senderId, SenderType senderType, LocalDateTime sentAt) throws JsonProcessingException {
@@ -264,7 +282,7 @@ public class ChatService{
         }
     }
 
-    private ReceiveMessageResponseDTO setReceiveMessageField(ReceiveMessageResponseDTO messageDTO) {
+    private void setReceiveMessageField(ReceiveMessageResponseDTO messageDTO) {
 
         if (messageDTO.getSenderType() == SenderType.MEMBER) {
             Member member = memberRepository.findById(messageDTO.getSenderId())
@@ -291,7 +309,6 @@ public class ChatService{
 
         } else throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
 
-        return messageDTO;
     }
 
     @Transactional
@@ -334,27 +351,59 @@ public class ChatService{
             return;
         }
 
-        List<ChatMessage> chatMessages = new ArrayList<>();
+        List<ChatMessage> chatMessagesToSave = new ArrayList<>();
+
         for (String message : messages) {
             RedisMessageDTO redisMessage = objectMapper.readValue(message, RedisMessageDTO.class);
-
             ChatMessage chatMessage = translateRedisDtoIntoChatMessage(redisMessage);
-            chatMessages.add(chatMessage);
+            chatMessagesToSave.add(chatMessage);
         }
 
-        chatMessageRepository.saveAll(chatMessages);
-        log.info("flush chat message to db -> success : data size - {}", chatMessages.size());
+        List<ChatMessage> savedMessages = chatMessageRepository.saveAll(chatMessagesToSave);
+        log.info("flush chat message to db -> success : data size - {}", savedMessages.size());
 
-        redisTemplate.delete(key);
-        log.info("flush chat message to db -> success : delete redis key - {}", key);
+        List<ReadMembers> readMembersToSave = new ArrayList<>();
+        List<String> redisKeysToDelete = new ArrayList<>();
+
+        for (ChatMessage savedMessage : savedMessages) {
+            String uuid = savedMessage.getUuid();
+            if (uuid == null) continue;
+            // todo. 에러 타입 추가하기
+
+            String readUsersKey = "chat:" + uuid + ":readUsers";
+            Set<String> readUserIds = redisTemplate.opsForSet().members(readUsersKey);
+
+            if (readUserIds != null && !readUserIds.isEmpty()) {
+                for (String memberIdStr : readUserIds) {
+                    Long memberId = Long.parseLong(memberIdStr);
+                    Member member = memberRepository.findById(memberId)
+                            .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
+
+                    ReadMembers readMember = ReadMembers.builder()
+                            .chatMessage(savedMessage)
+                            .member(member)
+                            .build();
+
+                    readMembersToSave.add(readMember);
+                }
+            }
+            redisKeysToDelete.add(readUsersKey);
+        }
+
+        readMembersRepository.saveAll(readMembersToSave);
+        log.info("flush message read members to db -> success : data size - {}", readMembersToSave.size());
+
+        redisKeysToDelete.add(key);
+        redisTemplate.delete(redisKeysToDelete);
+        log.info("flush chat data from redis -> success : deleted keys - {}", redisKeysToDelete);
     }
 
     private ChatMessage translateRedisDtoIntoChatMessage(RedisMessageDTO message) {
 
         ChatRoom chatRoom = chatValidator.validateChatRoom(message.getChatRoomId());
 
-        // uuid ?
         return ChatMessage.builder()
+                .uuid(message.getUuid())
                 .chatRoom(chatRoom)
                 .member(message.getMemberId() != null
                         ? memberRepository.findById(message.getMemberId()).orElseThrow(
@@ -368,6 +417,33 @@ public class ChatService{
                 .originalMessage(message.getOriginalMessage())
                 .originalSenderName(message.getOriginalSenderName())
                 .build();
+    }
+
+    private ReceiveMessageResponseDTO toReceiveMessageResponseDTO(ChatMessage chatMessage) {
+        ReceiveMessageResponseDTO messageDTO = ReceiveMessageResponseDTO.fromChatMessageEntity(chatMessage);
+        setReceiveMessageField(messageDTO);
+
+        if (messageDTO.getUuid() == null) {
+            throw new GeneralException(ErrorInfo.BAD_REQUEST);  // 나중에 에러 타입 수정
+        }
+
+        if (redisTemplate.hasKey("chat:" + messageDTO.getUuid() + ":readUsers")) {
+            int totalMembersCount = chatRoomMemberRepository.countByChatRoom_ChatRoomId(chatMessage.getChatRoom().getChatRoomId());
+            Set<String> readUsers = redisTemplate.opsForSet().members("chat:" + messageDTO.getUuid() + ":readUsers");
+            long readCount = readUsers != null ? readUsers.size() : 0;
+            int unreadMembersCount = (int) (totalMembersCount - readCount);
+
+            messageDTO.setUnreadCount(unreadMembersCount);
+        }
+        else {
+            int totalMembersCount = chatRoomMemberRepository.countByChatRoom_ChatRoomId(chatMessage.getChatRoom().getChatRoomId());
+            Long readCount = readMembersRepository.countReadMembersByMessageId(chatMessage.getMessageId());
+            int unreadMembersCount = (int) (totalMembersCount - readCount);
+
+            messageDTO.setUnreadCount(unreadMembersCount);
+        }
+
+        return messageDTO;
     }
 
     @Transactional
@@ -438,8 +514,7 @@ public class ChatService{
         List<ReceiveMessageResponseDTO> pagedMessages = new ArrayList<>();
         if (!combinedMessages.isEmpty()) {
             pagedMessages = combinedMessages.subList(0, end).stream()
-                    .map(ReceiveMessageResponseDTO::fromChatMessageEntity)
-                    .map(this::setReceiveMessageField)
+                    .map(this::toReceiveMessageResponseDTO)
                     .sorted(Comparator.comparing(ReceiveMessageResponseDTO::getSentAt))
                     .toList();
         }
