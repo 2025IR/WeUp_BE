@@ -70,10 +70,7 @@ public class NotificationService {
 
         messagingTemplate.convertAndSend(
                 "/topic/user/" + user.getUserId(),
-                Map.of(
-                        "message", notification.getMessage(),
-                        "createdAt", notification.getNotificationCreatedAt()
-                )
+                Map.of("message", notification.getMessage())
         );
     }
 
@@ -95,10 +92,7 @@ public class NotificationService {
 
         messagingTemplate.convertAndSend(
                 "/topic/project/" + project.getProjectId(),
-                Map.of(
-                        "message", message,
-                        "createdAt", LocalDateTime.now()
-                )
+                Map.of("message", message)
         );
     }
 }
