@@ -24,6 +24,9 @@ public class ChatMessage {
     @Column(nullable = false, updatable = false)
     private Long messageId;
 
+    @Column(nullable = false, updatable = false)
+    private String uuid;
+
     @ManyToOne
     @JoinColumn(name = "chat_room_id")
     private ChatRoom chatRoom;

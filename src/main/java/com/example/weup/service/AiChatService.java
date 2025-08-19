@@ -17,7 +17,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
@@ -53,8 +52,6 @@ public class AiChatService {
 
     private final ProjectValidator projectValidator;
 
-    private final SimpMessagingTemplate messagingTemplate;
-
     @Value("${ai.server.url}")
     private String aiServerUrl;
 
@@ -65,9 +62,11 @@ public class AiChatService {
                 .message(aiChatRequestDTO.getUserInput())
                 .build();
 
+        log.debug("ai chat service - memberId:{}", aiChatRequestDTO.getSenderId());
         Member sendMember = memberRepository.findById(aiChatRequestDTO.getSenderId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
+        log.debug("chat service - send basic message로 이동");
         chatService.sendBasicMessage(chatRoomId, sendMessageRequestDto);
 
         try {
@@ -76,7 +75,8 @@ public class AiChatService {
 
             Map<String, Object> jsonBody = new HashMap<>();
             jsonBody.put("user_input", aiChatRequestDTO.getUserInput());
-            jsonBody.put("project_id", aiChatRequestDTO.getProjectId());
+            jsonBody.put("project_id", String.valueOf(aiChatRequestDTO.getProjectId()));
+            jsonBody.put("mode", "auto");
 
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(jsonBody, headers);
 
@@ -84,7 +84,9 @@ public class AiChatService {
             ResponseEntity<String> response = restTemplate.postForEntity(aiServerUrl, requestEntity, String.class);
 
             JsonNode root = objectMapper.readTree(response.getBody());
-            String realMessage = root.get("response").asText();
+            log.debug("send message to ai -> response data check, root : {}", root.toString());
+            String realMessage = root.get("output").asText();
+            log.debug("send message to ai -> response data check, realMessage : {}", realMessage);
 
             if (Objects.equals(realMessage, "")) {
                 throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
@@ -102,14 +104,16 @@ public class AiChatService {
     public void aiAssignRole(AiRoleAssignRequestDTO aiRoleAssignDto) {
 
         Project project = projectValidator.validateActiveProject(aiRoleAssignDto.getProjectId());
+        log.debug("project validator -> end");
 
         Member member = memberRepository.findByUser_NameAndProject_ProjectId(aiRoleAssignDto.getUserName(), project.getProjectId());
+        log.debug("member validator -> end");
 
         Role role = roleRepository.findByProjectAndRoleName(project, aiRoleAssignDto.getRoleName())
                         .orElseThrow(() -> new GeneralException(ErrorInfo.ROLE_NOT_FOUND));
+        log.debug("role validator -> end");
 
         memberRoleRepository.deleteByMember(member);
-
         MemberRole memberRole = MemberRole.builder()
                 .member(member)
                 .role(role)

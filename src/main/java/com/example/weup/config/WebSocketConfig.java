@@ -1,6 +1,7 @@
 package com.example.weup.config;
 
 import com.example.weup.HandlerMethodArgumentResolver.resolver.StompLoginUserArgumentResolver;
+import com.example.weup.handler.StompChannelInterceptor;
 import lombok.RequiredArgsConstructor;
 import org.jetbrains.annotations.NotNull;
 import org.springframework.context.annotation.Configuration;
