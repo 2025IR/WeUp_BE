@@ -24,6 +24,7 @@ public class MemberValidator {
     private final ProjectValidator projectValidator;
 
     public Member validateActiveMemberInProject(Long userId, Long projectId) {
+        log.debug("member validator - validate active member in project : {}", projectId);
         Member member = memberRepository.findByUser_UserIdAndProject_ProjectId(userId, projectId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.NOT_IN_PROJECT));
 
@@ -31,6 +32,7 @@ public class MemberValidator {
             throw new GeneralException(ErrorInfo.DELETED_MEMBER);
         }
 
+        log.debug("member validator -> end");
         return member;
     }
 
@@ -55,6 +57,7 @@ public class MemberValidator {
     }
 
     public Member validateMemberAndProject(Long memberId) {
+        log.debug("member validate, validation member and project - memberId: {}", memberId);
         Member member = memberRepository.findById(memberId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
@@ -68,6 +71,7 @@ public class MemberValidator {
     }
 
     public void isMemberAlreadyInChatRoom(ChatRoom chatRoom, Member member, boolean targetResult) {
+        log.debug("member validate, is member already in chat room? - memberId: {}", member.getMemberId());
         if (targetResult) {
             if (!chatRoomMemberRepository.existsByChatRoomAndMember(chatRoom, member)) {
                 throw new GeneralException(ErrorInfo.MEMBER_NOT_FOUND);

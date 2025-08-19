@@ -30,6 +30,7 @@ public class AiChatController {
     public ResponseEntity<DataResponseDTO<String>> aiAssignRole(@RequestBody AiRoleAssignRequestDTO aiRoleAssignDto) {
 
         log.info("요청자 : Flask Server, AI Assign Role -> start");
+        log.debug("project id : {}, user name : {}, role name : {}", aiRoleAssignDto.getProjectId(), aiRoleAssignDto.getUserName(), aiRoleAssignDto.getRoleName());
         aiChatService.aiAssignRole(aiRoleAssignDto);
 
         log.info("요청자 : Flask Server, AI Assign Role -> success");
@@ -40,6 +41,7 @@ public class AiChatController {
     public ResponseEntity<DataResponseDTO<String>> aiTodoCreate(@RequestBody AiTodoCreateRequestDTO aiTodoCreateDto) {
 
         log.info("요청자 : Flask Server, AI Todo Create -> start");
+        log.debug("project id : {}, todo name : {}, start date : {}", aiTodoCreateDto.getProjectId(), aiTodoCreateDto.getTodoName(), aiTodoCreateDto.getStartDate());
         aiChatService.aiTodoCreate(aiTodoCreateDto);
 
         log.info("요청자 : Flask Server, AI Todo Create -> success");
