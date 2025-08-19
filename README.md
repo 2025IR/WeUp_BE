@@ -1,3 +1,3 @@
 # WE:UP_Backend
 
-#### CI/CD Test
+#### CI/CD Test - check server
