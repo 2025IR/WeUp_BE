@@ -14,8 +14,6 @@ import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 import org.springframework.web.socket.messaging.SessionSubscribeEvent;
 
-import java.util.Objects;
-
 @Component
 @Slf4j
 @RequiredArgsConstructor

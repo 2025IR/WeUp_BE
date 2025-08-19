@@ -99,14 +99,14 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 }
                 // 채팅방 알림 진입
                 else if (destination.startsWith("/topic/chat")) {
-                    Long chatRoomId;
+                    long chatRoomId;
 
                     if (destination.split("/")[3].equals("active")) {
-                        chatRoomId = Long.valueOf(destination.split("/")[4]);
+                        chatRoomId = Long.parseLong(destination.split("/")[4]);
                         log.info("Topic(Chatroom Active) Subscribe -> Success : User - {}, Destination - {}, chat room id - {}", userId, destination, chatRoomId);
                     }
                     else if (destination.split("/")[3].equals("connect")) {
-                        chatRoomId = Long.valueOf(destination.split("/")[4]);
+                        chatRoomId = Long.parseLong(destination.split("/")[4]);
                         log.debug("split 확인 해보자 : {}", Arrays.toString(destination.split("/")));
                         log.info("Topic(Chatroom Connect) Subscribe -> Success : User - {}, Destination - {}, chat room id - {}", userId, destination, chatRoomId);
                         sessionService.addConnectMemberToChatRoom(chatRoomId, userId);

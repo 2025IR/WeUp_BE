@@ -81,7 +81,6 @@ public class AiChatService {
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(jsonBody, headers);
 
             log.info("send message to ai -> POST Request To AI Flask Server start : url - {}", aiServerUrl);
-            log.debug("send message to ai -> request data check : {}", requestEntity.toString());
             ResponseEntity<String> response = restTemplate.postForEntity(aiServerUrl, requestEntity, String.class);
 
             JsonNode root = objectMapper.readTree(response.getBody());
