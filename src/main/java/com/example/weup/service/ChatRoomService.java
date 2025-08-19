@@ -7,7 +7,6 @@ import com.example.weup.dto.request.EditChatRoomNameRequestDTO;
 import com.example.weup.dto.request.InviteChatRoomDTO;
 import com.example.weup.dto.response.GetChatRoomListDTO;
 import com.example.weup.dto.response.GetInvitableListDTO;
-import com.example.weup.dto.response.RedisMessageDTO;
 import com.example.weup.entity.*;
 import com.example.weup.repository.ChatMessageRepository;
 import com.example.weup.repository.ChatRoomMemberRepository;
@@ -28,7 +27,6 @@ import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -192,13 +190,16 @@ public class ChatRoomService {
                     long unreadMessageCount = getUnreadMessageCount(chatRoom.getChatRoomId(), userId);
                     log.debug("get unread message count : {}", unreadMessageCount);
 
-                    ChatMessage latestMessage = null;
+                    ChatMessage latestMessage;
                     try {
                         latestMessage = chatService.getLatestMessage(chatRoom.getChatRoomId());
                     } catch (JsonProcessingException e) {
-                        throw new RuntimeException(e);
+                        throw new RuntimeException("마지막 채팅 내역 불러오는 도중 오류 발생, error message : " + e.getMessage());
                     }
-                    log.debug("get latest message : {}", Objects.requireNonNull(latestMessage).getMessage());
+
+                    if (latestMessage == null) {
+                        log.debug("채팅 없음, chat room id : {}", chatRoom.getChatRoomId());
+                    }
 
                     return GetChatRoomListDTO.builder()
                             .chatRoomId(chatRoom.getChatRoomId())
@@ -207,8 +208,8 @@ public class ChatRoomService {
                             .chatRoomMemberNames(chatRoomMemberNames)
                             .isBasic(chatRoom.isBasic())
                             .unreadMessageCount(unreadMessageCount)
-                            .lastMessage(Objects.requireNonNull(latestMessage).getMessage())
-                            .lastMessageTime(Objects.requireNonNull(latestMessage).getSentAt())
+                            .lastMessage(latestMessage != null ? latestMessage.getMessage() : null)
+                            .lastMessageTime(latestMessage != null ? latestMessage.getSentAt() : null)
                             .build();
                 })
                 .collect(Collectors.toList());
@@ -219,7 +220,7 @@ public class ChatRoomService {
         Instant startTime = (lastReadTime == null) ? Instant.EPOCH : lastReadTime;
 
         long redisUnreadCount = 0L;
-        long mysqlUnreadCount = 0L;
+        long mysqlUnreadCount;
 
         ZSetOperations<String, String> zSetOperations = redisTemplate.opsForZSet();
         String redisKey = "chat:room:" + chatRoomId;

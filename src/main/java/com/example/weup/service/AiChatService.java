@@ -4,8 +4,6 @@ import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.*;
 import com.example.weup.constant.SenderType;
-import com.example.weup.dto.response.ReceiveMessageResponseDTO;
-import com.example.weup.dto.response.RedisMessageDTO;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
 import com.example.weup.validate.ProjectValidator;
@@ -19,7 +17,6 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
@@ -108,14 +105,16 @@ public class AiChatService {
     public void aiAssignRole(AiRoleAssignRequestDTO aiRoleAssignDto) {
 
         Project project = projectValidator.validateActiveProject(aiRoleAssignDto.getProjectId());
+        log.debug("project validator -> end");
 
         Member member = memberRepository.findByUser_NameAndProject_ProjectId(aiRoleAssignDto.getUserName(), project.getProjectId());
+        log.debug("member validator -> end");
 
         Role role = roleRepository.findByProjectAndRoleName(project, aiRoleAssignDto.getRoleName())
                         .orElseThrow(() -> new GeneralException(ErrorInfo.ROLE_NOT_FOUND));
+        log.debug("role validator -> end");
 
         memberRoleRepository.deleteByMember(member);
-
         MemberRole memberRole = MemberRole.builder()
                 .member(member)
                 .role(role)

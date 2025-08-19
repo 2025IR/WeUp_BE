@@ -1,7 +1,9 @@
-package com.example.weup.config;
+package com.example.weup.handler;
 
 import com.example.weup.entity.User;
+import com.example.weup.service.ChatService;
 import com.example.weup.service.SessionService;
+import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.event.EventListener;
@@ -10,6 +12,9 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Component;
 import org.springframework.web.socket.messaging.SessionConnectedEvent;
 import org.springframework.web.socket.messaging.SessionDisconnectEvent;
+import org.springframework.web.socket.messaging.SessionSubscribeEvent;
+
+import java.util.Objects;
 
 @Component
 @Slf4j
@@ -17,6 +22,8 @@ import org.springframework.web.socket.messaging.SessionDisconnectEvent;
 public class StompEventListener {
 
     private final SessionService sessionService;
+
+    private final ChatService chatService;
 
     @EventListener
     public void handlerWebSocketConnect(SessionConnectedEvent event) {
@@ -52,5 +59,24 @@ public class StompEventListener {
         // todo. 예기치 않은 종료가 될 때... active, connect에 있는 user 전부 지워주는 로직 필요한가?
         log.info("WebSocket Disconnect -> Success : sessionId - {}", sessionId);
         sessionService.removeSession(sessionId);
+    }
+
+    @EventListener
+    public void handlerSubscribeEvent(SessionSubscribeEvent event) throws JsonProcessingException {
+        log.debug("\n\n WebSocket Subscribe Event Handler IN");
+        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
+        String sessionId = accessor.getSessionId();
+        String destination = accessor.getDestination();
+        String userIdStr = sessionService.getUserIdBySession(sessionId);
+        log.debug("WebSocket Subscribe Event Destination : {}", destination);
+
+        if (destination != null && destination.startsWith("/topic/chat/active")) {
+            Long chatRoomId = Long.valueOf(destination.split("/")[4]);
+            Long userId = Long.valueOf(userIdStr);
+
+            sessionService.addActiveMemberToChatRoom(chatRoomId, userId);
+            chatService.processChatRoomEntry(chatRoomId, userId);
+            chatService.enterChatRoomEvent(chatRoomId, userId);
+        }
     }
 }

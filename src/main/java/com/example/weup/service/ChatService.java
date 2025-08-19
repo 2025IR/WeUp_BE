@@ -174,7 +174,8 @@ public class ChatService{
 
         log.debug("\n Send Save Message IN");
         String saveMessageKey = "chat:room:" + chatRoomId;
-        redisTemplate.opsForZSet().add(saveMessageKey, objectMapper.writeValueAsString(message), message.getSentAt().toEpochSecond(ZoneOffset.UTC));
+        long sentAtMilli = message.getSentAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        redisTemplate.opsForZSet().add(saveMessageKey, objectMapper.writeValueAsString(message), sentAtMilli);
 
         ReceiveMessageResponseDTO receiveMessageResponseDto = ReceiveMessageResponseDTO.fromRedisMessageDTO(message);
         setReceiveMessageField(receiveMessageResponseDto);
@@ -207,7 +208,7 @@ public class ChatService{
         log.debug("save message -> end");
     }
 
-    private void saveReadUser(String saveKey, String memberId) throws JsonProcessingException {
+    private void saveReadUser(String saveKey, String memberId) {
         redisTemplate.opsForSet().add(saveKey, memberId);
         log.debug("read members 추가, read member key : {}, member id : {}", saveKey, memberId);
     }
@@ -223,25 +224,36 @@ public class ChatService{
                 : null;
 
         if (lastJson != null) {
-            lastMessage = objectMapper.readValue(lastJson, ChatMessage.class);
+            RedisMessageDTO redisMessage = objectMapper.readValue(lastJson, RedisMessageDTO.class);
+            lastMessage = translateRedisDtoIntoChatMessage(redisMessage);
         } else {
             lastMessage = chatMessageRepository.findTopByChatRoom_ChatRoomIdOrderBySentAtDesc(chatRoomId);
         }
 
         if (lastMessage != null) {
-            if (lastMessage.getMember() != null) {
+            log.debug("\n\n set display type, lastMessage uuid : {}, message : {}", lastMessage.getUuid(), lastMessage.getMessage());
+
+            if (lastMessage.getSenderType() == SenderType.MEMBER) {
+                log.debug("member id가 존재할 떄, 즉, member type 메시지 일 때, member id : {}", lastMessage.getMember().getMemberId());
                 if (lastMessage.getMember().getMemberId().equals(senderId)) {
+                    log.debug("마지막 채팅의 member id, 지금 보낸 사람의 member id가 동일할 때");
                     if (isSameMinute(lastMessage.getSentAt(), sentAt)) {
+                        log.debug("1 시간까지 같은가 ?");
                         return DisplayType.SAME_TIME;
                     } else {
+                        log.debug("1 시람만 같은가 ?");
                         return DisplayType.SAME_SENDER;
                     }
                 }
-            } else if (lastMessage.getSenderType() != null) {
+            } else {
+                log.debug("이전 메시지가 system, ai, deleted 메시지 일 떄");
                 if (lastMessage.getSenderType().equals(senderType)) {
+                    log.debug("마지막 채팅의 sender type과 지금 메시지의 sender type이 동일할 때");
                     if (isSameMinute(lastMessage.getSentAt(), sentAt)) {
+                        log.debug("2 시간까지 같은가 ?");
                         return DisplayType.SAME_TIME;
                     } else {
+                        log.debug("2 사람만 같은가 ?");
                         return DisplayType.SAME_SENDER;
                     }
                 }
@@ -268,7 +280,7 @@ public class ChatService{
         if (lastMessages != null && !lastMessages.isEmpty()) {
 
             String lastMessage = lastMessages.iterator().next();
-            ChatMessage lastChatMessage = objectMapper.readValue(lastMessage, ChatMessage.class);
+            RedisMessageDTO lastChatMessage = objectMapper.readValue(lastMessage, RedisMessageDTO.class);
             lastMessageDate = lastChatMessage.getSentAt().toLocalDate();
         }
 
@@ -584,7 +596,7 @@ public class ChatService{
                 .lastReadTime(lastReadAt)
                 .build();
 
-        messagingTemplate.convertAndSend("/topic/chat/active" + chatRoomId, enterChatRoomDTO);
+        messagingTemplate.convertAndSend("/topic/chat/active/" + chatRoomId, enterChatRoomDTO);
         log.debug("enter chat room event -> end");
     }
 
@@ -603,30 +615,39 @@ public class ChatService{
         long minScore = lastReadAt.toEpochMilli();
 
         Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
+        log.debug("update read redis message user -> member validator -> end");
 
         Set<String> redisMessages = redisTemplate.opsForZSet().rangeByScore(messageKey, minScore, Double.POSITIVE_INFINITY);
         if (redisMessages == null || redisMessages.isEmpty()) {
+            log.debug("update read reids message user -> redis empty !!!");
             return;
         }
 
         for (String redisMessage : redisMessages) {
             RedisMessageDTO messageDTO = objectMapper.readValue(redisMessage, RedisMessageDTO.class);
-            String readUsersKey = "chat:" + messageDTO.getUuid() + "readUsers";
+            String readUsersKey = "chat:" + messageDTO.getUuid() + ":readUsers";
 
+            log.debug("update read redis message user -> message uuid : {}, message : {}, readUsersKey : {}", messageDTO.getUuid(), messageDTO.getMessage(), readUsersKey);
             redisTemplate.opsForSet().add(readUsersKey, String.valueOf(member.getMemberId()));
+            log.debug("update read redis message user -> SUCCESS");
         }
     }
 
-    private void updateReadDBMessageUser(Long chatRoomId, Long userId, Instant startInstant) throws JsonProcessingException {
+    private void updateReadDBMessageUser(Long chatRoomId, Long userId, Instant startInstant) {
         LocalDateTime lastReadLocalDateTime = LocalDateTime.ofInstant(startInstant, ZoneId.systemDefault());
         Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
+        log.debug("update read db message user -> member validator -> end");
 
         List<ChatMessage> mysqlMessages = chatMessageRepository.findChatMessageByChatRoom_ChatRoomIdAndSentAtAfter(chatRoomId, lastReadLocalDateTime);
         if (mysqlMessages == null || mysqlMessages.isEmpty()) {
+            log.debug("update read db message user -> mysql empty !!!");
             return;
         }
 
         for (ChatMessage chatMessage : mysqlMessages) {
+            log.debug("update read db message user -> message id : {}, message : {}", chatMessage.getMessageId(), chatMessage.getMessage());
+            if (chatMessage.getSenderType() == SenderType.SYSTEM) continue;
+
             ReadMembers readMembers = ReadMembers.builder()
                     .chatMessage(chatMessage)
                     .member(member)
@@ -634,5 +655,6 @@ public class ChatService{
 
             readMembersRepository.save(readMembers);
         }
+        log.debug("update read db message user -> SUCCESS");
     }
 }
