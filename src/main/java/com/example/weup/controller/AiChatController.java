@@ -1,9 +1,6 @@
 package com.example.weup.controller;
 
-import com.example.weup.dto.request.AiChatRequestDTO;
-import com.example.weup.dto.request.AiMinutesCreateRequestDTO;
-import com.example.weup.dto.request.AiRoleAssignRequestDTO;
-import com.example.weup.dto.request.AiTodoCreateRequestDTO;
+import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.DataResponseDTO;
 import com.example.weup.service.AiChatService;
 import com.fasterxml.jackson.core.JsonProcessingException;
@@ -56,6 +53,16 @@ public class AiChatController {
         aiChatService.aiCreateMinutes(aiMinutesCreateRequestDTO);
 
         log.info("요청자 : Flask Server, AI Create Minutes -> success");
-        return ResponseEntity.ok(DataResponseDTO.of("AI 비서 - Todo 생성이 완료되었습니다."));
+        return ResponseEntity.ok(DataResponseDTO.of("AI 비서 - 회의록 작성이 완료되었습니다."));
+    }
+
+    @PostMapping("/board/minutes/message")
+    public ResponseEntity<DataResponseDTO<String>> aiGetMessagesForMinutes(@RequestBody AiGetMessagesForMinutesRequestDTO aiGetMessagesForMinutesRequestDTO) {
+
+        log.info("요청자 : Flask Server, AI Get Messages for Minutes -> start");
+        String contents = aiChatService.aiGetMessagesForMinutes(aiGetMessagesForMinutesRequestDTO);
+
+        log.info("요청자 : Flask Server, AI Get Messages for Minutes -> success");
+        return ResponseEntity.ok(DataResponseDTO.of(contents, "AI 비서 - 회의록 작성에 필요한 메시지 내역 전달이 완료되었습니다."));
     }
 }

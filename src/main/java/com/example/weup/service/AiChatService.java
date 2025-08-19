@@ -27,8 +27,10 @@ import org.springframework.web.client.RestTemplate;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 @Slf4j
 @Service
@@ -55,7 +57,7 @@ public class AiChatService {
 
     private final ProjectValidator projectValidator;
 
-    private final SimpMessagingTemplate messagingTemplate;
+    private final ChatMessageRepository chatMessageRepository;
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
@@ -79,6 +81,7 @@ public class AiChatService {
             Map<String, Object> jsonBody = new HashMap<>();
             jsonBody.put("user_input", aiChatRequestDTO.getUserInput());
             jsonBody.put("project_id", aiChatRequestDTO.getProjectId());
+            jsonBody.put("chat_room_id", chatRoomId);
 
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(jsonBody, headers);
 
@@ -155,5 +158,19 @@ public class AiChatService {
                 .build();
 
         boardRepository.save(board);
+    }
+
+    @Transactional
+    public String aiGetMessagesForMinutes(AiGetMessagesForMinutesRequestDTO request) {
+
+        List<ChatMessage> messages = chatMessageRepository.findByChatRoomIdAndSentAtBetweenOrderBySentAtAsc(
+                request.getChatRoomId(),
+                request.getStartTime(),
+                request.getEndTime()
+        );
+
+        return messages.stream()
+                .map(ChatMessage::getMessage)
+                .collect(Collectors.joining("\n"));
     }
 }
