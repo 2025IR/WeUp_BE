@@ -1,4 +1,4 @@
-package com.example.weup.config;
+package com.example.weup.handler;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
@@ -11,7 +11,6 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
-import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 @RestControllerAdvice(annotations = {RestController.class})
 public class ExceptionHandlers {

@@ -14,6 +14,4 @@ public class AiTodoCreateRequestDTO {
     private String todoName;
 
     private LocalDate startDate;
-
-    //private Long memberId;
 }
