@@ -60,7 +60,7 @@ public class NotificationService {
         notificationRepository.deleteByIsReadTrueAndNotificationCreatedAtBefore(threshold);
     }
 
-    public void sendPersonalNotification(User user, String message, String type) {
+    public void sendPersonalNotification(User user, String message, String type, Long projectId) {
         Notification notification = notificationRepository.save(
                 Notification.builder()
                         .user(user)
@@ -71,7 +71,8 @@ public class NotificationService {
         messagingTemplate.convertAndSend(
                 "/topic/user/" + user.getUserId(),
                 Map.of("message", notification.getMessage(),
-                        "type", type)
+                        "type", type,
+                        "projectId", projectId)
         );
     }
 
