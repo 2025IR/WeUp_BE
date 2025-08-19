@@ -28,7 +28,7 @@ jobs:
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle*', '**/gradle-wrapper.properties') }}
 
       - name: Build jar
-        working-directory: ./deploy/weup/backend
+        working-directory: .
         run: |
           chmod +x ./gradlew
           ./gradlew clean bootJar -x test
