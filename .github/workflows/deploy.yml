@@ -40,8 +40,9 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
-          source: "deploy/weup/backend/build/libs/*.jar"
+          source: "backend/build/libs/*.jar"
           target: "${{ secrets.DEPLOY_PATH }}/app.jar"
+
 
       - name: Remote deploy - docker compose up
         uses: appleboy/ssh-action@v0.1.7
