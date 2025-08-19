@@ -163,7 +163,7 @@ public class AiChatService {
     @Transactional
     public String aiGetMessagesForMinutes(AiGetMessagesForMinutesRequestDTO request) {
 
-        List<ChatMessage> messages = chatMessageRepository.findByChatRoomIdAndSentAtBetweenOrderBySentAtAsc(
+        List<ChatMessage> messages = chatMessageRepository.findByChatRoom_ChatRoomIdAndSentAtBetweenOrderBySentAtAsc(
                 request.getChatRoomId(),
                 request.getStartTime(),
                 request.getEndTime()
