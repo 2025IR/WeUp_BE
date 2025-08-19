@@ -1,50 +1,105 @@
 package com.example.weup.service;
 
+import com.example.weup.entity.Member;
+import com.example.weup.validate.ChatValidator;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
-import java.util.Collection;
-import java.util.Collections;
+import java.time.Instant;
 import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
+@Slf4j
 @Service
+@RequiredArgsConstructor
 public class SessionService {
 
-    private final ConcurrentMap<String, String> sessionIdToUserMap = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, Set<String>> userToSessionIdMap = new ConcurrentHashMap<>();
+    private final StringRedisTemplate redisTemplate;
 
-    public void save(String sessionId, String userId) {
-        sessionIdToUserMap.put(sessionId, userId);
-        userToSessionIdMap.computeIfAbsent(userId, k -> ConcurrentHashMap.newKeySet()).add(sessionId);
+    private final ChatValidator chatValidator;
+
+    private static final String SESSION_TO_USER_KEY = "ws:session:";
+    private static final String CHATROOM_ACTIVE_MEMBERS_KEY = "chatroom:%s:active:members";
+    private static final String CHATROOM_CONNECT_MEMBERS_KEY = "chatroom:%s:connect:members";
+    private static final String LAST_READ_AT_KEY = "chatroom:%s:lastReadAt:%s";
+
+    // session connect
+    public void saveSession(String sessionId, String userId) {
+        redisTemplate.opsForValue().set(SESSION_TO_USER_KEY + sessionId, userId);
     }
 
-    public void remove(String sessionId) {
-        String userId = sessionIdToUserMap.remove(sessionId);
+    // session disconnect
+    public void removeSession(String sessionId) {
+        String userId = redisTemplate.opsForValue().get(SESSION_TO_USER_KEY + sessionId);
         if (userId != null) {
-            Set<String> sessions = userToSessionIdMap.get(userId);
-            if (sessions != null) {
-                sessions.remove(sessionId);
-                if (sessions.isEmpty()) {
-                    userToSessionIdMap.remove(userId);
-                }
-            }
+            redisTemplate.delete(SESSION_TO_USER_KEY + sessionId);
         }
     }
 
-    public String getUserId(String sessionId) {
-        return sessionIdToUserMap.get(sessionId);
+    // session id -> user id 조회
+    public String getUserIdBySession(String sessionId) {
+        return redisTemplate.opsForValue().get(SESSION_TO_USER_KEY + sessionId);
     }
 
-    public Set<String> getSessionsByUserId(String userId) {
-        return userToSessionIdMap.getOrDefault(userId, Collections.emptySet());
+    // 채팅방 active member 추가
+    public void addActiveMemberToChatRoom(Long chatRoomId, Long userId) {
+        Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
+        redisTemplate.opsForSet().add(String.format(CHATROOM_ACTIVE_MEMBERS_KEY, chatRoomId), String.valueOf(member.getMemberId()));
     }
 
-    public Collection<String> getOnlineUserIds() {
-        return userToSessionIdMap.keySet();
+    // 채팅방 active member 제거
+    public void removeActiveMemberFromChatRoom(Long chatRoomId, Long userId) {
+        Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
+        redisTemplate.opsForSet().remove(String.format(CHATROOM_ACTIVE_MEMBERS_KEY, chatRoomId), String.valueOf(member.getMemberId()));
     }
 
-    public boolean isUserOnline(String userId) {
-        return userToSessionIdMap.containsKey(userId) && !userToSessionIdMap.get(userId).isEmpty();
+    // 채팅방 active member 목록 조회
+    public Set<String> getActiveChatRoomMembers(Long chatRoomId) {
+        return redisTemplate.opsForSet().members(String.format(CHATROOM_ACTIVE_MEMBERS_KEY, chatRoomId));
+    }
+
+    // 채팅방 active member 수 조회
+    public long getActiveMembersCountInChatRoom(Long chatRoomId) {
+        Long size = redisTemplate.opsForSet().size(String.format(CHATROOM_ACTIVE_MEMBERS_KEY, chatRoomId));
+        return size != null ? size : 0;
+    }
+
+    // 채팅방 connect member 추가
+    public void addConnectMemberToChatRoom(Long chatRoomId, Long userId) {
+        log.debug("\n session service - add connect member to chat room IN");
+        Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
+        log.debug("chat validator OUT");
+        redisTemplate.opsForSet().add(String.format(CHATROOM_CONNECT_MEMBERS_KEY, chatRoomId), String.valueOf(member.getMemberId()));
+    }
+
+    // 채팅방 connect member 제거
+    public void removeConnectMemberFromChatRoom(Long chatRoomId, Long userId) {
+        Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
+        redisTemplate.opsForSet().remove(String.format(CHATROOM_CONNECT_MEMBERS_KEY, chatRoomId), String.valueOf(member.getMemberId()));
+    }
+
+    // 채팅방 connect member 목록 조회
+    public Set<String> getConnectChatRoomMembers(Long chatRoomId) {
+        return redisTemplate.opsForSet().members(String.format(CHATROOM_CONNECT_MEMBERS_KEY, chatRoomId));
+    }
+
+    // 채팅방 connect member 수 조회
+    public long getConnectMembersCountInChatRoom(Long chatRoomId) {
+        Long size = redisTemplate.opsForSet().size(String.format(CHATROOM_CONNECT_MEMBERS_KEY, chatRoomId));
+        return size != null ? size : 0;
+    }
+
+    // lastReadAt 저장
+    public void saveLastReadAt(Long chatRoomId, Long userId, Instant lastReadAt) {
+        log.debug("\n\n session service - save last read at IN");
+        redisTemplate.opsForValue().set(String.format(LAST_READ_AT_KEY, chatRoomId, userId), String.valueOf(lastReadAt.toEpochMilli()));
+    }
+
+    // lastReadAt 불러오기
+    public Instant getLastReadAt(Long chatRoomId, Long userId) {
+        String lastReadAtStr = redisTemplate.opsForValue().get(String.format(LAST_READ_AT_KEY, chatRoomId, userId));
+        if (lastReadAtStr == null) return null;
+        return Instant.ofEpochMilli(Long.parseLong(lastReadAtStr));
     }
 }
