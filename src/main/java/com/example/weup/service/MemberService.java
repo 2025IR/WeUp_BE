@@ -85,8 +85,8 @@ public class MemberService {
                 chatRoomService.addChatRoomMember(chatRoomRepository.findByProjectAndBasicTrue(project), existingMember.getMemberId());
 
                 String msg = NotificationType.MEMBER_INVITED.format(invitee.getName(), project.getProjectName());
-                notificationService.sendPersonalNotification(invitee, msg);
-                notificationService.broadcastProjectNotification(project, msg, List.of(invitee.getUserId()));
+                notificationService.sendPersonalNotification(invitee, msg, "INVITE");
+                notificationService.broadcastProjectNotification(project, msg, List.of(invitee.getUserId()), "INVITE");
 
                 return "초대가 완료되었습니다.";
             } else {
@@ -107,8 +107,8 @@ public class MemberService {
         chatRoomService.addChatRoomMember(chatRoomRepository.findByProjectAndBasicTrue(project), member.getMemberId());
 
         String msg = NotificationType.MEMBER_INVITED.format(invitee.getName(), project.getProjectName());
-        notificationService.sendPersonalNotification(invitee, msg);
-        notificationService.broadcastProjectNotification(project, msg, List.of(invitee.getUserId()));
+        notificationService.sendPersonalNotification(invitee, msg, "INVITE");
+        notificationService.broadcastProjectNotification(project, msg, List.of(invitee.getUserId()), "INVITE");
 
         return "초대가 완료되었습니다.";
     }
@@ -182,7 +182,7 @@ public class MemberService {
         memberRepository.save(newLeaderMember);
 
         notificationService.sendPersonalNotification(newLeaderMember.getUser(),
-                NotificationType.LEADER_DELEGATED.format(project.getProjectName(),newLeaderMember.getUser().getName()));
+                NotificationType.LEADER_DELEGATED.format(project.getProjectName(),newLeaderMember.getUser().getName()), "DELEGATE");
     }
 
     @Transactional
@@ -222,8 +222,8 @@ public class MemberService {
         }
 
         String msg = NotificationType.MEMBER_DELETED.format(targetMember.getUser().getName(), project.getProjectName());
-        notificationService.sendPersonalNotification(targetMember.getUser(), msg);
-        notificationService.broadcastProjectNotification(project, msg, List.of(targetMember.getUser().getUserId()));
+        notificationService.sendPersonalNotification(targetMember.getUser(), msg, "DELETE");
+        notificationService.broadcastProjectNotification(project, msg, List.of(targetMember.getUser().getUserId()), "DELETE");
 
     }
 

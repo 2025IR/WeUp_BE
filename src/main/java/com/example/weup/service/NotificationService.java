@@ -60,7 +60,7 @@ public class NotificationService {
         notificationRepository.deleteByIsReadTrueAndNotificationCreatedAtBefore(threshold);
     }
 
-    public void sendPersonalNotification(User user, String message) {
+    public void sendPersonalNotification(User user, String message, String type) {
         Notification notification = notificationRepository.save(
                 Notification.builder()
                         .user(user)
@@ -70,11 +70,12 @@ public class NotificationService {
 
         messagingTemplate.convertAndSend(
                 "/topic/user/" + user.getUserId(),
-                Map.of("message", notification.getMessage())
+                Map.of("message", notification.getMessage(),
+                        "type", type)
         );
     }
 
-    public void broadcastProjectNotification(Project project, String message, List<Long> excludeUserIds) {
+    public void broadcastProjectNotification(Project project, String message, List<Long> excludeUserIds, String type) {
         List<Member> members = project.getMembers().stream()
                 .filter(m -> !m.isMemberDeleted() && (excludeUserIds == null || !excludeUserIds.contains(m.getUser().getUserId())))
                 .collect(Collectors.toList());
@@ -92,7 +93,8 @@ public class NotificationService {
 
         messagingTemplate.convertAndSend(
                 "/topic/project/" + project.getProjectId(),
-                Map.of("message", message)
+                Map.of("message", message,
+                        "type", type)
         );
     }
 }

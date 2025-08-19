@@ -147,7 +147,7 @@ public class ProjectService {
 
         if (!project.isStatus()) {
             String msg = NotificationType.PROJECT_ENDED.format(project.getProjectName());
-            notificationService.broadcastProjectNotification(project, msg, null);
+            notificationService.broadcastProjectNotification(project, msg, null, "FINISH");
         }
     }
 
