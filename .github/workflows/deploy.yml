@@ -30,8 +30,7 @@ jobs:
       - name: Build jar
         working-directory: ./deploy/weup/backend
         run: |
-          # gradlew가 있다면 실행, 없으면 로컬 gradle 사용 시 오류 발생하니 wrapper 포함 확인
-          chmod +x ./gradlew || true
+          chmod +x ./gradlew
           ./gradlew clean bootJar -x test
 
       - name: Copy jar to server
@@ -54,8 +53,6 @@ jobs:
           script: |
             set -e
             cd ${{ secrets.DEPLOY_PATH }}
-            # 파일 소유권 문제 방지 (DEPLOY_USER로 소유권 설정)
             sudo chown -R ${{ secrets.DEPLOY_USER }}:${{ secrets.DEPLOY_USER }} .
-            # 안전하게 재시작
             sudo docker compose down || true
             sudo docker compose up -d --build
