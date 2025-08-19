@@ -40,7 +40,7 @@ jobs:
           username: ${{ secrets.DEPLOY_USER }}
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
-          source: "backend/build/libs/*.jar"
+          source: "build/libs/*.jar"
           target: "${{ secrets.DEPLOY_PATH }}/app.jar"
 
 
