@@ -33,6 +33,9 @@ jobs:
           chmod +x ./gradlew
           ./gradlew clean bootJar -x test
 
+      - name: Rename jar
+        run: mv build/libs/*.jar build/libs/app.jar
+
       - name: Copy jar to server
         uses: appleboy/scp-action@v0.1.7
         with:
@@ -41,7 +44,7 @@ jobs:
           key: ${{ secrets.DEPLOY_SSH_KEY }}
           port: 22
           source: "build/libs/*.jar"
-          target: "${{ secrets.DEPLOY_PATH }}/app.jar"
+          target: "${{ secrets.DEPLOY_PATH }}/"
 
 
       - name: Remote deploy - docker compose up
