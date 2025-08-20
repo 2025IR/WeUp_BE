@@ -18,14 +18,14 @@ public class ChatRoom {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
-    @Column(name = "chatroom_id", nullable = false, updatable = false)
+    @Column(name = "chat_room_id", nullable = false, updatable = false)
     private Long chatRoomId;
 
     @Column(nullable = false)
     private String chatRoomName;
 
-    @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "project_id")
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "project_id", nullable = false)
     private Project project;
 
     @Column(nullable = false)

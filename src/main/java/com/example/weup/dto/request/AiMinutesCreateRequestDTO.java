@@ -10,7 +10,11 @@ import lombok.NoArgsConstructor;
 @Builder
 @Getter
 public class AiMinutesCreateRequestDTO {
+
     private Long projectId;
+
     private String title;
+
     private String contents;
+
 }

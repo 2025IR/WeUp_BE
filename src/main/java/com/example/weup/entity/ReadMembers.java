@@ -11,7 +11,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @Entity
-@Table
+@Table (indexes = @Index(name = "ux_read_members_msg_member", columnList = "message_id, member_id", unique = true))
 public class ReadMembers {
 
     @Id

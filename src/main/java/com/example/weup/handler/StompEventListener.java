@@ -73,8 +73,8 @@ public class StompEventListener {
             Long userId = Long.valueOf(userIdStr);
 
             sessionService.addActiveMemberToChatRoom(chatRoomId, userId);
-            chatService.processChatRoomEntry(chatRoomId, userId);
             chatService.enterChatRoomEvent(chatRoomId, userId);
+            chatService.processChatRoomEntry(chatRoomId, userId);
         }
     }
 }
