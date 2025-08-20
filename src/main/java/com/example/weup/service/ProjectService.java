@@ -1,13 +1,13 @@
 package com.example.weup.service;
 
+import com.example.weup.GeneralException;
+import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.ProjectCreateRequestDTO;
+import com.example.weup.dto.request.ProjectDescriptionUpdateRequestDTO;
 import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
-import com.example.weup.entity.Board;
-import com.example.weup.entity.ChatRoom;
-import com.example.weup.entity.Member;
-import com.example.weup.entity.Project;
+import com.example.weup.entity.*;
 import com.example.weup.repository.*;
 import com.example.weup.validate.MemberValidator;
 import com.example.weup.validate.ProjectValidator;
@@ -16,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -24,6 +25,8 @@ import java.io.IOException;
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
+import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
 @Slf4j
@@ -45,9 +48,14 @@ public class ProjectService {
     private final FileRepository fileRepository;
     private final RoleRepository roleRepository;
     private final TodoRepository todoRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Value("${project.default-image}")
     private String defaultProjectImage;
+
+    private String lockKey(Long projectId) {
+        return "lock:project:" + projectId;
+    }
 
     @Transactional
     public Project createProject(ProjectCreateRequestDTO projectCreateRequestDTO) throws IOException {
@@ -145,18 +153,6 @@ public class ProjectService {
     }
 
     @Transactional
-    public void editProjectDescription(Long userId, Long projectId, String description) {
-
-        Project project = projectValidator.validateActiveProject(projectId);
-        memberValidator.validateActiveMemberInProject(userId, projectId);
-
-        project.editProjectDescription(description);
-
-        projectRepository.save(project);
-        log.info("edit project description -> db save success : project id - {}", project.getProjectId());
-    }
-
-    @Transactional
     public void deleteProject(Long userId, Long projectId) {
 
         Project project = projectValidator.validateAccessToGetProjectDetail(projectId);
@@ -236,5 +232,50 @@ public class ProjectService {
         // 프로젝트
         projectRepository.deleteAll(projectToDelete);
         log.info("delete project -> Project db data deleted");
+    }
+
+    public void startEditProjectDescription(Long userId, Long projectId) {
+        Member member = memberValidator.validateActiveMemberInProject(userId, projectId);
+
+        Boolean success = redisTemplate.opsForValue().setIfAbsent(lockKey(projectId), "locked", 3, TimeUnit.MINUTES);
+        if (Boolean.FALSE.equals(success)) {
+            throw new GeneralException(ErrorInfo.IS_EDITING_NOW);
+        }
+
+        messagingTemplate.convertAndSend(
+                "/topic/project/" + projectId,
+                Map.of("type", "EDIT_LOCK",
+                        "lockedBy", member.getUser().getName(),
+                        "memberId", member.getMemberId())
+        );
+    }
+
+    public void broadcastProjectDescriptionUpdate(Long userId, String description, Long projectId) {
+        Member member = memberValidator.validateActiveMemberInProject(userId, projectId);
+
+        messagingTemplate.convertAndSend(
+                "/topic/project/" + projectId,
+                Map.of("type", "EDIT_UPDATE",
+                        "description", description,
+                        "editedBy", member.getUser().getName(),
+                        "memberId", member.getMemberId())
+        );
+    }
+
+    @Transactional
+    public void editProjectDescription(Long userId, Long projectId, String description) {
+        Project project = projectValidator.validateActiveProject(projectId);
+        Member member = memberValidator.validateActiveMemberInProject(userId, projectId);
+
+        project.editProjectDescription(description);
+        projectRepository.save(project);
+
+        redisTemplate.delete(lockKey(projectId));
+
+        messagingTemplate.convertAndSend(
+                "/topic/project/" + projectId,
+                Map.of("type", "EDIT_UNLOCK",
+                        "memberId", member.getMemberId())
+        );
     }
 }
