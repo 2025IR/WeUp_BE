@@ -152,18 +152,6 @@ public class ProjectService {
         log.info("edit project information -> db save success : project id - {}", project.getProjectId());
     }
 
-//    @Transactional
-//    public void editProjectDescription(Long userId, Long projectId, String description) {
-//
-//        Project project = projectValidator.validateActiveProject(projectId);
-//        memberValidator.validateActiveMemberInProject(userId, projectId);
-//
-//        project.editProjectDescription(description);
-//
-//        projectRepository.save(project);
-//        log.info("edit project description -> db save success : project id - {}", project.getProjectId());
-//    }
-
     @Transactional
     public void deleteProject(Long userId, Long projectId) {
 
