@@ -31,7 +31,7 @@ public class JwtFilter extends OncePerRequestFilter {
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
 
     private static final List<String> WHITE_LIST = List.of(
-            "/user/signIn", "/user/signup", "/user/reissuetoken", "/user/email", "/user/email/check",
+            "/user/signIn", "/user/signup", "/user/reissuetoken", "/user/email", "/user/email/check", "/welcome",
             "/error", "/ai", "/ai/**", "/ws", "/ws/**"
     );
 
