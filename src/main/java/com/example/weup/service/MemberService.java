@@ -38,10 +38,6 @@ public class MemberService {
     private final MemberRoleRepository memberRoleRepository;
     private final ChatRoomRepository chatRoomRepository;
     private final ChatRoomMemberRepository chatRoomMemberRepository;
-    private final NotificationRepository notificationRepository;
-
-    private final SimpMessagingTemplate messagingTemplate;
-
     private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
@@ -200,7 +196,6 @@ public class MemberService {
                 Map.of("type", "LIST_CHANGED",
                         "editedBy", formerLeaderMember.getUser().getName())
         );
-    }
 
         notificationService.sendPersonalNotification(newLeaderMember.getUser(),
                 NotificationType.LEADER_DELEGATED.format(project.getProjectName(),newLeaderMember.getUser().getName()),
@@ -246,6 +241,12 @@ public class MemberService {
         String msg = NotificationType.MEMBER_DELETED.format(targetMember.getUser().getName(), project.getProjectName());
         notificationService.sendPersonalNotification(targetMember.getUser(), msg, "DELETE", deleteMemberRequestDTO.getProjectId());
         notificationService.broadcastProjectNotification(project, msg, List.of(targetMember.getUser().getUserId()), "DELETE");
+
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + deleteMemberRequestDTO.getProjectId(),
+                Map.of("type", "LIST_CHANGED",
+                        "editedBy", requestMember.getUser().getName())
+        );
     }
 
     @Transactional
@@ -259,12 +260,6 @@ public class MemberService {
         return roles.stream()
                 .map(role -> new RoleListResponseDTO(role.getRoleId(), role.getRoleName(), role.getRoleColor()))
                 .collect(Collectors.toList());
-
-        messagingTemplate.convertAndSend(
-                "/topic/member/" + deleteMemberRequestDTO.getProjectId(),
-                Map.of("type", "LIST_CHANGED",
-                        "editedBy", requestMember.getUser().getName())
-        );
     }
 
     @Transactional
