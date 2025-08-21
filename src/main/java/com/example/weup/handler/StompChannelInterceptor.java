@@ -121,7 +121,6 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 if (destination == null) {
                     log.warn("SEND command receive with Null Destination from Session Id - {}", accessor.getSessionId());
                 }
-                // todo. 백엔드가 보내는 알림은 거치지 않는지 확인
                 else if (destination.startsWith("/app/send") || destination.startsWith("/app/project") ||
                         destination.startsWith("/app/todo") || destination.startsWith("/app/chat") || destination.startsWith("/app/schedule")) {
                     log.info("SEND Destination Validate -> Success : User - {}, Destination - {}", userId, destination);

@@ -181,7 +181,10 @@ public class ChatService{
         setReceiveMessageField(receiveMessageResponseDto);
 
         String readMessageKey = "chat:" + receiveMessageResponseDto.getUuid() + ":readUsers";
-        saveReadUser(readMessageKey, String.valueOf(receiveMessageResponseDto.getSenderId()));
+        if (message.getSenderType() == SenderType.MEMBER) {
+            log.debug("save message -> sender type = MEMBER 채팅만 read user 로직 실행");
+            saveReadUser(readMessageKey, String.valueOf(receiveMessageResponseDto.getSenderId()));
+        }
 
         int totalMemberCount = chatRoomMemberRepository.countByChatRoom_ChatRoomId(chatRoomId);
         long readCount = sessionService.getActiveMembersCountInChatRoom(chatRoomId);
