@@ -58,7 +58,6 @@ public class ChatRoomService {
     public ChatRoom createBasicChatRoom(Project project, String projectName) {
 
         ChatRoom chatRoom = ChatRoom.builder()
-                .chatRoomName(projectName + " 채팅방")
                 .project(project)
                 .basic(true)
                 .build();

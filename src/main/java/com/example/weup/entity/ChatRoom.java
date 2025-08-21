@@ -22,7 +22,8 @@ public class ChatRoom {
     private Long chatRoomId;
 
     @Column(nullable = false)
-    private String chatRoomName;
+    @Builder.Default
+    private String chatRoomName = "기본 채팅방";
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "project_id", nullable = false)
