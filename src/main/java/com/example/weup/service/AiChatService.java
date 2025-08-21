@@ -125,6 +125,12 @@ public class AiChatService {
                 .build();
 
         memberRoleRepository.save(memberRole);
+
+        messagingTemplate.convertAndSend(
+                "/topic/role/" + aiRoleAssignDto.getProjectId(),
+                Map.of("editedBy", "AI 비서")
+        );
+
         log.info("AI Request Assign Role -> success : member id - {}, role id - {}", member.getMemberId(), role.getRoleId());
     }
 
@@ -140,6 +146,12 @@ public class AiChatService {
                 .build();
 
         todoRepository.save(todo);
+
+        messagingTemplate.convertAndSend(
+                "/topic/todo/" + aiTodoCreateDto.getProjectId(),
+                Map.of("createdBy", "AI 비서")
+        );
+
         log.info("AI Request Todo Create -> success : project id - {}, todo id - {}", project.getProjectId(), todo.getTodoId());
     }
 

@@ -8,17 +8,16 @@ import com.example.weup.dto.request.EditTodoStatusRequestDTO;
 import com.example.weup.dto.response.TodoAssigneeResponseDTO;
 import com.example.weup.dto.response.TodoListResponseDTO;
 import com.example.weup.entity.*;
-import com.example.weup.repository.MemberRepository;
-import com.example.weup.repository.ProjectRepository;
-import com.example.weup.repository.TodoMemberRepository;
-import com.example.weup.repository.TodoRepository;
+import com.example.weup.repository.*;
 import com.example.weup.validate.MemberValidator;
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.stream.Collectors;
 
@@ -33,11 +32,12 @@ public class TodoService {
     private final MemberRepository memberRepository;
     private final TodoRepository todoRepository;
     private final TodoMemberRepository todoMemberRepository;
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public void createTodo(Long userId, CreateTodoRequestDTO createTodoRequestDTO) {
 
-        memberValidator.validateActiveMemberInProject(userId, createTodoRequestDTO.getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, createTodoRequestDTO.getProjectId());
 
         Project project = projectRepository.findById(createTodoRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
@@ -47,6 +47,11 @@ public class TodoService {
                 .build();
 
         todoRepository.save(todo);
+
+        messagingTemplate.convertAndSend(
+                "/topic/todo/" + createTodoRequestDTO.getProjectId(),
+                Map.of("createdBy", member.getUser().getName())
+        );
     }
 
     public List<TodoListResponseDTO> getTodoList(Long userId, Long projectId) {
@@ -101,7 +106,7 @@ public class TodoService {
         Todo todo = todoRepository.findById(editTodoRequestDTO.getTodoId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));
 
-        memberValidator.validateActiveMemberInProject(userId, todo.getProject().getProjectId());
+        Member requestMember = memberValidator.validateActiveMemberInProject(userId, todo.getProject().getProjectId());
 
         todo.edit(editTodoRequestDTO.getTodoName(), editTodoRequestDTO.getStartDate(), editTodoRequestDTO.getEndDate());
 
@@ -120,6 +125,11 @@ public class TodoService {
                             .build())
                     .forEach(todoMemberRepository::save);
         }
+
+        messagingTemplate.convertAndSend(
+                "/topic/todo/" + todo.getProject().getProjectId(),
+                Map.of("editedBy", requestMember.getUser().getName())
+        );
     }
 
 
@@ -134,10 +144,15 @@ public class TodoService {
         Todo todo = todoRepository.findById(editTodoStatusRequestDTO.getTodoId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));
 
-        memberValidator.validateActiveMemberInProject(userId, todo.getProject().getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, todo.getProject().getProjectId());
 
         todo.changeStatus(editTodoStatusRequestDTO.getStatus());
         todoRepository.save(todo);
+
+        messagingTemplate.convertAndSend(
+                "/topic/todo/" + todo.getProject().getProjectId(),
+                Map.of("editedBy", member.getUser().getName())
+        );
     }
 
     @Transactional
@@ -146,10 +161,15 @@ public class TodoService {
         Todo todo = todoRepository.findById(todoId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TODO_NOT_FOUND));
 
-        memberValidator.validateActiveMemberInProject(userId, todo.getProject().getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, todo.getProject().getProjectId());
 
         todoMemberRepository.deleteAllByTodo_TodoId(todoId);
 
         todoRepository.deleteById(todoId);
+
+        messagingTemplate.convertAndSend(
+                "/topic/todo/" + todo.getProject().getProjectId(),
+                Map.of("deletedBy", member.getUser().getName())
+        );
     }
 }

@@ -11,6 +11,7 @@ import com.example.weup.validate.MemberValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -46,6 +47,8 @@ public class MemberService {
     private final ChatRoomRepository chatRoomRepository;
 
     private final ChatRoomMemberRepository chatRoomMemberRepository;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     @Transactional
     public Member addProjectCreater(Long userId, Project project) {
@@ -91,6 +94,13 @@ public class MemberService {
             if (existingMember.isMemberDeleted()) {
                 existingMember.reJoin();
                 chatRoomService.addChatRoomMember(chatRoomRepository.findByProjectAndBasicTrue(project), existingMember.getMemberId());
+
+                messagingTemplate.convertAndSend(
+                        "/topic/member/" + projectInviteRequestDTO.getProjectId(),
+                        Map.of("type", "LIST_CHANGED",
+                                "editedBy", inviter.getName())
+                );
+
                 return "초대가 완료되었습니다.";
             } else {
                 throw new GeneralException(ErrorInfo.ALREADY_IN_PROJECT);
@@ -108,6 +118,12 @@ public class MemberService {
         memberRepository.save(member);
 
         chatRoomService.addChatRoomMember(chatRoomRepository.findByProjectAndBasicTrue(project), member.getMemberId());
+
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + projectInviteRequestDTO.getProjectId(),
+                Map.of("type", "LIST_CHANGED",
+                        "editedBy", inviter.getName())
+        );
 
         return "초대가 완료되었습니다.";
     }
@@ -179,6 +195,12 @@ public class MemberService {
 
         memberRepository.save(formerLeaderMember);
         memberRepository.save(newLeaderMember);
+
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + leaderDelegateRequestDTO.getProjectId(),
+                Map.of("type", "LIST_CHANGED",
+                        "editedBy", formerLeaderMember.getUser().getName())
+        );
     }
 
     @Transactional
@@ -230,6 +252,12 @@ public class MemberService {
                 chatService.sendSystemMessage(chatRoom.getChatRoomId(), chatRoomMember.getMember().getUser().getName() + "님이 채팅방에서 퇴장했습니다.");
             }
         }
+
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + deleteMemberRequestDTO.getProjectId(),
+                Map.of("type", "LIST_CHANGED",
+                        "editedBy", requestMember.getUser().getName())
+        );
     }
 
     @Transactional
@@ -265,12 +293,18 @@ public class MemberService {
                     .build();
 
             memberRoleRepository.save(memberRole);
+
+            messagingTemplate.convertAndSend(
+                    "/topic/member/" + assignRoleRequestDTO.getProjectId(),
+                    Map.of("type", "LIST_CHANGED",
+                            "editedBy", member.getUser().getName())
+            );
         }
     }
 
     @Transactional
     public void createRole(Long userId, CreateRoleRequestDTO createRoleRequestDTO) {
-        memberValidator.validateActiveMemberInProject(userId, createRoleRequestDTO.getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, createRoleRequestDTO.getProjectId());
 
         Project project = projectRepository.findById(createRoleRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
@@ -285,6 +319,12 @@ public class MemberService {
                 .build();
 
         roleRepository.save(role);
+
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + createRoleRequestDTO.getProjectId(),
+                Map.of("type", "ROLE_CHANGED",
+                        "editedBy", member.getUser().getName())
+        );
     }
 
     @Transactional
@@ -292,7 +332,7 @@ public class MemberService {
         String roleName = editRoleRequestDTO.getRoleName();
         String roleColor = editRoleRequestDTO.getRoleColor();
 
-        memberValidator.validateActiveMemberInProject(userId, editRoleRequestDTO.getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, editRoleRequestDTO.getProjectId());
 
         if ((roleName == null || roleName.isEmpty()) && (roleColor == null || roleColor.isEmpty())) {
             throw new GeneralException(ErrorInfo.EMPTY_INPUT_VALUE);
@@ -307,12 +347,18 @@ public class MemberService {
 
         role.editRole(roleName, roleColor);
 
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + editRoleRequestDTO.getProjectId(),
+                Map.of("type", "ROLE_CHANGED",
+                        "editedBy", member.getUser().getName())
+        );
+
         roleRepository.save(role);
     }
 
     @Transactional
     public void removeRole(Long userId, DeleteRoleRequestDTO deleteRoleRequestDTO) {
-        memberValidator.validateActiveMemberInProject(userId, deleteRoleRequestDTO.getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, deleteRoleRequestDTO.getProjectId());
 
 
         Role role = roleRepository.findById(deleteRoleRequestDTO.getRoleId())
@@ -321,6 +367,12 @@ public class MemberService {
         memberRoleRepository.deleteByRole(role);
 
         roleRepository.delete(role);
-    }
 
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + deleteRoleRequestDTO.getProjectId(),
+                Map.of("type", "ROLE_CHANGED",
+                        "editedBy", member.getUser().getName())
+        );
+
+    }
 }
