@@ -20,6 +20,7 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
@@ -34,6 +35,8 @@ import java.util.*;
 public class AiChatService {
 
     private final RestTemplate restTemplate;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     private final ChatService chatService;
 
@@ -54,7 +57,9 @@ public class AiChatService {
     private final ProjectValidator projectValidator;
 
     private final StringRedisTemplate redisTemplate;
+
     private final ChatValidator chatValidator;
+
     private final ChatMessageRepository chatMessageRepository;
 
     @Value("${ai.server.url}")
@@ -81,6 +86,7 @@ public class AiChatService {
             Map<String, Object> jsonBody = new HashMap<>();
             jsonBody.put("user_input", aiChatRequestDTO.getUserInput());
             jsonBody.put("project_id", String.valueOf(aiChatRequestDTO.getProjectId()));
+            jsonBody.put("chat_room_id", String.valueOf(chatRoomId));
             jsonBody.put("mode", "auto");
 
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(jsonBody, headers);
@@ -90,15 +96,57 @@ public class AiChatService {
 
             JsonNode root = objectMapper.readTree(response.getBody());
             log.debug("send message to ai -> response data check, root : {}", root.toString());
-            String realMessage = root.get("output").asText();
-            log.debug("send message to ai -> response data check, realMessage : {}", realMessage);
 
-            if (Objects.equals(realMessage, "")) {
-                throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
+            String route = root.get("route").asText();
+            if (route.equals("chat")) {
+                String realMessage = root.get("output").asText();
+                log.debug("send message to ai -> response data check, realMessage : {}", realMessage);
+
+                if (Objects.equals(realMessage, "")) {
+                    throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
+                }
+                log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
+
+                chatService.sendAIMessage(chatRoomId, realMessage, aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
             }
-            log.info("send message to ai -> POST Request To AI Flask Server success : message - {}", realMessage);
+            else if (route.equals("http")) {
+                log.info("AI 서버의 HTTP 요청에 따른 응답 성공");
 
-            chatService.sendAIMessage(chatRoomId, realMessage, aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
+                JsonNode outputNode = root.get("output");
+                if (outputNode.isNull()) {
+                    log.debug("output null ERROR");
+                    chatService.sendAIMessage(chatRoomId, "오류 발생", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
+                    return;
+                }
+
+                JsonNode toolNode = outputNode.get("tool");
+                if (toolNode.asText().equals("change_role")) {
+                    chatService.sendAIMessage(chatRoomId, "역할 변경이 완료되었습니다.", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
+                    log.info("AI 서버의 HTTP 요청에 따른 역할 변경 완료");
+                }
+                else if (toolNode.asText().equals("todo_create")) {
+                    chatService.sendAIMessage(chatRoomId, "투두 생성이 완료되었습니다.", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
+                    log.info("AI 서버의 HTTP 요청에 따른 투두 생성 완료");
+                }
+                else if (toolNode.asText().equals("meeting_create")) {
+                    chatService.sendAIMessage(chatRoomId, "회의록 작성이 완료되었습니다.", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
+                    log.info("AI 서버의 HTTP 요청에 따른 회의록 작성 완료");
+                }
+            }
+            else if (route.equals("clarify")){
+                String realMessage = root.get("output").asText();
+
+                if (Objects.equals(realMessage, "")) {
+                    throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
+                    //todo. 변경
+                }
+
+                chatService.sendAIMessage(chatRoomId, realMessage, aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
+                log.info("AI 서버에 입력된 정보 부족, message - {}", realMessage);
+            }
+            else
+                log.warn("서버의 잘못된 요청, route : {}", route);
+
 
         } catch (RestClientException e) {
             throw new RuntimeException("AI Chat 서버 요청 중 오류 발생 : " + e);
@@ -126,10 +174,7 @@ public class AiChatService {
 
         memberRoleRepository.save(memberRole);
 
-        messagingTemplate.convertAndSend(
-                "/topic/role/" + aiRoleAssignDto.getProjectId(),
-                Map.of("editedBy", "AI 비서")
-        );
+        messagingTemplate.convertAndSend("/topic/role/" + aiRoleAssignDto.getProjectId(), Map.of("editedBy", "AI 비서"));
 
         log.info("AI Request Assign Role -> success : member id - {}, role id - {}", member.getMemberId(), role.getRoleId());
     }
@@ -199,7 +244,7 @@ public class AiChatService {
         combinedMessages.addAll(mysqlMessages);
 
         if (combinedMessages.isEmpty()) {
-            log.debug("AI Get Messages for Minute -> ERROR : 해당 날짜의 메시지 없음.  Start At : {}", aiGetMsgDTO.getStartTime());
+            log.debug("AI Get Messages for Minutes -> ERROR : 해당 날짜의 메시지 없음.  Start At : {}", aiGetMsgDTO.getStartTime());
             return null;
         }
 
@@ -208,12 +253,13 @@ public class AiChatService {
         StringBuilder returnMessage = new StringBuilder();
         for (ChatMessage message : combinedMessages) {
             if (message.getSenderType() == SenderType.SYSTEM) continue;
+            else if (message.getSenderType() == SenderType.AI) continue;
 
             returnMessage.append(message.getMessage()).append("/n");
         }
 
         if (!returnMessage.isEmpty()) returnMessage.setLength(returnMessage.length() - 1);
-        log.debug("\nAI Get Messages for Minute -> 합친 메시지 내역 확인\n");
+        log.debug("\nAI Get Messages for Minutes -> 합친 메시지 내역 확인\n");
         log.debug(returnMessage + "\n\n\n");
 
         return returnMessage.toString();

@@ -61,10 +61,10 @@ public class AiChatController {
     @PostMapping("/minutes/message")
     public ResponseEntity<DataResponseDTO<String>> aiGetMessagesForMinute(@RequestBody AiGetMessageRequestDTO aiGetMessageRequestDTO)  throws JsonProcessingException {
 
-        log.info("요청자 : Flask Server, AI Get Messages for Minute -> start");
+        log.info("요청자 : Flask Server, AI Get Messages for Minutes -> start");
         String contents = aiChatService.aiGetMessages(aiGetMessageRequestDTO);
 
-        log.info("요청자 : Flask Server, AI Get Messages for Minute -> success");
+        log.info("요청자 : Flask Server, AI Get Messages for Minutes -> success");
         return ResponseEntity.ok(DataResponseDTO.of(contents, "회의록 작성에 필요한 메시지 내역 전달이 완료되었습니다."));
     }
 }
