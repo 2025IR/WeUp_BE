@@ -82,7 +82,7 @@ public class ChatService{
                 .memberId(sendMember.getMemberId())
                 .message(messageRequestDTO.getMessage())
                 .isImage(messageRequestDTO.getIsImage())
-                .sentAt(messageRequestDTO.getSentAt())
+                .sentAt(LocalDateTime.now())
                 .displayType(setDisplayType(chatRoomId, messageRequestDTO.getSenderId(), SenderType.MEMBER, messageRequestDTO.getSentAt()))
                 .build();
 
@@ -174,7 +174,7 @@ public class ChatService{
 
         log.debug("\n Send Save Message IN");
         String saveMessageKey = "chat:room:" + chatRoomId;
-        long sentAtMilli = message.getSentAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        long sentAtMilli = message.getSentAt().atZone(ZoneId.of("Asia/Seoul")).toInstant().toEpochMilli();
         redisTemplate.opsForZSet().add(saveMessageKey, objectMapper.writeValueAsString(message), sentAtMilli);
 
         ReceiveMessageResponseDTO receiveMessageResponseDto = ReceiveMessageResponseDTO.fromRedisMessageDTO(message);
@@ -199,7 +199,7 @@ public class ChatService{
         messagingTemplate.convertAndSend("/topic/chat/connect/" + chatRoomId, connectResponseDTO);
         log.debug("connect member 에게 메시지 전송, destination : /topic/chat/connect/" + chatRoomId);
 
-        Set<String> connectMembers = sessionService.getConnectChatRoomMembers(chatRoomId);
+        Set<String> connectMembers = sessionService.getActiveChatRoomMembers(chatRoomId);
         log.debug("\n read members 추가 시작");
         for (String memberId : connectMembers) {
             saveReadUser(readMessageKey, memberId);
@@ -435,7 +435,7 @@ public class ChatService{
         log.debug("flush chat data from redis -> success : deleted keys - {}", redisKeysToDelete);
     }
 
-    private ChatMessage translateRedisDtoIntoChatMessage(RedisMessageDTO message) {
+    public ChatMessage translateRedisDtoIntoChatMessage(RedisMessageDTO message) {
 
         ChatRoom chatRoom = chatValidator.validateChatRoom(message.getChatRoomId());
 
@@ -590,6 +590,7 @@ public class ChatService{
         log.debug("\n enter chat room event IN");
         Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
         Instant lastReadAt = sessionService.getLastReadAt(chatRoomId, userId);
+        log.debug("Enter Chat Room Event -> {}", lastReadAt);
 
         EnterChatRoomResponseDTO enterChatRoomDTO = EnterChatRoomResponseDTO.builder()
                 .memberId(member.getMemberId())
@@ -600,6 +601,7 @@ public class ChatService{
         log.debug("enter chat room event -> end");
     }
 
+    @Transactional
     public void processChatRoomEntry(Long chatRoomId, Long userId) throws JsonProcessingException {
         Instant lastReadAt = sessionService.getLastReadAt(chatRoomId, userId);
         Instant startInstant = (lastReadAt == null) ? Instant.EPOCH : lastReadAt;
@@ -648,13 +650,13 @@ public class ChatService{
             log.debug("update read db message user -> message id : {}, message : {}", chatMessage.getMessageId(), chatMessage.getMessage());
             if (chatMessage.getSenderType() == SenderType.SYSTEM) continue;
 
-            ReadMembers readMembers = ReadMembers.builder()
-                    .chatMessage(chatMessage)
-                    .member(member)
-                    .build();
-
-            readMembersRepository.save(readMembers);
+            int returnValue = readMembersRepository.insertIgnore(chatMessage.getMessageId(), member.getMemberId());
+            if (returnValue == 1) {
+                log.debug("update read db message user -> SUCCESS, message id - {}, member id - {}", chatMessage.getMessageId(), member.getMemberId());
+            } else {
+                log.debug("update read db message user -> ERROR : 중복 값 존재, message id - {}, member id - {}", chatMessage.getMessageId(), member.getMemberId());
+            }
         }
-        log.debug("update read db message user -> SUCCESS");
     }
+
 }

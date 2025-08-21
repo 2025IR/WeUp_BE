@@ -8,6 +8,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import java.time.Instant;
+import java.time.ZoneId;
 import java.util.Set;
 
 @Slf4j
@@ -52,6 +53,10 @@ public class SessionService {
     public void removeActiveMemberFromChatRoom(Long chatRoomId, Long userId) {
         Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
         redisTemplate.opsForSet().remove(String.format(CHATROOM_ACTIVE_MEMBERS_KEY, chatRoomId), String.valueOf(member.getMemberId()));
+
+        if (getActiveMembersCountInChatRoom(chatRoomId) == 0) {
+            redisTemplate.delete(String.format(CHATROOM_ACTIVE_MEMBERS_KEY, chatRoomId));
+        }
     }
 
     // 채팅방 active member 목록 조회
@@ -77,6 +82,10 @@ public class SessionService {
     public void removeConnectMemberFromChatRoom(Long chatRoomId, Long userId) {
         Member member = chatValidator.validateMemberInChatRoomSession(chatRoomId, userId);
         redisTemplate.opsForSet().remove(String.format(CHATROOM_CONNECT_MEMBERS_KEY, chatRoomId), String.valueOf(member.getMemberId()));
+
+        if (getConnectMembersCountInChatRoom(chatRoomId) == 0) {
+            redisTemplate.delete(String.format(CHATROOM_CONNECT_MEMBERS_KEY, chatRoomId));
+        }
     }
 
     // 채팅방 connect member 목록 조회
@@ -93,13 +102,15 @@ public class SessionService {
     // lastReadAt 저장
     public void saveLastReadAt(Long chatRoomId, Long userId, Instant lastReadAt) {
         log.debug("\n\n session service - save last read at IN");
-        redisTemplate.opsForValue().set(String.format(LAST_READ_AT_KEY, chatRoomId, userId), String.valueOf(lastReadAt.toEpochMilli()));
+        long kstTime = lastReadAt.atZone(ZoneId.of("Asia/Seoul")).toInstant().toEpochMilli();
+        redisTemplate.opsForValue().set(String.format(LAST_READ_AT_KEY, chatRoomId, userId), String.valueOf(kstTime));
     }
 
     // lastReadAt 불러오기
     public Instant getLastReadAt(Long chatRoomId, Long userId) {
         String lastReadAtStr = redisTemplate.opsForValue().get(String.format(LAST_READ_AT_KEY, chatRoomId, userId));
         if (lastReadAtStr == null) return null;
+        log.debug("Get Last Read At -> {}", Instant.ofEpochMilli(Long.parseLong(lastReadAtStr)));
         return Instant.ofEpochMilli(Long.parseLong(lastReadAtStr));
     }
 }

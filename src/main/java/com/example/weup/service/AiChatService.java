@@ -4,8 +4,10 @@ import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.*;
 import com.example.weup.constant.SenderType;
+import com.example.weup.dto.response.RedisMessageDTO;
 import com.example.weup.entity.*;
 import com.example.weup.repository.*;
+import com.example.weup.validate.ChatValidator;
 import com.example.weup.validate.ProjectValidator;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.JsonNode;
@@ -13,6 +15,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -22,10 +25,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestClientException;
 import org.springframework.web.client.RestTemplate;
 
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Objects;
+import java.time.ZoneId;
+import java.util.*;
 
 @Slf4j
 @Service
@@ -51,6 +52,10 @@ public class AiChatService {
     private final BoardRepository boardRepository;
 
     private final ProjectValidator projectValidator;
+
+    private final StringRedisTemplate redisTemplate;
+    private final ChatValidator chatValidator;
+    private final ChatMessageRepository chatMessageRepository;
 
     @Value("${ai.server.url}")
     private String aiServerUrl;
@@ -151,9 +156,10 @@ public class AiChatService {
     }
 
     @Transactional
-    public void aiCreateMinutes(AiMinutesCreateRequestDTO aiMinutesCreateRequestDTO) {
+    public void aiCreateMinutes(AiMinutesCreateRequestDTO aiCreateMinuteDTO) {
 
-        Project project = projectValidator.validateActiveProject(aiMinutesCreateRequestDTO.getProjectId());
+        log.debug("project id : {}, title : {}, contents : {}", aiCreateMinuteDTO.getProjectId(), aiCreateMinuteDTO.getTitle(), aiCreateMinuteDTO.getContents());
+        Project project = projectValidator.validateActiveProject(aiCreateMinuteDTO.getProjectId());
 
         Tag tag = tagRepository.findByTagName("회의록")
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TAG_NOT_FOUND));
@@ -162,12 +168,54 @@ public class AiChatService {
                 .project(project)
                 .tag(tag)
                 .member(null)
-                .title(aiMinutesCreateRequestDTO.getTitle())
-                .contents(aiMinutesCreateRequestDTO.getContents())
-                .boardCreateTime(LocalDateTime.now())
+                .title(aiCreateMinuteDTO.getTitle())
+                .contents(aiCreateMinuteDTO.getContents())
                 .senderType(SenderType.AI)
                 .build();
 
         boardRepository.save(board);
+    }
+
+    @Transactional
+    public String aiGetMessages(AiGetMessageRequestDTO aiGetMsgDTO) throws JsonProcessingException {
+
+        log.debug("start at : {}, end at : {}, chat room id : {}", aiGetMsgDTO.getStartTime(), aiGetMsgDTO.getEndTime(), aiGetMsgDTO.getChatRoomId());
+        List<ChatMessage> combinedMessages = new ArrayList<>();
+        chatValidator.validateChatRoom(aiGetMsgDTO.getChatRoomId());
+
+        String redisKey = "chat:room:" + aiGetMsgDTO.getChatRoomId();
+        long startAt = aiGetMsgDTO.getStartTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        long endAt = aiGetMsgDTO.getEndTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+
+        Set<String> redisMessages = redisTemplate.opsForZSet().rangeByScore(redisKey, startAt, endAt);
+        if (redisMessages != null && !redisMessages.isEmpty()) {
+            for (String redisMessageJson : redisMessages) {
+                combinedMessages.add(chatService.translateRedisDtoIntoChatMessage(objectMapper.readValue(redisMessageJson, RedisMessageDTO.class)));
+            }
+        }
+
+        List<ChatMessage> mysqlMessages = chatMessageRepository.findByChatRoom_ChatRoomIdAndSentAtBetweenOrderBySentAtAsc(
+                aiGetMsgDTO.getChatRoomId(), aiGetMsgDTO.getStartTime(), aiGetMsgDTO.getEndTime());
+        combinedMessages.addAll(mysqlMessages);
+
+        if (combinedMessages.isEmpty()) {
+            log.debug("AI Get Messages for Minute -> ERROR : 해당 날짜의 메시지 없음.  Start At : {}", aiGetMsgDTO.getStartTime());
+            return null;
+        }
+
+        combinedMessages.sort(Comparator.comparing(ChatMessage::getSentAt));
+
+        StringBuilder returnMessage = new StringBuilder();
+        for (ChatMessage message : combinedMessages) {
+            if (message.getSenderType() == SenderType.SYSTEM) continue;
+
+            returnMessage.append(message.getMessage()).append("/n");
+        }
+
+        if (!returnMessage.isEmpty()) returnMessage.setLength(returnMessage.length() - 1);
+        log.debug("\nAI Get Messages for Minute -> 합친 메시지 내역 확인\n");
+        log.debug(returnMessage + "\n\n\n");
+
+        return returnMessage.toString();
     }
 }

@@ -40,7 +40,7 @@ public class Board {
     @Builder.Default
     private LocalDateTime boardCreateTime = LocalDateTime.now();
 
-    @Column(name= "contents")
+    @Column(name= "contents", length = 10000)
     private String contents;
 
     @Column(name= "sender_type")
