@@ -146,6 +146,7 @@ public class AiChatService {
     @Transactional
     public void aiCreateMinutes(AiMinutesCreateRequestDTO aiCreateMinuteDTO) {
 
+        log.debug("project id : {}, title : {}, contents : {}", aiCreateMinuteDTO.getProjectId(), aiCreateMinuteDTO.getTitle(), aiCreateMinuteDTO.getContents());
         Project project = projectValidator.validateActiveProject(aiCreateMinuteDTO.getProjectId());
 
         Tag tag = tagRepository.findByTagName("회의록")
@@ -166,12 +167,13 @@ public class AiChatService {
     @Transactional
     public String aiGetMessages(AiGetMessageRequestDTO aiGetMsgDTO) throws JsonProcessingException {
 
+        log.debug("start at : {}, end at : {}, chat room id : {}", aiGetMsgDTO.getStartTime(), aiGetMsgDTO.getEndTime(), aiGetMsgDTO.getChatRoomId());
         List<ChatMessage> combinedMessages = new ArrayList<>();
         chatValidator.validateChatRoom(aiGetMsgDTO.getChatRoomId());
 
         String redisKey = "chat:room:" + aiGetMsgDTO.getChatRoomId();
-        long startAt = aiGetMsgDTO.getStartAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
-        long endAt = aiGetMsgDTO.getEndAt().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        long startAt = aiGetMsgDTO.getStartTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+        long endAt = aiGetMsgDTO.getEndTime().atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
 
         Set<String> redisMessages = redisTemplate.opsForZSet().rangeByScore(redisKey, startAt, endAt);
         if (redisMessages != null && !redisMessages.isEmpty()) {
@@ -181,11 +183,11 @@ public class AiChatService {
         }
 
         List<ChatMessage> mysqlMessages = chatMessageRepository.findByChatRoom_ChatRoomIdAndSentAtBetweenOrderBySentAtAsc(
-                aiGetMsgDTO.getChatRoomId(), aiGetMsgDTO.getStartAt(), aiGetMsgDTO.getEndAt());
+                aiGetMsgDTO.getChatRoomId(), aiGetMsgDTO.getStartTime(), aiGetMsgDTO.getEndTime());
         combinedMessages.addAll(mysqlMessages);
 
         if (combinedMessages.isEmpty()) {
-            log.debug("AI Get Messages for Minute -> ERROR : 해당 날짜의 메시지 없음.  Start At : {}", aiGetMsgDTO.getStartAt());
+            log.debug("AI Get Messages for Minute -> ERROR : 해당 날짜의 메시지 없음.  Start At : {}", aiGetMsgDTO.getStartTime());
             return null;
         }
 

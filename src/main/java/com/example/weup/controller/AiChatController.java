@@ -48,7 +48,7 @@ public class AiChatController {
         return ResponseEntity.ok(DataResponseDTO.of("AI 비서 - Todo 생성이 완료되었습니다."));
     }
 
-    @PostMapping("/minute/create")
+    @PostMapping("/minutes/create")
     public ResponseEntity<DataResponseDTO<String>> aiCreateMinutes(@RequestBody AiMinutesCreateRequestDTO aiMinutesCreateRequestDTO) {
 
         log.info("요청자 : Flask Server, AI Create Minutes -> start");
@@ -58,7 +58,7 @@ public class AiChatController {
         return ResponseEntity.ok(DataResponseDTO.of("AI 비서 - 회의록 생성이 완료되었습니다."));
     }
 
-    @PostMapping("/minute/message")
+    @PostMapping("/minutes/message")
     public ResponseEntity<DataResponseDTO<String>> aiGetMessagesForMinute(@RequestBody AiGetMessageRequestDTO aiGetMessageRequestDTO)  throws JsonProcessingException {
 
         log.info("요청자 : Flask Server, AI Get Messages for Minute -> start");

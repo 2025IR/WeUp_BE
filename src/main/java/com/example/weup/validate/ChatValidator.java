@@ -19,7 +19,7 @@ public class ChatValidator {
     private final MemberValidator memberValidator;
 
     public ChatRoom validateChatRoom(Long chatRoomId) {
-        log.debug("chat validator - validate chat room IN");
+        log.debug("chat validator - validate chat room IN, chat room id : {}", chatRoomId);
         return chatRoomRepository.findById(chatRoomId)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.CHAT_ROOM_NOT_FOUND));
     }

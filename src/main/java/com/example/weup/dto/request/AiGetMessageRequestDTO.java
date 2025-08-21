@@ -7,9 +7,9 @@ import java.time.LocalDateTime;
 @Getter
 public class AiGetMessageRequestDTO {
 
-    private LocalDateTime startAt;
+    private LocalDateTime startTime;
 
-    private LocalDateTime endAt;
+    private LocalDateTime endTime;
 
     private Long chatRoomId;
 }
