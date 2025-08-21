@@ -33,17 +33,18 @@ public class Board {
     @JoinColumn(name = "tag_id", nullable = false)
     private Tag tag;
 
-    @Column(name = "title")
+    @Column(name = "title", nullable = false)
     private String title;
 
-    @Column(name= "board_create_time")
+    @Column(name= "board_create_time", nullable = false)
     @Builder.Default
     private LocalDateTime boardCreateTime = LocalDateTime.now();
 
-    @Column(name= "contents", length = 10000)
+    @Column(name= "contents", length = 10000, nullable = false)
     private String contents;
 
-    @Column(name= "sender_type")
+    @Column(name= "sender_type", nullable = false)
+    @Enumerated(EnumType.STRING)
     @Builder.Default
     private SenderType senderType = SenderType.MEMBER;
 

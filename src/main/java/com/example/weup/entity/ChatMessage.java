@@ -35,10 +35,10 @@ public class ChatMessage {
     @JoinColumn(name = "sender_id")
     private Member member;
 
-    @Column
+    @Column(nullable = false)
     private String message;
 
-    @Column
+    @Column(nullable = false)
     @Builder.Default
     @JsonProperty("isImage")
     private Boolean isImage = false;
@@ -46,10 +46,12 @@ public class ChatMessage {
     @Column(nullable = false)
     private LocalDateTime sentAt;
 
+    @Column(nullable = false)
     @Builder.Default
     @Enumerated(EnumType.STRING)
     private SenderType senderType = SenderType.MEMBER;
 
+    @Column(nullable = false)
     @Builder.Default
     @Enumerated(EnumType.STRING)
     private DisplayType displayType = DisplayType.DEFAULT;
