@@ -2,6 +2,7 @@ package com.example.weup.service;
 
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
+import com.example.weup.constant.NotificationType;
 import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.MemberInfoResponseDTO;
 import com.example.weup.dto.response.RoleListResponseDTO;
@@ -25,28 +26,21 @@ import java.util.stream.Collectors;
 public class MemberService {
 
     private final AsyncMailService asyncMailService;
-
     private final S3Service s3Service;
-
     private final ChatRoomService chatRoomService;
-
     private final ChatService chatService;
-
+    private final NotificationService notificationService;
     private final MemberValidator memberValidator;
-
     private final UserRepository userRepository;
-
     private final ProjectRepository projectRepository;
-
     private final MemberRepository memberRepository;
-
     private final RoleRepository roleRepository;
-
     private final MemberRoleRepository memberRoleRepository;
-
     private final ChatRoomRepository chatRoomRepository;
-
     private final ChatRoomMemberRepository chatRoomMemberRepository;
+    private final NotificationRepository notificationRepository;
+
+    private final SimpMessagingTemplate messagingTemplate;
 
     private final SimpMessagingTemplate messagingTemplate;
 
@@ -77,16 +71,13 @@ public class MemberService {
         Project project = projectRepository.findById(projectInviteRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
 
-        memberValidator.validateActiveMemberInProject(userId, projectInviteRequestDTO.getProjectId());
+        memberValidator.validateActiveMemberInProject(userId, project.getProjectId());
 
         String email = projectInviteRequestDTO.getEmail().trim();
-
         User invitee = userRepository.findByAccountSocialEmail(email)
                 .orElseThrow(() -> new GeneralException(ErrorInfo.USER_NOT_FOUND));
 
-        if (invitee.isUserWithdrawal()) {
-            throw new GeneralException(ErrorInfo.USER_NOT_FOUND);
-        }
+        if (invitee.isUserWithdrawal()) throw new GeneralException(ErrorInfo.USER_NOT_FOUND);
 
         Member existingMember = memberRepository.findByUserAndProject(invitee, project).orElse(null);
 
@@ -94,6 +85,10 @@ public class MemberService {
             if (existingMember.isMemberDeleted()) {
                 existingMember.reJoin();
                 chatRoomService.addChatRoomMember(chatRoomRepository.findByProjectAndBasicTrue(project), existingMember.getMemberId());
+              
+                String msg = NotificationType.MEMBER_INVITED.format(invitee.getName(), project.getProjectName());
+                notificationService.sendPersonalNotification(invitee, msg, "INVITE", projectInviteRequestDTO.getProjectId());
+                notificationService.broadcastProjectNotification(project, msg, List.of(invitee.getUserId()), "INVITE");
 
                 messagingTemplate.convertAndSend(
                         "/topic/member/" + projectInviteRequestDTO.getProjectId(),
@@ -118,6 +113,10 @@ public class MemberService {
         memberRepository.save(member);
 
         chatRoomService.addChatRoomMember(chatRoomRepository.findByProjectAndBasicTrue(project), member.getMemberId());
+
+        String msg = NotificationType.MEMBER_INVITED.format(invitee.getName(), project.getProjectName());
+        notificationService.sendPersonalNotification(invitee, msg, "INVITE", projectInviteRequestDTO.getProjectId());
+        notificationService.broadcastProjectNotification(project, msg, List.of(invitee.getUserId()), "INVITE");
 
         messagingTemplate.convertAndSend(
                 "/topic/member/" + projectInviteRequestDTO.getProjectId(),
@@ -203,18 +202,9 @@ public class MemberService {
         );
     }
 
-    @Transactional
-    public List<RoleListResponseDTO> listRoles(Long userId, Long projectId) {
-        memberValidator.validateActiveMemberInProject(userId, projectId);
-
-        Project project = projectRepository.findById(projectId)
-                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
-
-        List<Role> roles = roleRepository.findAllByProject(project);
-
-        return roles.stream()
-                .map(role -> new RoleListResponseDTO(role.getRoleId(), role.getRoleName(), role.getRoleColor()))
-                .collect(Collectors.toList());
+        notificationService.sendPersonalNotification(newLeaderMember.getUser(),
+                NotificationType.LEADER_DELEGATED.format(project.getProjectName(),newLeaderMember.getUser().getName()),
+                "DELEGATE", leaderDelegateRequestDTO.getProjectId());
     }
 
     @Transactional
@@ -252,6 +242,23 @@ public class MemberService {
                 chatService.sendSystemMessage(chatRoom.getChatRoomId(), chatRoomMember.getMember().getUser().getName() + "님이 채팅방에서 퇴장했습니다.");
             }
         }
+
+        String msg = NotificationType.MEMBER_DELETED.format(targetMember.getUser().getName(), project.getProjectName());
+        notificationService.sendPersonalNotification(targetMember.getUser(), msg, "DELETE", deleteMemberRequestDTO.getProjectId());
+        notificationService.broadcastProjectNotification(project, msg, List.of(targetMember.getUser().getUserId()), "DELETE");
+    }
+
+    @Transactional
+    public List<RoleListResponseDTO> listRoles(Long userId, Long projectId) {
+        memberValidator.validateActiveMemberInProject(userId, projectId);
+        Project project = projectRepository.findById(projectId)
+                .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
+
+        List<Role> roles = roleRepository.findAllByProject(project);
+
+        return roles.stream()
+                .map(role -> new RoleListResponseDTO(role.getRoleId(), role.getRoleName(), role.getRoleColor()))
+                .collect(Collectors.toList());
 
         messagingTemplate.convertAndSend(
                 "/topic/member/" + deleteMemberRequestDTO.getProjectId(),
@@ -360,7 +367,6 @@ public class MemberService {
     public void removeRole(Long userId, DeleteRoleRequestDTO deleteRoleRequestDTO) {
         Member member = memberValidator.validateActiveMemberInProject(userId, deleteRoleRequestDTO.getProjectId());
 
-
         Role role = roleRepository.findById(deleteRoleRequestDTO.getRoleId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.ROLE_NOT_FOUND));
 
@@ -373,6 +379,5 @@ public class MemberService {
                 Map.of("type", "ROLE_CHANGED",
                         "editedBy", member.getUser().getName())
         );
-
     }
 }
