@@ -42,6 +42,8 @@ public class MemberService {
 
     private final SimpMessagingTemplate messagingTemplate;
 
+    private final SimpMessagingTemplate messagingTemplate;
+
     @Transactional
     public Member addProjectCreater(Long userId, Project project) {
 
@@ -83,10 +85,16 @@ public class MemberService {
             if (existingMember.isMemberDeleted()) {
                 existingMember.reJoin();
                 chatRoomService.addChatRoomMember(chatRoomRepository.findByProjectAndBasicTrue(project), existingMember.getMemberId());
-
+              
                 String msg = NotificationType.MEMBER_INVITED.format(invitee.getName(), project.getProjectName());
                 notificationService.sendPersonalNotification(invitee, msg, "INVITE", projectInviteRequestDTO.getProjectId());
                 notificationService.broadcastProjectNotification(project, msg, List.of(invitee.getUserId()), "INVITE");
+
+                messagingTemplate.convertAndSend(
+                        "/topic/member/" + projectInviteRequestDTO.getProjectId(),
+                        Map.of("type", "LIST_CHANGED",
+                                "editedBy", inviter.getName())
+                );
 
                 return "초대가 완료되었습니다.";
             } else {
@@ -109,6 +117,12 @@ public class MemberService {
         String msg = NotificationType.MEMBER_INVITED.format(invitee.getName(), project.getProjectName());
         notificationService.sendPersonalNotification(invitee, msg, "INVITE", projectInviteRequestDTO.getProjectId());
         notificationService.broadcastProjectNotification(project, msg, List.of(invitee.getUserId()), "INVITE");
+
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + projectInviteRequestDTO.getProjectId(),
+                Map.of("type", "LIST_CHANGED",
+                        "editedBy", inviter.getName())
+        );
 
         return "초대가 완료되었습니다.";
     }
@@ -181,6 +195,13 @@ public class MemberService {
         memberRepository.save(formerLeaderMember);
         memberRepository.save(newLeaderMember);
 
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + leaderDelegateRequestDTO.getProjectId(),
+                Map.of("type", "LIST_CHANGED",
+                        "editedBy", formerLeaderMember.getUser().getName())
+        );
+    }
+
         notificationService.sendPersonalNotification(newLeaderMember.getUser(),
                 NotificationType.LEADER_DELEGATED.format(project.getProjectName(),newLeaderMember.getUser().getName()),
                 "DELEGATE", leaderDelegateRequestDTO.getProjectId());
@@ -225,7 +246,6 @@ public class MemberService {
         String msg = NotificationType.MEMBER_DELETED.format(targetMember.getUser().getName(), project.getProjectName());
         notificationService.sendPersonalNotification(targetMember.getUser(), msg, "DELETE", deleteMemberRequestDTO.getProjectId());
         notificationService.broadcastProjectNotification(project, msg, List.of(targetMember.getUser().getUserId()), "DELETE");
-
     }
 
     @Transactional
@@ -239,6 +259,12 @@ public class MemberService {
         return roles.stream()
                 .map(role -> new RoleListResponseDTO(role.getRoleId(), role.getRoleName(), role.getRoleColor()))
                 .collect(Collectors.toList());
+
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + deleteMemberRequestDTO.getProjectId(),
+                Map.of("type", "LIST_CHANGED",
+                        "editedBy", requestMember.getUser().getName())
+        );
     }
 
     @Transactional
@@ -274,12 +300,18 @@ public class MemberService {
                     .build();
 
             memberRoleRepository.save(memberRole);
+
+            messagingTemplate.convertAndSend(
+                    "/topic/member/" + assignRoleRequestDTO.getProjectId(),
+                    Map.of("type", "LIST_CHANGED",
+                            "editedBy", member.getUser().getName())
+            );
         }
     }
 
     @Transactional
     public void createRole(Long userId, CreateRoleRequestDTO createRoleRequestDTO) {
-        memberValidator.validateActiveMemberInProject(userId, createRoleRequestDTO.getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, createRoleRequestDTO.getProjectId());
 
         Project project = projectRepository.findById(createRoleRequestDTO.getProjectId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.PROJECT_NOT_FOUND));
@@ -294,6 +326,12 @@ public class MemberService {
                 .build();
 
         roleRepository.save(role);
+
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + createRoleRequestDTO.getProjectId(),
+                Map.of("type", "ROLE_CHANGED",
+                        "editedBy", member.getUser().getName())
+        );
     }
 
     @Transactional
@@ -301,7 +339,7 @@ public class MemberService {
         String roleName = editRoleRequestDTO.getRoleName();
         String roleColor = editRoleRequestDTO.getRoleColor();
 
-        memberValidator.validateActiveMemberInProject(userId, editRoleRequestDTO.getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, editRoleRequestDTO.getProjectId());
 
         if ((roleName == null || roleName.isEmpty()) && (roleColor == null || roleColor.isEmpty())) {
             throw new GeneralException(ErrorInfo.EMPTY_INPUT_VALUE);
@@ -316,12 +354,18 @@ public class MemberService {
 
         role.editRole(roleName, roleColor);
 
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + editRoleRequestDTO.getProjectId(),
+                Map.of("type", "ROLE_CHANGED",
+                        "editedBy", member.getUser().getName())
+        );
+
         roleRepository.save(role);
     }
 
     @Transactional
     public void removeRole(Long userId, DeleteRoleRequestDTO deleteRoleRequestDTO) {
-        memberValidator.validateActiveMemberInProject(userId, deleteRoleRequestDTO.getProjectId());
+        Member member = memberValidator.validateActiveMemberInProject(userId, deleteRoleRequestDTO.getProjectId());
 
         Role role = roleRepository.findById(deleteRoleRequestDTO.getRoleId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.ROLE_NOT_FOUND));
@@ -329,5 +373,11 @@ public class MemberService {
         memberRoleRepository.deleteByRole(role);
 
         roleRepository.delete(role);
+
+        messagingTemplate.convertAndSend(
+                "/topic/member/" + deleteRoleRequestDTO.getProjectId(),
+                Map.of("type", "ROLE_CHANGED",
+                        "editedBy", member.getUser().getName())
+        );
     }
 }
