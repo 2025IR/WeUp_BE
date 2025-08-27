@@ -27,9 +27,17 @@ public class ChatController {
     public void sendMessage(@DestinationVariable Long chatRoomId, SendMessageRequestDTO messageDto) throws JsonProcessingException {
 
         log.info("요청자 : {}, websocket send chatting -> start", messageDto.getSenderId());
-
         chatService.sendBasicMessage(chatRoomId, messageDto);
+
         log.info("요청자 : {}, websocket send chatting -> success", messageDto.getSenderId());
+    }
+
+    @ResponseBody
+    @PostMapping("/ai/{chatRoomId}")
+    public void sendMsg(@PathVariable Long chatRoomId, @RequestBody SendMessageRequestDTO messageDto) throws JsonProcessingException {
+
+        log.debug("sender id : {}, message : {}", messageDto.getSenderId(), messageDto.getMessage());
+        chatService.sendBasicMessage(chatRoomId, messageDto);
     }
 
     @ResponseBody

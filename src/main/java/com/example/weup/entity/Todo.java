@@ -48,7 +48,7 @@ public class Todo {
             this.todoName = todoName;
         }
 
-        if (startDate != null && endDate != null) {
+        if (startDate != null) {
             this.startDate = startDate;
             this.endDate = endDate;
         }

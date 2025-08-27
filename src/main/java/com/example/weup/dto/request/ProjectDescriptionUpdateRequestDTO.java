@@ -1,20 +1,15 @@
 package com.example.weup.dto.request;
 
 import lombok.AllArgsConstructor;
-import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
+import lombok.Setter;
 
+@Getter
+@Setter
 @NoArgsConstructor
 @AllArgsConstructor
-@Builder
-@Getter
-public class AiMinutesCreateRequestDTO {
-
-    private Long projectId;
-
-    private String title;
-
-    private String contents;
-
+public class ProjectDescriptionUpdateRequestDTO {
+    private Long userId;
+    private String description;
 }

@@ -31,7 +31,7 @@ public class Member {
     @JsonBackReference
     private Project project;
 
-    @Column(name = "available_time", length = 252)
+    @Column(name = "available_time", length = 252, nullable = false)
     @Builder.Default
     private String availableTime = "0".repeat(252);
 

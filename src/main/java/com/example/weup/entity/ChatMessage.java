@@ -24,18 +24,21 @@ public class ChatMessage {
     @Column(nullable = false, updatable = false)
     private Long messageId;
 
-    @ManyToOne
-    @JoinColumn(name = "chat_room_id")
+    @Column(nullable = false, updatable = false)
+    private String uuid;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "chat_room_id", nullable = false)
     private ChatRoom chatRoom;
 
-    @ManyToOne
+    @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "sender_id")
     private Member member;
 
-    @Column
+    @Column(nullable = false)
     private String message;
 
-    @Column
+    @Column(nullable = false)
     @Builder.Default
     @JsonProperty("isImage")
     private Boolean isImage = false;
@@ -43,10 +46,12 @@ public class ChatMessage {
     @Column(nullable = false)
     private LocalDateTime sentAt;
 
+    @Column(nullable = false)
     @Builder.Default
     @Enumerated(EnumType.STRING)
     private SenderType senderType = SenderType.MEMBER;
 
+    @Column(nullable = false)
     @Builder.Default
     @Enumerated(EnumType.STRING)
     private DisplayType displayType = DisplayType.DEFAULT;

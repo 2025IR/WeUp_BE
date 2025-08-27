@@ -43,7 +43,8 @@ public class User implements UserDetails {
     private byte isDarkMode = 1;
 
     @Column(name = "is_user_withdrawal", nullable = false)
-    private boolean isUserWithdrawal;
+    @Builder.Default
+    private boolean isUserWithdrawal = false;
 
     @Column(name = "deleted_at")
     private LocalDateTime deletedAt;

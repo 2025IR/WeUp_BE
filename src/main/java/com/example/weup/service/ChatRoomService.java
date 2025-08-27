@@ -18,9 +18,13 @@ import com.fasterxml.jackson.core.JsonProcessingException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.data.redis.core.ZSetOperations;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
@@ -49,10 +53,11 @@ public class ChatRoomService {
 
     private final StringRedisTemplate redisTemplate;
 
+    private final SessionService sessionService;
+
     public ChatRoom createBasicChatRoom(Project project, String projectName) {
 
         ChatRoom chatRoom = ChatRoom.builder()
-                .chatRoomName(projectName + " 채팅방")
                 .project(project)
                 .basic(true)
                 .build();
@@ -161,6 +166,7 @@ public class ChatRoomService {
     @Transactional
     public List<GetChatRoomListDTO> getChatRoomList(Long userId, Long projectId) {
 
+        log.debug("\n get chat room list IN");
         Project project = projectValidator.validateActiveProject(projectId);
         Member member = memberValidator.validateActiveMemberInProject(userId, project.getProjectId());
 
@@ -178,6 +184,21 @@ public class ChatRoomService {
                     List<String> chatRoomMemberNames = chatRoomMemberRepository.findByChatRoom(chatRoom).stream()
                             .map(chatRoomMember -> chatRoomMember.getMember().getUser().getName())
                             .collect(Collectors.toList());
+                    log.debug("get chat room member names, count : {}", chatRoomMemberNames.size());
+
+                    long unreadMessageCount = getUnreadMessageCount(chatRoom.getChatRoomId(), userId);
+                    log.debug("get unread message count : {}", unreadMessageCount);
+
+                    ChatMessage latestMessage;
+                    try {
+                        latestMessage = chatService.getLatestMessage(chatRoom.getChatRoomId());
+                    } catch (JsonProcessingException e) {
+                        throw new RuntimeException("마지막 채팅 내역 불러오는 도중 오류 발생, error message : " + e.getMessage());
+                    }
+
+                    if (latestMessage == null) {
+                        log.debug("채팅 없음, chat room id : {}", chatRoom.getChatRoomId());
+                    }
 
                     return GetChatRoomListDTO.builder()
                             .chatRoomId(chatRoom.getChatRoomId())
@@ -185,9 +206,33 @@ public class ChatRoomService {
                             .chatRoomName(chatRoom.getChatRoomName())
                             .chatRoomMemberNames(chatRoomMemberNames)
                             .isBasic(chatRoom.isBasic())
+                            .unreadMessageCount(unreadMessageCount)
+                            .lastMessage(latestMessage != null ? latestMessage.getMessage() : null)
+                            .lastMessageTime(latestMessage != null ? latestMessage.getSentAt() : null)
                             .build();
                 })
                 .collect(Collectors.toList());
+    }
+
+    private long getUnreadMessageCount(Long chatRoomId, Long userId) {
+        Instant lastReadTime = sessionService.getLastReadAt(chatRoomId, userId);
+        Instant startTime = (lastReadTime == null) ? Instant.EPOCH : lastReadTime;
+
+        long redisUnreadCount = 0L;
+        long mysqlUnreadCount;
+
+        ZSetOperations<String, String> zSetOperations = redisTemplate.opsForZSet();
+        String redisKey = "chat:room:" + chatRoomId;
+
+        Long redisCount = zSetOperations.count(redisKey, startTime.toEpochMilli(), Double.POSITIVE_INFINITY);
+        if (redisCount != null) {
+            redisUnreadCount = redisCount;
+        }
+
+        LocalDateTime lastDateTime = LocalDateTime.ofInstant(startTime, ZoneId.systemDefault());
+        mysqlUnreadCount = chatMessageRepository.countByChatRoom_ChatRoomIdAndSentAtAfter(chatRoomId, lastDateTime);
+
+        return redisUnreadCount + mysqlUnreadCount;
     }
 
     @Transactional
