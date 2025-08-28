@@ -121,14 +121,21 @@ public class BoardService {
 
         board.editBoard(editBoardRequestDTO.getTitle().trim(), editBoardRequestDTO.getContents().trim(), tag);
 
-        if(editBoardRequestDTO.getFile() != null) {
+        if (editBoardRequestDTO.getFile() != null) {
             fileService.addFiles(board, editBoardRequestDTO.getFile());
         }
 
-        if(editBoardRequestDTO.getRemoveFileIds() != null && !editBoardRequestDTO.getRemoveFileIds().isEmpty()) {
+        if (editBoardRequestDTO.getRemoveFileIds() != null && !editBoardRequestDTO.getRemoveFileIds().isEmpty()) {
             fileService.removeFiles(board, editBoardRequestDTO.getRemoveFileIds());
         }
+
+        boolean hasContents = board.getContents() != null && !board.getContents().trim().isEmpty();
+        boolean hasFiles = fileRepository.existsByBoard(board);
+        if (!hasContents && !hasFiles) {
+            throw new GeneralException(ErrorInfo.BOARD_CONTENT_OR_FILE_REQUIRED);
+        }
     }
+
 
     @Transactional
     public void deleteBoard(Long userId, Long boardId) {

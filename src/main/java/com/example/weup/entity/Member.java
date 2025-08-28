@@ -56,6 +56,7 @@ public class Member {
 
     public void markAsDeleted() {
         this.isMemberDeleted = true;
+        this.availableTime = "0".repeat(252);
     }
 
     public void editSchedule(String availableTime) {
@@ -65,9 +66,5 @@ public class Member {
     public void reJoin() {
         this.isMemberDeleted = false;
         this.lastAccessTime = LocalDateTime.now();
-    }
-
-    public void assignDeletedUser(User user) {
-        this.user = user;
     }
 }

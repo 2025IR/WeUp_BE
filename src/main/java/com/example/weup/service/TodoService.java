@@ -50,7 +50,8 @@ public class TodoService {
 
         messagingTemplate.convertAndSend(
                 "/topic/todo/" + createTodoRequestDTO.getProjectId(),
-                Map.of("createdBy", member.getUser().getName())
+                Map.of("createdBy", member.getUser().getName(),
+                        "memberId", member.getMemberId())
         );
     }
 
@@ -128,7 +129,8 @@ public class TodoService {
 
         messagingTemplate.convertAndSend(
                 "/topic/todo/" + todo.getProject().getProjectId(),
-                Map.of("editedBy", requestMember.getUser().getName())
+                Map.of("editedBy", requestMember.getUser().getName(),
+                        "memberId", requestMember.getMemberId())
         );
     }
 
@@ -151,7 +153,8 @@ public class TodoService {
 
         messagingTemplate.convertAndSend(
                 "/topic/todo/" + todo.getProject().getProjectId(),
-                Map.of("editedBy", member.getUser().getName())
+                Map.of("editedBy", member.getUser().getName(),
+                        "memberId", member.getMemberId())
         );
     }
 
@@ -169,7 +172,8 @@ public class TodoService {
 
         messagingTemplate.convertAndSend(
                 "/topic/todo/" + todo.getProject().getProjectId(),
-                Map.of("deletedBy", member.getUser().getName())
+                Map.of("deletedBy", member.getUser().getName(),
+                        "memberId", member.getMemberId())
         );
     }
 }
