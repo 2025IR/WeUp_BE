@@ -34,4 +34,6 @@ public interface MemberRoleRepository extends JpaRepository<MemberRole, Long> {
     void deleteByMember(Member member);
 
     List<MemberRole> findByMember(Member member);
+
+    List<MemberRole> findAllByMember_MemberId(Long memberId);
 }
