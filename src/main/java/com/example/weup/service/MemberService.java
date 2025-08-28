@@ -232,8 +232,6 @@ public class MemberService {
         List<MemberRole> memberRoleList = memberRoleRepository.findAllByMember_MemberId(targetMember.getMemberId());
         memberRoleRepository.deleteAll(memberRoleList);
 
-
-
         List<ChatRoom> chatRooms = chatRoomRepository.findByProject(project);
         for (ChatRoom chatRoom : chatRooms) {
             ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, targetMember);
