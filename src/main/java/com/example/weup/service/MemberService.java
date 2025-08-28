@@ -229,6 +229,11 @@ public class MemberService {
         targetMember.markAsDeleted();
         memberRepository.save(targetMember);
 
+        List<MemberRole> memberRoleList = memberRoleRepository.findAllByMember_MemberId(targetMember.getMemberId());
+        memberRoleRepository.deleteAll(memberRoleList);
+
+
+
         List<ChatRoom> chatRooms = chatRoomRepository.findByProject(project);
         for (ChatRoom chatRoom : chatRooms) {
             ChatRoomMember chatRoomMember = chatRoomMemberRepository.findByChatRoomAndMember(chatRoom, targetMember);
@@ -264,7 +269,7 @@ public class MemberService {
 
     @Transactional
     public void assignRoleToMember(Long userId, AssignRoleRequestDTO assignRoleRequestDTO) {
-        memberValidator.validateActiveMemberInProject(userId, assignRoleRequestDTO.getProjectId());
+        Member requestMember = memberValidator.validateActiveMemberInProject(userId, assignRoleRequestDTO.getProjectId());
 
         if (memberValidator.isDeletedMember(assignRoleRequestDTO.getMemberId())){
             throw new GeneralException(ErrorInfo.DELETED_MEMBER);
@@ -299,7 +304,8 @@ public class MemberService {
             messagingTemplate.convertAndSend(
                     "/topic/member/" + assignRoleRequestDTO.getProjectId(),
                     Map.of("type", "LIST_CHANGED",
-                            "editedBy", member.getUser().getName())
+                            "editedBy", member.getUser().getName(),
+                            "memberId", requestMember.getMemberId())
             );
         }
     }
@@ -325,7 +331,8 @@ public class MemberService {
         messagingTemplate.convertAndSend(
                 "/topic/member/" + createRoleRequestDTO.getProjectId(),
                 Map.of("type", "ROLE_CHANGED",
-                        "editedBy", member.getUser().getName())
+                        "editedBy", member.getUser().getName(),
+                        "memberId", member.getMemberId())
         );
     }
 
@@ -352,7 +359,8 @@ public class MemberService {
         messagingTemplate.convertAndSend(
                 "/topic/member/" + editRoleRequestDTO.getProjectId(),
                 Map.of("type", "ROLE_CHANGED",
-                        "editedBy", member.getUser().getName())
+                        "editedBy", member.getUser().getName(),
+                        "memberId", member.getMemberId())
         );
 
         roleRepository.save(role);
@@ -372,7 +380,8 @@ public class MemberService {
         messagingTemplate.convertAndSend(
                 "/topic/member/" + deleteRoleRequestDTO.getProjectId(),
                 Map.of("type", "ROLE_CHANGED",
-                        "editedBy", member.getUser().getName())
+                        "editedBy", member.getUser().getName(),
+                        "memberId", member.getMemberId())
         );
     }
 }
