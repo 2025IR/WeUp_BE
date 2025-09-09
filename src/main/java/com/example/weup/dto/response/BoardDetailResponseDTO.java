@@ -11,6 +11,7 @@ import java.util.List;
 public class BoardDetailResponseDTO {
     private String name;
     private String profileImage;
+    private Long memberId;
     private String title;
     private String contents;
     private LocalDateTime boardCreatedTime;

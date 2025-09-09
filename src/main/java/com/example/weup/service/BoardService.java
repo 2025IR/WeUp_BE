@@ -99,6 +99,7 @@ public class BoardService {
         return BoardDetailResponseDTO.builder()
                 .name(getWriterName(board))
                 .profileImage(getWriterProfileImage(board))
+                .memberId(board.getMember().getMemberId())
                 .title(board.getTitle())
                 .contents(board.getContents())
                 .boardCreatedTime(board.getBoardCreateTime())
