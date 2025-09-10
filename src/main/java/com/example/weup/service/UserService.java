@@ -5,9 +5,7 @@ import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.*;
 import com.example.weup.dto.response.GetProfileResponseDTO;
 import com.example.weup.entity.*;
-import com.example.weup.repository.ChatMessageRepository;
-import com.example.weup.repository.MemberRepository;
-import com.example.weup.repository.UserRepository;
+import com.example.weup.repository.*;
 import com.example.weup.security.JwtDto;
 import com.example.weup.security.JwtUtil;
 import jakarta.transaction.Transactional;
@@ -43,6 +41,8 @@ public class UserService {
 
     private final S3Service s3Service;
     private final ProjectService projectService;
+    private final NotificationRepository notificationRepository;
+    private final MemberRoleRepository memberRoleRepository;
 
     @Value("${user.default-profile-image}")
     private String defaultProfileImage;
@@ -174,7 +174,12 @@ public class UserService {
         List<Member> memberList = memberRepository.findAllByUser_UserId(userId);
         for (Member member : memberList) {
             member.markAsDeleted();
+            List<MemberRole> memberRoleList = memberRoleRepository.findAllByMember_MemberId(member.getMemberId());
+            memberRoleRepository.deleteAll(memberRoleList);
         }
+
+        List<Notification> NotificationList = notificationRepository.findAllByUser_UserId(userId);
+        notificationRepository.deleteAll(NotificationList);
     }
 
     @Scheduled(cron = "0 0 0 * * *")

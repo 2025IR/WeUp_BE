@@ -71,7 +71,9 @@ public enum ErrorInfo {
 
     IS_EDITING_NOW(HttpStatus.CONFLICT, "다른 사용자가 수정 중입니다."),
 
-    MEMBER_ALREADY_EXISTS_IN_CHAT_ROOM(HttpStatus.CONFLICT, "이미 채팅방에 존재하는 멤버입니다.");
+    MEMBER_ALREADY_EXISTS_IN_CHAT_ROOM(HttpStatus.CONFLICT, "이미 채팅방에 존재하는 멤버입니다."),
+
+    BOARD_CONTENT_OR_FILE_REQUIRED(HttpStatus.BAD_REQUEST, "게시글 내용이나 파일 중 하나 이상을 입력해주세요.");
 
     private final HttpStatus httpStatus;
 
