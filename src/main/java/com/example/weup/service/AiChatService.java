@@ -109,29 +109,34 @@ public class AiChatService {
 
                 chatService.sendAIMessage(chatRoomId, realMessage, aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
             }
-            else if (route.equals("http")) {
+            else if (route.equals("default")) {
                 log.info("AI 서버의 HTTP 요청에 따른 응답 성공");
 
-                JsonNode outputNode = root.get("output");
-                if (outputNode.isNull()) {
-                    log.debug("output null ERROR");
-                    chatService.sendAIMessage(chatRoomId, "오류 발생", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
-                    return;
-                }
+//                JsonNode outputNode = root.get("output");
+//                if (outputNode.isNull()) {
+//                    log.debug("output null ERROR");
+//                    chatService.sendAIMessage(chatRoomId, "오류 발생", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
+//                    return;
+//                }
 
-                JsonNode toolNode = outputNode.get("tool");
-                if (toolNode.asText().equals("change_role")) {
-                    chatService.sendAIMessage(chatRoomId, "역할 변경이 완료되었습니다.", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
-                    log.info("AI 서버의 HTTP 요청에 따른 역할 변경 완료");
-                }
-                else if (toolNode.asText().equals("todo_create")) {
-                    chatService.sendAIMessage(chatRoomId, "투두 생성이 완료되었습니다.", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
-                    log.info("AI 서버의 HTTP 요청에 따른 투두 생성 완료");
-                }
-                else if (toolNode.asText().equals("meeting_create")) {
-                    chatService.sendAIMessage(chatRoomId, "회의록 작성이 완료되었습니다.", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
-                    log.info("AI 서버의 HTTP 요청에 따른 회의록 작성 완료");
-                }
+                //todo. root : {"project_id":"7","route":"default","output":"홍승혁의 역할을 디자인 분야로 성공적으로 변경하였습니다.","missing":null}
+                // 이렇게 와서 이제 내가 메시지를 return 하지 않아도 AI에서 온 답변을 그대로 토스해주면 됨
+                String realMessage = root.get("output").asText();
+                System.out.println("ai api request realMessage : " + realMessage);
+                chatService.sendAIMessage(chatRoomId, realMessage, aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
+//                JsonNode toolNode = outputNode.get("tool");
+//                if (toolNode.asText().equals("change_role")) {
+//                    chatService.sendAIMessage(chatRoomId, "역할 변경이 완료되었습니다.", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
+//                    log.info("AI 서버의 HTTP 요청에 따른 역할 변경 완료");
+//                }
+//                else if (toolNode.asText().equals("todo_create")) {
+//                    chatService.sendAIMessage(chatRoomId, "투두 생성이 완료되었습니다.", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
+//                    log.info("AI 서버의 HTTP 요청에 따른 투두 생성 완료");
+//                }
+//                else if (toolNode.asText().equals("meeting_create")) {
+//                    chatService.sendAIMessage(chatRoomId, "회의록 작성이 완료되었습니다.", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
+//                    log.info("AI 서버의 HTTP 요청에 따른 회의록 작성 완료");
+//                }
             }
             else if (route.equals("clarify")){
                 String realMessage = root.get("output").asText();
@@ -166,7 +171,9 @@ public class AiChatService {
                         .orElseThrow(() -> new GeneralException(ErrorInfo.ROLE_NOT_FOUND));
         log.debug("role validator -> end");
 
-        memberRoleRepository.deleteByMember(member);
+        memberRoleRepository.deleteAllByMember(member);
+        memberRoleRepository.flush();
+
         MemberRole memberRole = MemberRole.builder()
                 .member(member)
                 .role(role)
@@ -214,7 +221,7 @@ public class AiChatService {
                 .tag(tag)
                 .member(null)
                 .title(aiCreateMinuteDTO.getTitle())
-                .contents(aiCreateMinuteDTO.getContents())
+                .contents(aiCreateMinuteDTO.getContents())  //todo. null로 들어오는데 왜 생성이 됨?
                 .senderType(SenderType.AI)
                 .build();
 

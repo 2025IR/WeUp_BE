@@ -4,7 +4,6 @@ import com.example.weup.constant.NotificationType;
 import com.example.weup.GeneralException;
 import com.example.weup.constant.ErrorInfo;
 import com.example.weup.dto.request.ProjectCreateRequestDTO;
-import com.example.weup.dto.request.ProjectDescriptionUpdateRequestDTO;
 import com.example.weup.dto.request.ProjectEditRequestDTO;
 import com.example.weup.dto.response.DetailProjectResponseDTO;
 import com.example.weup.dto.response.ListUpProjectResponseDTO;
@@ -219,7 +218,7 @@ public class ProjectService {
             for (Member member : membersToDelete) {
                 log.info("delete project -> db read success : project id: {}, member id : {}", member.getProject().getProjectId(), member.getMemberId());
 
-                memberRoleRepository.deleteByMember(member);
+                memberRoleRepository.deleteAllByMember(member);
                 log.info("delete project -> Member Role db data deleted");
 
                 todoMemberRepository.deleteByMember(member);

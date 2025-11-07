@@ -279,7 +279,7 @@ public class MemberService {
         Member member = memberRepository.findById(assignRoleRequestDTO.getMemberId())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
-        memberRoleRepository.deleteByMember(member);
+        memberRoleRepository.deleteAllByMember(member);
         List<MemberRole> deleteRoles = memberRoleRepository.findByMember(member);
         for (MemberRole role : deleteRoles) {
             log.debug("after deleted data : " + role.getRole().getRoleId() + " : " + role.getRole().getRoleName());
