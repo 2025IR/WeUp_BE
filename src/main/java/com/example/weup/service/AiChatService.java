@@ -87,7 +87,6 @@ public class AiChatService {
             jsonBody.put("user_input", aiChatRequestDTO.getUserInput());
             jsonBody.put("project_id", String.valueOf(aiChatRequestDTO.getProjectId()));
             jsonBody.put("chat_room_id", String.valueOf(chatRoomId));
-            jsonBody.put("mode", "auto");
 
             HttpEntity<Map<String, Object>> requestEntity = new HttpEntity<>(jsonBody, headers);
 
@@ -112,46 +111,14 @@ public class AiChatService {
             else if (route.equals("default")) {
                 log.info("AI 서버의 HTTP 요청에 따른 응답 성공");
 
-//                JsonNode outputNode = root.get("output");
-//                if (outputNode.isNull()) {
-//                    log.debug("output null ERROR");
-//                    chatService.sendAIMessage(chatRoomId, "오류 발생", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
-//                    return;
-//                }
-
                 //todo. root : {"project_id":"7","route":"default","output":"홍승혁의 역할을 디자인 분야로 성공적으로 변경하였습니다.","missing":null}
                 // 이렇게 와서 이제 내가 메시지를 return 하지 않아도 AI에서 온 답변을 그대로 토스해주면 됨
                 String realMessage = root.get("output").asText();
                 System.out.println("ai api request realMessage : " + realMessage);
                 chatService.sendAIMessage(chatRoomId, realMessage, aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
-//                JsonNode toolNode = outputNode.get("tool");
-//                if (toolNode.asText().equals("change_role")) {
-//                    chatService.sendAIMessage(chatRoomId, "역할 변경이 완료되었습니다.", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
-//                    log.info("AI 서버의 HTTP 요청에 따른 역할 변경 완료");
-//                }
-//                else if (toolNode.asText().equals("todo_create")) {
-//                    chatService.sendAIMessage(chatRoomId, "투두 생성이 완료되었습니다.", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
-//                    log.info("AI 서버의 HTTP 요청에 따른 투두 생성 완료");
-//                }
-//                else if (toolNode.asText().equals("meeting_create")) {
-//                    chatService.sendAIMessage(chatRoomId, "회의록 작성이 완료되었습니다.", aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
-//                    log.info("AI 서버의 HTTP 요청에 따른 회의록 작성 완료");
-//                }
-            }
-            else if (route.equals("clarify")){
-                String realMessage = root.get("output").asText();
-
-                if (Objects.equals(realMessage, "")) {
-                    throw new GeneralException(ErrorInfo.INTERNAL_ERROR);
-                    //todo. 변경
-                }
-
-                chatService.sendAIMessage(chatRoomId, realMessage, aiChatRequestDTO.getUserInput(), sendMember.getUser().getName());
-                log.info("AI 서버에 입력된 정보 부족, message - {}", realMessage);
             }
             else
                 log.warn("서버의 잘못된 요청, route : {}", route);
-
 
         } catch (RestClientException e) {
             throw new RuntimeException("AI Chat 서버 요청 중 오류 발생 : " + e);
