@@ -77,7 +77,7 @@ public class AiChatService {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.MEMBER_NOT_FOUND));
 
         log.debug("chat service - send basic message로 이동");
-        chatService.sendBasicMessage(chatRoomId, sendMessageRequestDto);
+        chatService.sendBasicMessage(chatRoomId, sendMessageRequestDto, true);
 
         try {
             HttpHeaders headers = new HttpHeaders();

@@ -64,7 +64,7 @@ public class ChatService{
 
     // basic chat message
     @Transactional
-    public void sendBasicMessage(Long chatRoomId, SendMessageRequestDTO messageRequestDTO) throws JsonProcessingException {
+    public void sendBasicMessage(Long chatRoomId, SendMessageRequestDTO messageRequestDTO, Boolean isPrompt) throws JsonProcessingException {
 
         ChatRoom chatRoom = chatValidator.validateChatRoom(chatRoomId);
 
@@ -82,6 +82,7 @@ public class ChatService{
                 .memberId(sendMember.getMemberId())
                 .message(messageRequestDTO.getMessage())
                 .isImage(messageRequestDTO.getIsImage())
+                .isPrompt(isPrompt)
                 .sentAt(LocalDateTime.now())
                 .displayType(setDisplayType(chatRoomId, messageRequestDTO.getSenderId(), SenderType.MEMBER, messageRequestDTO.getSentAt()))
                 .build();
@@ -112,6 +113,7 @@ public class ChatService{
                 .memberId(sendMember.getMemberId())
                 .message(storedFileName)
                 .isImage(true)
+                .isPrompt(false)
                 .sentAt(LocalDateTime.now())
                 .displayType(setDisplayType(chatRoomId, sendMember.getMemberId(), SenderType.MEMBER, LocalDateTime.now()))
                 .build();
@@ -135,6 +137,7 @@ public class ChatService{
                 .memberId(null)
                 .message(message)
                 .isImage(false)
+                .isPrompt(false)
                 .sentAt(LocalDateTime.now())
                 .senderType(SenderType.SYSTEM)
                 .displayType(DisplayType.DEFAULT)
@@ -158,6 +161,7 @@ public class ChatService{
                 .memberId(null)
                 .message(message)
                 .isImage(false)
+                .isPrompt(false)
                 .sentAt(LocalDateTime.now())
                 .senderType(SenderType.AI)
                 .displayType(setDisplayType(chatRoomId, null, SenderType.AI, LocalDateTime.now()))
@@ -190,6 +194,8 @@ public class ChatService{
         long readCount = sessionService.getActiveMembersCountInChatRoom(chatRoomId);
         int unreadCount = (int) (totalMemberCount - readCount);
         receiveMessageResponseDto.setUnreadCount(unreadCount);
+
+        log.error("*@#!@!#$@!$@!@#!!@#@#$@$    " + receiveMessageResponseDto.isPrompt());
 
         messagingTemplate.convertAndSend("/topic/chat/active/" + chatRoomId, receiveMessageResponseDto);
         log.debug("active member 에게 메시지 전송, destination : /topic/chat/active/" + chatRoomId);
@@ -451,6 +457,7 @@ public class ChatService{
                         : null)
                 .message(message.getMessage())
                 .isImage(message.getIsImage())
+                .isPrompt(message.getIsPrompt())
                 .sentAt(message.getSentAt())
                 .senderType(message.getSenderType())
                 .displayType(message.getDisplayType())

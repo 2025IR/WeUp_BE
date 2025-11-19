@@ -7,7 +7,7 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public enum SenderType {
     MEMBER("", ""),
-    AI("AI 비서", "64a81f23-0738-433b-86d8-44b3cd3bc553-smiley2.png"),
+    AI("AI 비서", "55620a2f-3742-43aa-a6dc-945092bcdbe9-AI_1.png"),
     SYSTEM("시스템", ""),
     WITHDRAW("알 수 없음", "delete_user.jpg");
 

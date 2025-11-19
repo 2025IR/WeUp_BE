@@ -23,6 +23,8 @@ public class RedisMessageDTO {
 
     private Boolean isImage;
 
+    private Boolean isPrompt;
+
     private LocalDateTime sentAt;
 
     @Builder.Default
