@@ -115,6 +115,8 @@ public class TodoService {
 
         if (editTodoRequestDTO.getMemberIds() != null) {
             todoMemberRepository.deleteByTodo_TodoId(editTodoRequestDTO.getTodoId());
+            todoMemberRepository.flush();
+
             todoMemberRepository.findAllByTodo_TodoId(editTodoRequestDTO.getTodoId());
 
             editTodoRequestDTO.getMemberIds().stream()

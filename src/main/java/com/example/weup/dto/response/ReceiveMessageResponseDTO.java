@@ -30,6 +30,9 @@ public class ReceiveMessageResponseDTO {
     @JsonProperty("isImage")
     private boolean isImage;
 
+    @JsonProperty("isPrompt")
+    private boolean isPrompt;
+
     private SenderType senderType;
 
     private DisplayType displayType;
@@ -47,6 +50,7 @@ public class ReceiveMessageResponseDTO {
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())
                 .isImage(chatMessage.getIsImage())
+                .isPrompt(chatMessage.getIsPrompt())
                 .senderType(chatMessage.getSenderType())
                 .displayType(chatMessage.getDisplayType())
                 .originalMessage(chatMessage.getOriginalMessage())
@@ -61,6 +65,7 @@ public class ReceiveMessageResponseDTO {
                 .message(chatMessage.getMessage())
                 .sentAt(chatMessage.getSentAt())
                 .isImage(chatMessage.getIsImage())
+                .isPrompt(chatMessage.getIsPrompt())
                 .senderType(chatMessage.getSenderType())
                 .displayType(chatMessage.getDisplayType())
                 .originalMessage(chatMessage.getOriginalMessage())

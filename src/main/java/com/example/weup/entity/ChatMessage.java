@@ -43,6 +43,10 @@ public class ChatMessage {
     @JsonProperty("isImage")
     private Boolean isImage = false;
 
+    @Column
+    @JsonProperty("isPrompt")
+    private Boolean isPrompt = false;
+
     @Column(nullable = false)
     private LocalDateTime sentAt;
 
