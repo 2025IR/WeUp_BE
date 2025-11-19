@@ -2,7 +2,7 @@ name: Deploy Backend to NCloud
 
 on:
   push:
-    branches: [ main ]
+    branches: [ "main" ]
 
 jobs:
   deploy:
@@ -13,37 +13,31 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Prepare SSH key on runner
+        shell: bash
         run: |
           mkdir -p ~/.ssh
           chmod 700 ~/.ssh
 
+          # runner에 이미 개인키가 ~/ssh/id_deploy_rsa로 있으면 그걸 복사
+          # (경로가 다르면 여기에서 수정)
           cp ~/.ssh/id_deploy_rsa ~/.ssh/ncloud_rsa
           chmod 600 ~/.ssh/ncloud_rsa
 
-          cat > ~/.ssh/config << 'EOF'
-Host ncloud
-  HostName 223.130.137.53
-  User irlab
-  IdentityFile ~/.ssh/ncloud_rsa
-  StrictHostKeyChecking=no
-EOF
-          chmod 600 ~/.ssh/config
-
-      - name: Deploy on NCloud (.53)
+      - name: Deploy on NCloud (.53) without heredoc
+        shell: bash
         env:
+          # 옵션은 필요하면 유지. 실제 ssh 명령에서 -i 와 -o StrictHostKeyChecking 지정함.
+          # (이 env는 선택사항)
           GIT_SSH_COMMAND: 'ssh -o StrictHostKeyChecking=no -i ~/.ssh/ncloud_rsa'
         run: |
-          ssh -o ConnectTimeout=10 ncloud << 'EOF'
+          # 한 줄 문자열로 원격 명령 전달: heredoc 전혀 사용 안 함
+          ssh -o ConnectTimeout=10 -i ~/.ssh/ncloud_rsa -o StrictHostKeyChecking=no irlab@223.130.137.53 '
             set -e
             cd ~/weup_backend
-            # 안전한 동기화: 강제 리셋(주의: 로컬 변경 덮어씀)
             git fetch origin
             git reset --hard origin/main
-            # 기존 컨테이너 내리기(실패해도 다음 단계 시도)
             sudo docker compose down || true
-            # 재빌드 & 백그라운드로 실행
             sudo docker compose up --build -d
-            # 간단 헬스체크 (예시: backend가 8080에서 실행중이라고 가정)
             sleep 8
             curl -fsS http://localhost:8080/actuator/health || (sudo docker logs backend && exit 1)
-          EOF
+          '
