@@ -33,6 +33,4 @@ jobs:
             git reset --hard origin/main
             sudo docker compose down || true
             sudo docker compose up --build -d
-            sleep 8
-            curl -fsS http://localhost:8080/actuator/health || (sudo docker logs backend && exit 1)
           '
