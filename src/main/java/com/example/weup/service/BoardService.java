@@ -99,7 +99,7 @@ public class BoardService {
         return BoardDetailResponseDTO.builder()
                 .name(getWriterName(board))
                 .profileImage(getWriterProfileImage(board))
-                .memberId(board.getMember().getMemberId())
+                .memberId(board.getMember() != null ? board.getMember().getMemberId() : null)
                 .title(board.getTitle())
                 .contents(board.getContents())
                 .boardCreatedTime(board.getBoardCreateTime())
@@ -115,7 +115,9 @@ public class BoardService {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
 
         Member member = memberValidator.validateActiveMemberInProject(userId, board.getProject().getProjectId());
-        memberValidator.validateBoardWriter(board, member);
+        if (board.getMember() != null) {
+            memberValidator.validateBoardWriter(board, member);
+        }
 
         Tag tag = tagRepository.findByTagName(editBoardRequestDTO.getTag())
                 .orElseThrow(() -> new GeneralException(ErrorInfo.TAG_NOT_FOUND));
@@ -137,7 +139,6 @@ public class BoardService {
         }
     }
 
-
     @Transactional
     public void deleteBoard(Long userId, Long boardId) {
 
@@ -145,7 +146,9 @@ public class BoardService {
                 .orElseThrow(() -> new GeneralException(ErrorInfo.BOARD_NOT_FOUND));
 
         Member member = memberValidator.validateActiveMemberInProject(userId, board.getProject().getProjectId());
-        memberValidator.validateBoardWriter(board, member);
+        if (board.getMember() != null) {
+            memberValidator.validateBoardWriter(board, member);
+        }
 
         List<File> files = fileRepository.findAllByBoard(board);
         for (File file : files) {
