@@ -1,0 +1,49 @@
+name: Deploy Backend to NCloud
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+      - name: Checkout repository (runner-local)
+        uses: actions/checkout@v4
+
+      - name: Prepare SSH key on runner
+        run: |
+          mkdir -p ~/.ssh
+          chmod 700 ~/.ssh
+
+          cp ~/.ssh/id_deploy_rsa ~/.ssh/ncloud_rsa
+          chmod 600 ~/.ssh/ncloud_rsa
+
+          cat > ~/.ssh/config << 'EOF'
+Host ncloud
+  HostName 223.130.137.53
+  User irlab
+  IdentityFile ~/.ssh/ncloud_rsa
+  StrictHostKeyChecking=no
+EOF
+          chmod 600 ~/.ssh/config
+
+      - name: Deploy on NCloud (.53)
+        env:
+          GIT_SSH_COMMAND: 'ssh -o StrictHostKeyChecking=no -i ~/.ssh/ncloud_rsa'
+        run: |
+          ssh -o ConnectTimeout=10 ncloud << 'EOF'
+            set -e
+            cd ~/weup_backend
+            # 안전한 동기화: 강제 리셋(주의: 로컬 변경 덮어씀)
+            git fetch origin
+            git reset --hard origin/main
+            # 기존 컨테이너 내리기(실패해도 다음 단계 시도)
+            sudo docker compose down || true
+            # 재빌드 & 백그라운드로 실행
+            sudo docker compose up --build -d
+            # 간단 헬스체크 (예시: backend가 8080에서 실행중이라고 가정)
+            sleep 8
+            curl -fsS http://localhost:8080/actuator/health || (sudo docker logs backend && exit 1)
+          EOF
