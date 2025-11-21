@@ -35,7 +35,7 @@ public class ChatMessage {
     @JoinColumn(name = "sender_id")
     private Member member;
 
-    @Column(nullable = false)
+    @Column(columnDefinition = "TEXT", nullable = false)
     private String message;
 
     @Column(nullable = false)
@@ -44,6 +44,7 @@ public class ChatMessage {
     private Boolean isImage = false;
 
     @Column
+    @Builder.Default
     @JsonProperty("isPrompt")
     private Boolean isPrompt = false;
 
