@@ -26,17 +26,14 @@ import java.util.Map;
 public class LiveKitService {
 
     private final RedisTemplate<String, String> redisTemplate;
-
     private final UserRepository userRepository;
-
     private final MemberValidator memberValidator;
-
     private final ProjectValidator projectValidator;
 
-    @Value("${livekit.api-key}")
+    @Value("${vite.api-key}")
     private String apiKey;
 
-    @Value("${livekit.api-secret}")
+    @Value("${vite.api-secret}")
     private String apiSecret;
 
     public String generateLiveKitToken(Long projectId, Long userId) {
@@ -87,22 +84,5 @@ public class LiveKitService {
         String key = "meeting:" + projectId + ":users";
         log.info("get participant count -> db read success : room name - {}", projectId);
         return redisTemplate.opsForSet().size(key);
-    }
-
-    @Transactional
-    public void handleWebhook(Map<String, Object> payload, String event) {
-
-        Map<String, Object> room = (Map<String, Object>) payload.get("room");
-        Map<String, Object> participant = (Map<String, Object>) payload.get("participant");
-
-        String roomName = (String) room.get("name");
-        String userIdentity = (String) participant.get("identity");
-
-        if ("participant_joined".equals(event)) {
-            enterRoom(Long.parseLong(roomName), Long.parseLong(userIdentity));
-        }
-        else if ("participant_left".equals(event)) {
-            leaveRoom(Long.parseLong(roomName), Long.parseLong(userIdentity));
-        }
     }
 }

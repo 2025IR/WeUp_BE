@@ -8,8 +8,6 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.Map;
-
 @Slf4j
 @RestController
 @RequiredArgsConstructor
@@ -47,16 +45,4 @@ public class LiveKitController {
         log.info("요청자 : {}, get participant count -> success", userId);
         return ResponseEntity.ok(DataResponseDTO.of(String.valueOf(count), "화상 회의실 현재 참여 인원 수 조회가 완료되었습니다."));
     }
-
-    @PostMapping("/webhook")
-    public ResponseEntity<DataResponseDTO<String>> handleWebhook(@LoginUser Long userId, @RequestBody Map<String, Object> payload) {
-
-        log.info("요청자 : {}, webhook handler -> start", userId);
-        String event = (String) payload.get("event");
-        liveKitService.handleWebhook(payload, event);
-
-        log.info("요청자 : {}, webhook handler -> success", userId);
-        return ResponseEntity.ok(DataResponseDTO.of("WebHook Event 성공"));
-    }
-
 }
