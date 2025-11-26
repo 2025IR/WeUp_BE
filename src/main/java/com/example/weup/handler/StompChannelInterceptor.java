@@ -43,7 +43,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     @Override
     public Message<?> preSend(@NotNull Message<?> message, @NotNull MessageChannel channel) {
 
-        Long userId = 0L;
+        Long userId;
         String destination = "";
 
         StompHeaderAccessor accessor = StompHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
@@ -191,6 +191,14 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
                 userId = jwtUtil.getUserId(unsubscribeToken);
                 userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
+
+                destination = accessor.getDestination();
+                if (destination == null) {
+                    log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
+                    return message;
+                    //throw new GeneralException(ErrorInfo.WEBSOCKET_BAD_REQUEST);
+                }
+                log.info("STOMP destination = {}", destination);
 
                 if (destination.startsWith("/topic/chat/active")) {
                     Long chatRoomId = Long.valueOf(destination.split("/")[4]);
