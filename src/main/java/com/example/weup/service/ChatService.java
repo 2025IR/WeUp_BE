@@ -307,6 +307,7 @@ public class ChatService{
                     .memberId(null)
                     .message(currentDate.format(DateTimeFormatter.ofPattern("yyyy년 MM월 dd일")))
                     .isImage(false)
+                    .isPrompt(false)
                     .sentAt(currentMessageTime)
                     .senderType(SenderType.SYSTEM)
                     .displayType(DisplayType.DEFAULT)
