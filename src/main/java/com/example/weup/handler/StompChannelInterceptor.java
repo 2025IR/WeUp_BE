@@ -44,6 +44,8 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     public Message<?> preSend(@NotNull Message<?> message, @NotNull MessageChannel channel) {
 
         Long userId = 0L;
+        String destination;
+
         StompHeaderAccessor accessor = StompHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
 
         if (accessor == null) return message;
@@ -78,14 +80,15 @@ public class StompChannelInterceptor implements ChannelInterceptor {
         if (command == null) {
             return message;
         }
-        String destination = accessor.getDestination();
-        if (destination == null) {
-            log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
-            throw new GeneralException(ErrorInfo.WEBSOCKET_BAD_REQUEST);
-        }
 
         switch (command) {
             case SUBSCRIBE:
+                destination = accessor.getDestination();
+                if (destination == null) {
+                    log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
+                    log.warn("SUBSCRIBE command receive with Null Destination - {}", accessor.getDestination());
+                    throw new GeneralException(ErrorInfo.WEBSOCKET_BAD_REQUEST);
+                }
                 // 개인 알림 진입
                 if (destination.startsWith("/user/queue/notification")) {
                     log.info("Personal notification Subscribe -> Success : User - {}", userId);
@@ -128,6 +131,12 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 break;
 
             case SEND:
+                destination = accessor.getDestination();
+                if (destination == null) {
+                    log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
+                    log.warn("SUBSCRIBE command receive with Null Destination - {}", accessor.getDestination());
+                    throw new GeneralException(ErrorInfo.WEBSOCKET_BAD_REQUEST);
+                }
                 if (destination.startsWith("/app/send") || destination.startsWith("/app/project") ||
                         destination.startsWith("/app/todo") || destination.startsWith("/app/chat") || destination.startsWith("/app/schedule")) {
                     log.info("SEND Destination Validate -> Success : User - {}, Destination - {}", userId, destination);
@@ -138,6 +147,12 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 break;
 
             case UNSUBSCRIBE:
+                destination = accessor.getDestination();
+                if (destination == null) {
+                    log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
+                    log.warn("SUBSCRIBE command receive with Null Destination - {}", accessor.getDestination());
+                    throw new GeneralException(ErrorInfo.WEBSOCKET_BAD_REQUEST);
+                }
                 if (destination.startsWith("/topic/chat/active")) {
                     Long chatRoomId = Long.valueOf(destination.split("/")[4]);
                     sessionService.removeActiveMemberFromChatRoom(chatRoomId, userId);
