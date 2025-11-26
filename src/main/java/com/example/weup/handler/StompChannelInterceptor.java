@@ -44,48 +44,64 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     public Message<?> preSend(@NotNull Message<?> message, @NotNull MessageChannel channel) {
 
         Long userId = 0L;
+        String destination = "";
+
         StompHeaderAccessor accessor = StompHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-
         if (accessor == null) return message;
+
         StompCommand command = accessor.getCommand();
-
-        if (StompCommand.CONNECT.equals(command)) {
-
-            List<String> header = accessor.getNativeHeader("Authorization");
-            if (header == null || header.isEmpty()) {
-                log.warn("CONNECT - Authorization 헤더 없음");
-                throw new GeneralException(ErrorInfo.UNAUTHORIZED);
-            }
-
-            String token = header.getFirst();
-            if (jwtUtil.isExpired(token)) {
-                log.warn("CONNECT - JWT 만료");
-                throw new GeneralException(ErrorInfo.UNAUTHORIZED);
-            }
-
-            userId = jwtUtil.getUserId(token);
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
-
-            UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
-
-            accessor.setUser(authToken);
-
-            log.info("STOMP CONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
-        }
-
-        if (command == null) {
-            return message;
-        }
-        String destination = accessor.getDestination();
-        if (destination == null) {
-            log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
-            throw new GeneralException(ErrorInfo.WEBSOCKET_BAD_REQUEST);
-        }
+        if (command == null) return message;
+        log.info("STOMP command = {}", command);
 
         switch (command) {
+            case CONNECT:
+                List<String> connectHeader = accessor.getNativeHeader("Authorization");
+                if (connectHeader == null || connectHeader.isEmpty()) {
+                    log.warn("CONNECT - Authorization 헤더 없음");
+                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+                }
+
+                String connectToken = connectHeader.getFirst();
+                if (jwtUtil.isExpired(connectToken)) {
+                    log.warn("CONNECT - JWT 만료");
+                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+                }
+
+                userId = jwtUtil.getUserId(connectToken);
+                User connectUser = userRepository.findById(userId)
+                        .orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
+
+                UsernamePasswordAuthenticationToken authToken =
+                        new UsernamePasswordAuthenticationToken(connectUser, null, connectUser.getAuthorities());
+
+                accessor.setUser(authToken);
+
+                log.info("STOMP CONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
+                break;
+
             case SUBSCRIBE:
+                destination = accessor.getDestination();
+                if (destination == null) {
+                    log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
+                    throw new GeneralException(ErrorInfo.WEBSOCKET_BAD_REQUEST);
+                }
+                log.info("STOMP destination = {}", destination);
+
+                List<String> subscribeHeader = accessor.getNativeHeader("Authorization");
+                if (subscribeHeader == null || subscribeHeader.isEmpty()) {
+                    log.warn("SUBSCRIBE - Authorization 헤더 없음");
+                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+                }
+
+                String subscribeToken = subscribeHeader.getFirst();
+                if (jwtUtil.isExpired(subscribeToken)) {
+                    log.warn("SUBSCRIBE - JWT 만료");
+                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+                }
+
+                userId = jwtUtil.getUserId(subscribeToken);
+                userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
+
                 // 개인 알림 진입
                 if (destination.startsWith("/user/queue/notification")) {
                     log.info("Personal notification Subscribe -> Success : User - {}", userId);
@@ -98,6 +114,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                     if (projectMatcher.matches()) {
                         targetEntityId = Long.parseLong(projectMatcher.group(1));
                     }
+                    log.info("Stomp 분기 처리 - Subscribe /topic/project : {}", targetEntityId);
 
                     if (targetEntityId != null) {
                         memberValidator.validateActiveMemberInProject(userId, targetEntityId);
@@ -128,6 +145,28 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 break;
 
             case SEND:
+                destination = accessor.getDestination();
+                if (destination == null) {
+                    log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
+                    throw new GeneralException(ErrorInfo.WEBSOCKET_BAD_REQUEST);
+                }
+                log.info("STOMP destination = {}", destination);
+
+                List<String> sendHeader = accessor.getNativeHeader("Authorization");
+                if (sendHeader == null || sendHeader.isEmpty()) {
+                    log.warn("SEND - Authorization 헤더 없음");
+                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+                }
+
+                String sendToken = sendHeader.getFirst();
+                if (jwtUtil.isExpired(sendToken)) {
+                    log.warn("SEND - JWT 만료");
+                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+                }
+
+                userId = jwtUtil.getUserId(sendToken);
+                userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
+
                 if (destination.startsWith("/app/send") || destination.startsWith("/app/project") ||
                         destination.startsWith("/app/todo") || destination.startsWith("/app/chat") || destination.startsWith("/app/schedule")) {
                     log.info("SEND Destination Validate -> Success : User - {}, Destination - {}", userId, destination);
@@ -138,6 +177,21 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 break;
 
             case UNSUBSCRIBE:
+                List<String> unsubscribeHeader = accessor.getNativeHeader("Authorization");
+                if (unsubscribeHeader == null || unsubscribeHeader.isEmpty()) {
+                    log.warn("UNSUBSCRIBE - Authorization 헤더 없음");
+                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+                }
+
+                String unsubscribeToken = unsubscribeHeader.getFirst();
+                if (jwtUtil.isExpired(unsubscribeToken)) {
+                    log.warn("UNSUBSCRIBE - JWT 만료");
+                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+                }
+
+                userId = jwtUtil.getUserId(unsubscribeToken);
+                userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
+
                 if (destination.startsWith("/topic/chat/active")) {
                     Long chatRoomId = Long.valueOf(destination.split("/")[4]);
                     sessionService.removeActiveMemberFromChatRoom(chatRoomId, userId);
@@ -152,6 +206,20 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 break;
 
             case DISCONNECT:
+                List<String> disconnectHeader = accessor.getNativeHeader("Authorization");
+                if (disconnectHeader == null || disconnectHeader.isEmpty()) {
+                    log.warn("DISCONNECT - Authorization 헤더 없음");
+                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+                }
+
+                String disconnectToken = disconnectHeader.getFirst();
+                if (jwtUtil.isExpired(disconnectToken)) {
+                    log.warn("DISCONNECT - JWT 만료");
+                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+                }
+
+                userId = jwtUtil.getUserId(disconnectToken);
+                userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
                 log.info("STOMP DISCONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
                 break;
 
