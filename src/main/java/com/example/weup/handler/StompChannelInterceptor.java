@@ -21,6 +21,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.Arrays;
+import java.util.List;
 import java.util.Objects;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -43,39 +44,49 @@ public class StompChannelInterceptor implements ChannelInterceptor {
     @Override
     public Message<?> preSend(@NotNull Message<?> message, @NotNull MessageChannel channel) {
 
+        Long userId = 0L;
         StompHeaderAccessor accessor = StompHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
-        String token = String.valueOf(Objects.requireNonNull(Objects.requireNonNull(accessor).getNativeHeader("Authorization")).getFirst());
 
-        if (token == null) {
-            log.warn("Stomp Channel Interceptor 내부 - token 없음");
-            throw new GeneralException(ErrorInfo.UNAUTHORIZED);
-        }
-        if (jwtUtil.isExpired(token)) {
-            log.warn("Stomp Channel Interceptor 내부 - JWT 만료");
-            throw new GeneralException(ErrorInfo.UNAUTHORIZED);
-        }
-
-        Long userId = jwtUtil.getUserId(token);
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
-
-        UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
-        accessor.setUser(authToken);
-
+        if (accessor == null) return message;
         StompCommand command = accessor.getCommand();
+
+        if (StompCommand.CONNECT.equals(command)) {
+
+            List<String> header = accessor.getNativeHeader("Authorization");
+            if (header == null || header.isEmpty()) {
+                log.warn("CONNECT - Authorization 헤더 없음");
+                throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+            }
+
+            String token = header.getFirst();
+            if (jwtUtil.isExpired(token)) {
+                log.warn("CONNECT - JWT 만료");
+                throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+            }
+
+            userId = jwtUtil.getUserId(token);
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
+
+            UsernamePasswordAuthenticationToken authToken =
+                    new UsernamePasswordAuthenticationToken(user, null, user.getAuthorities());
+
+            accessor.setUser(authToken);
+
+            log.info("STOMP CONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
+        }
+
+        if (command == null) {
+            return message;
+        }
         String destination = accessor.getDestination();
+        if (destination == null) {
+            log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
+            throw new GeneralException(ErrorInfo.WEBSOCKET_BAD_REQUEST);
+        }
 
-        switch (Objects.requireNonNull(command)) {
-            case CONNECT:
-                log.info("STOMP CONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
-                break;
-
+        switch (command) {
             case SUBSCRIBE:
-                if (destination == null) {
-                    log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
-                    throw new GeneralException(ErrorInfo.BAD_REQUEST);
-                }
-
                 // 개인 알림 진입
                 if (destination.startsWith("/user/queue/notification")) {
                     log.info("Personal notification Subscribe -> Success : User - {}", userId);
@@ -118,10 +129,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 break;
 
             case SEND:
-                if (destination == null) {
-                    log.warn("SEND command receive with Null Destination from Session Id - {}", accessor.getSessionId());
-                }
-                else if (destination.startsWith("/app/send") || destination.startsWith("/app/project") ||
+                if (destination.startsWith("/app/send") || destination.startsWith("/app/project") ||
                         destination.startsWith("/app/todo") || destination.startsWith("/app/chat") || destination.startsWith("/app/schedule")) {
                     log.info("SEND Destination Validate -> Success : User - {}, Destination - {}", userId, destination);
                 }
@@ -131,10 +139,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 break;
 
             case UNSUBSCRIBE:
-                if (destination == null) {
-                    log.warn("UNSUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
-                }
-                else if (destination.startsWith("/topic/chat/active")) {
+                if (destination.startsWith("/topic/chat/active")) {
                     Long chatRoomId = Long.valueOf(destination.split("/")[4]);
                     sessionService.removeActiveMemberFromChatRoom(chatRoomId, userId);
                     sessionService.saveLastReadAt(chatRoomId, userId, Instant.now());
