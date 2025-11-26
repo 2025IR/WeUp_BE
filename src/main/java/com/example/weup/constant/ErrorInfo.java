@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 public enum ErrorInfo {
     BAD_REQUEST(HttpStatus.BAD_REQUEST, "잘못된 요청입니다."),
 
+    WEBSOCKET_BAD_REQUEST(HttpStatus.BAD_REQUEST, "Stomp 구독 시, Destination 경로가 포함되지 않은 잘못된 요청입니다."),
+
     INTERNAL_ERROR(HttpStatus.INTERNAL_SERVER_ERROR, "서버 에러가 발생했습니다."),
 
     EMAIL_ALREADY_EXIST(HttpStatus.CONFLICT, "이미 사용 중인 이메일입니다."),

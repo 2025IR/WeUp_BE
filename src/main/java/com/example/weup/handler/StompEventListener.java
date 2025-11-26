@@ -54,7 +54,6 @@ public class StompEventListener {
             return;
         }
 
-        // todo. 예기치 않은 종료가 될 때... active, connect에 있는 user 전부 지워주는 로직 필요한가?
         log.info("WebSocket Disconnect -> Success : sessionId - {}", sessionId);
         sessionService.removeSession(sessionId);
     }
