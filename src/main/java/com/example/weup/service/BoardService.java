@@ -36,6 +36,12 @@ public class BoardService {
     private final MemberValidator memberValidator;
 
     @Transactional
+    public void createTag(Long userId, String tagName) {
+        Tag newTag = Tag.builder().tagName(tagName).build();
+        tagRepository.save(newTag);
+    }
+
+    @Transactional
     public void createBoard(Long userId, BoardCreateRequestDTO boardCreateRequestDTO) {
 
         Member member = memberValidator.validateActiveMemberInProject(userId, boardCreateRequestDTO.getProjectId());
