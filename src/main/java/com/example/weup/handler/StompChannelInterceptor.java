@@ -209,21 +209,23 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                 break;
 
             case DISCONNECT:
-                List<String> disconnectHeader = accessor.getNativeHeader("Authorization");
-                if (disconnectHeader == null || disconnectHeader.isEmpty()) {
-                    log.warn("DISCONNECT - Authorization 헤더 없음");
-                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
-                }
+//                List<String> disconnectHeader = accessor.getNativeHeader("Authorization");
+//                if (disconnectHeader == null || disconnectHeader.isEmpty()) {
+//                    log.warn("DISCONNECT - Authorization 헤더 없음");
+//                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+//                }
+//
+//                String disconnectToken = disconnectHeader.getFirst();
+//                if (jwtUtil.isExpired(disconnectToken)) {
+//                    log.warn("DISCONNECT - JWT 만료");
+//                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
+//                }
+//
+//                userId = jwtUtil.getUserId(disconnectToken);
+//                userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
+//                log.info("DISCONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
+                log.info("DISCONNECT from Session - {}", accessor.getSessionId());
 
-                String disconnectToken = disconnectHeader.getFirst();
-                if (jwtUtil.isExpired(disconnectToken)) {
-                    log.warn("DISCONNECT - JWT 만료");
-                    throw new GeneralException(ErrorInfo.UNAUTHORIZED);
-                }
-
-                userId = jwtUtil.getUserId(disconnectToken);
-                userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
-                log.info("DISCONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
                 break;
 
             default:
