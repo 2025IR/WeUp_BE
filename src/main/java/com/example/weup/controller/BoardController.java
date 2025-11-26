@@ -19,7 +19,7 @@ public class BoardController {
 
     @PostMapping("/tag")
     public ResponseEntity<DataResponseDTO<String>> createTag(@LoginUser Long userId, @RequestBody CreateTagRequestDTO tagDto) {
-        boardService.createTag(userId, tagDto.getTagName());
+        boardService.createTag(tagDto.getTagName());
         return ResponseEntity.ok(DataResponseDTO.of("태그 생성이 완료되었습니다."));
     }
 

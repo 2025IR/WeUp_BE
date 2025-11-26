@@ -36,7 +36,7 @@ public class BoardService {
     private final MemberValidator memberValidator;
 
     @Transactional
-    public void createTag(Long userId, String tagName) {
+    public void createTag(String tagName) {
         Tag newTag = Tag.builder().tagName(tagName).build();
         tagRepository.save(newTag);
     }
