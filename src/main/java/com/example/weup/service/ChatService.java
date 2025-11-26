@@ -195,8 +195,6 @@ public class ChatService{
         int unreadCount = (int) (totalMemberCount - readCount);
         receiveMessageResponseDto.setUnreadCount(unreadCount);
 
-        log.error("*@#!@!#$@!$@!@#!!@#@#$@$    " + receiveMessageResponseDto.isPrompt());
-
         messagingTemplate.convertAndSend("/topic/chat/active/" + chatRoomId, receiveMessageResponseDto);
         log.debug("active member 에게 메시지 전송, destination : /topic/chat/active/" + chatRoomId);
 

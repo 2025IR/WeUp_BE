@@ -31,20 +31,16 @@ import java.util.regex.Pattern;
 public class StompChannelInterceptor implements ChannelInterceptor {
 
     private final JwtUtil jwtUtil;
-
     private final SessionService sessionService;
-
     private final UserRepository userRepository;
-
     private final MemberValidator memberValidator;
-
     private static final Pattern PROJECT_TOPIC_PATTERN = Pattern.compile("^/topic/project/(\\d+)(/.*)?$");
 
     @Override
     public Message<?> preSend(@NotNull Message<?> message, @NotNull MessageChannel channel) {
 
         Long userId;
-        String destination = "";
+        String destination;
 
         StompHeaderAccessor accessor = StompHeaderAccessor.getAccessor(message, StompHeaderAccessor.class);
         if (accessor == null) return message;
@@ -76,7 +72,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
                 accessor.setUser(authToken);
 
-                log.info("STOMP CONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
+                log.info("CONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
                 break;
 
             case SUBSCRIBE:
@@ -85,7 +81,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                     log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
                     throw new GeneralException(ErrorInfo.WEBSOCKET_BAD_REQUEST);
                 }
-                log.info("STOMP destination = {}", destination);
+                log.info("SUBSCRIBE destination = {}", destination);
 
                 List<String> subscribeHeader = accessor.getNativeHeader("Authorization");
                 if (subscribeHeader == null || subscribeHeader.isEmpty()) {
@@ -134,7 +130,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
                     }
                     else if (destination.split("/")[3].equals("connect")) {
                         chatRoomId = Long.parseLong(destination.split("/")[4]);
-                        log.debug("split 확인 해보자 : {}", Arrays.toString(destination.split("/")));
+                        log.debug("split check : {}", Arrays.toString(destination.split("/")));
                         log.info("Topic(Chatroom Connect) Subscribe -> Success : User - {}, Destination - {}, chat room id - {}", userId, destination, chatRoomId);
                         sessionService.addConnectMemberToChatRoom(chatRoomId, userId);
                     }
@@ -147,10 +143,10 @@ public class StompChannelInterceptor implements ChannelInterceptor {
             case SEND:
                 destination = accessor.getDestination();
                 if (destination == null) {
-                    log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
+                    log.warn("SEND command receive with Null Destination from Session Id - {}", accessor.getSessionId());
                     throw new GeneralException(ErrorInfo.WEBSOCKET_BAD_REQUEST);
                 }
-                log.info("STOMP destination = {}", destination);
+                log.info("SEND destination = {}", destination);
 
                 List<String> sendHeader = accessor.getNativeHeader("Authorization");
                 if (sendHeader == null || sendHeader.isEmpty()) {
@@ -194,11 +190,10 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
                 destination = accessor.getDestination();
                 if (destination == null) {
-                    log.warn("SUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
+                    log.warn("UNSUBSCRIBE command receive with Null Destination from Session Id - {}", accessor.getSessionId());
                     return message;
-                    //throw new GeneralException(ErrorInfo.WEBSOCKET_BAD_REQUEST);
                 }
-                log.info("STOMP destination = {}", destination);
+                log.info("UNSUBSCRIBE destination = {}", destination);
 
                 if (destination.startsWith("/topic/chat/active")) {
                     Long chatRoomId = Long.valueOf(destination.split("/")[4]);
@@ -228,7 +223,7 @@ public class StompChannelInterceptor implements ChannelInterceptor {
 
                 userId = jwtUtil.getUserId(disconnectToken);
                 userRepository.findById(userId).orElseThrow(() -> new UsernameNotFoundException("사용자 정보를 찾을 수 없습니다."));
-                log.info("STOMP DISCONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
+                log.info("DISCONNECT from User - {}, Session - {}", userId, accessor.getSessionId());
                 break;
 
             default:
