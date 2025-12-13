@@ -35,7 +35,7 @@ public class ChatMessage {
     @JoinColumn(name = "sender_id")
     private Member member;
 
-    @Column(columnDefinition = "TEXT", nullable = false)
+    @Column(columnDefinition = "LONGTEXT", nullable = false)
     private String message;
 
     @Column(nullable = false)
